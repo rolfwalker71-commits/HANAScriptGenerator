@@ -221,9 +221,12 @@ describe('Übertragungsskript', () => {
       }
     }
 
-    // Die Windows-Helfer bleiben auf dem Windows-Rechner.
-    expect(content).not.toContain('00_schemas_auslesen.cmd');
-    expect(content.match(/00_dateien_uebertragen\.cmd/g)).toBeNull();
+    // Die Windows-Helfer bleiben auf dem Windows-Rechner. Geprüft wird die
+    // Übertragungsliste selbst; in der Aufrufhilfe darf der eigene Name stehen.
+    const fileList = content.match(/^set "FILES=(.*)"$/m)?.[1] ?? '';
+    expect(fileList).not.toBe('');
+    expect(fileList).not.toContain('.cmd');
+    expect(fileList.split(' ')).toContain('schema_export.sh');
   });
 
   it('verzichtet auf chown, weil das nur root darf', () => {
@@ -248,10 +251,35 @@ describe('Übertragungsskript', () => {
     expect(content).toContain(`set "SSH_HOST=${config.host}"`);
   });
 
+  it('kommt im Normalfall mit einer einzigen Verbindung aus', () => {
+    // OpenSSH für Windows kann keine Verbindung wiederverwenden
+    // (kein ControlMaster), deshalb geht alles durch eine tar-Pipe:
+    // übertragen, entpacken und einrichten in einem Aufruf.
+    const content = deploy()?.content ?? '';
+    expect(content).toContain('tar -cf - %FILES% | ssh ');
+    expect(content).toContain("tar -xf - &&");
+
+    // Genau ein ssh-Aufruf auf dem Hauptweg, vor dem Rückfallweg.
+    // Bis zur Marke selbst, nicht bis zum goto weiter oben.
+    const mainPath = content.slice(0, content.indexOf('\r\n:use_scp\r\n'));
+    const sshCalls = mainPath.match(/^[^\r\n]*\bssh -p %SSH_PORT%/gm) ?? [];
+    expect(sshCalls).toHaveLength(1);
+  });
+
+  it('bietet den Rückfallweg und die Schlüsseleinrichtung an', () => {
+    const content = deploy()?.content ?? '';
+    expect(content).toContain('if /I "%~1"=="--scp" goto :use_scp');
+    expect(content).toContain('if /I "%~1"=="--key" goto :setup_key');
+    expect(content).toContain('ssh-keygen -t ed25519');
+    // Nur der öffentliche Teil geht an den Server.
+    expect(content).toContain('type "%SSH_KEY%.pub" | ssh');
+    expect(content).not.toMatch(/type "%SSH_KEY%" \| ssh/);
+  });
+
   it('hat für jeden Sprung eine Marke und CRLF-Zeilenenden', () => {
     const content = deploy()?.content ?? '';
 
-    for (const label of [':no_openssh', ':missing', ':scp_failed', ':ssh_failed']) {
+    for (const label of [':no_openssh', ':missing', ':transfer_failed', ':setup_key', ':done']) {
       expect(content, label).toContain(`\r\n${label}\r\n`);
       expect(content, label).toContain(`goto ${label}`);
     }

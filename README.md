@@ -93,8 +93,20 @@ die Zeilenenden, `chmod 750` und die Gruppe `sapsys`.
 ist es nicht, weil per `scp` übertragene Dateien dem übertragenden Benutzer bereits
 gehören. Die Gruppe lässt sich mit `chgrp` setzen, da `<sid>adm` zu `sapsys` gehört.
 
-Das Passwort wird dreimal abgefragt, einmal je Verbindung. Das Skript zeigt beim
-Start, wie sich das mit einem SSH-Schlüssel einmalig erledigen lässt.
+Das kostet **eine** Passwortabfrage: `tar` schreibt den Satz in die SSH-Verbindung,
+die Gegenseite entpackt und richtet in einem Aufruf ein. Das sonst übliche
+Wiederverwenden einer Verbindung über `ControlMaster` gibt es im OpenSSH für
+Windows nicht, deshalb dieser Weg.
+
+Ganz ohne Passwort geht es nach einmaliger Einrichtung:
+
+```bash
+00_dateien_uebertragen.cmd --key
+```
+
+Erzeugt bei Bedarf einen ed25519-Schlüssel, hinterlegt den öffentlichen Teil auf
+dem Server und prüft die Anmeldung. Danach fragt keine Übertragung mehr nach
+einem Passwort. `--scp` erzwingt die Einzelschritte, wenn etwas zu untersuchen ist.
 
 ## Was das Exportskript tut
 
