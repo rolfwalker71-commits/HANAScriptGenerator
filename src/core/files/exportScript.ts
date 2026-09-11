@@ -59,12 +59,43 @@ ${schemaArray(config)}
 ${RULE}
 #  SAP-Umgebung laden
 #
-#  Cron startet ohne Anmeldeprofil. Ohne die SAP-Umgebung findet hdbsql seine
-#  Bibliotheken unter Umstaenden nicht. Interaktiv ist das Laden wirkungslos.
+#  Cron startet ohne Anmeldeprofil; ohne die SAP-Umgebung findet hdbsql seine
+#  Bibliotheken unter Umstaenden nicht. Interaktiv ist sie dagegen laengst
+#  geladen, deshalb wird nur nachgeladen, wenn kein Terminal vorhanden ist.
+#
+#  Der Unterschied ist nicht kosmetisch: ein Profil wird mit "." in die
+#  laufende Shell gelesen. Steht darin ein "exit", endet dieses Skript
+#  sofort und ohne Ausgabe. Beim manuellen Lauf soll das nicht passieren
+#  koennen, und die Zeile davor zeigt im Cron-Fall, wo es geklemmt hat.
 ${RULE}
 
-if [ -f "\${HOME}/.sapenv.sh" ]; then
-    . "\${HOME}/.sapenv.sh" >/dev/null 2>&1 || true
+echo "SAP HANA Schema-Export startet..."
+
+if [ -t 1 ]; then
+    echo "Interaktiver Lauf, SAP-Umgebung wird als geladen angenommen."
+elif [ -f "\${HOME}/.sapenv.sh" ]; then
+    echo "Kein Terminal, lade SAP-Umgebung aus \${HOME}/.sapenv.sh ..."
+
+    # Das Profil wird in einer Subshell gelesen; uebernommen werden nur PATH
+    # und LD_LIBRARY_PATH. Ein "exit" im Profil beendet damit nur die
+    # Subshell und nicht diesen Lauf.
+    SAPENV="$( . "\${HOME}/.sapenv.sh" >/dev/null 2>&1
+               printf '%s\\n%s\\n' "\${PATH}" "\${LD_LIBRARY_PATH:-}" )"
+
+    SAPENV_PATH="$(printf '%s' "\${SAPENV}" | sed -n '1p')"
+    SAPENV_LIB="$(printf '%s' "\${SAPENV}" | sed -n '2p')"
+
+    if [ -n "\${SAPENV_PATH}" ]; then
+        PATH="\${SAPENV_PATH}"
+        export PATH
+    fi
+
+    if [ -n "\${SAPENV_LIB}" ]; then
+        LD_LIBRARY_PATH="\${SAPENV_LIB}"
+        export LD_LIBRARY_PATH
+    fi
+
+    echo "SAP-Umgebung geladen."
 fi
 
 ${RULE}

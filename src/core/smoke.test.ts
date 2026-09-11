@@ -213,6 +213,45 @@ describe('generiertes Exportskript im Trockenlauf', () => {
     expect(archives).toEqual([`ALPHA_${today}.tar.gz`]);
   });
 
+  it('überlebt ein SAP-Profil, das selbst ein exit enthält', () => {
+    // Ein Profil wird mit "." in die laufende Shell gelesen. Ohne Subshell
+    // würde dieses exit den Lauf sofort und ohne jede Ausgabe beenden.
+    const fakeHome = join(root, 'home_mit_exit');
+    mkdirSync(fakeHome, { recursive: true });
+    writeFileSync(
+      join(fakeHome, '.sapenv.sh'),
+      'PATH="/sap/bin:${PATH}"\nexport PATH\nexit 0\n',
+      'utf8',
+    );
+
+    const output = execFileSync('bash', [join(root, 'schema_export.sh')], {
+      stdio: 'pipe',
+      encoding: 'utf8',
+      env: { ...process.env, HOME: fakeHome },
+    });
+
+    expect(output).toContain('lade SAP-Umgebung');
+    expect(output).toContain('Alle Schema-Exporte erfolgreich abgeschlossen');
+  });
+
+  it('gibt sofort etwas aus, damit ein stiller Abbruch auffällt', () => {
+    const script = generateAll(config).find((f) => f.name === 'schema_export.sh');
+    const executable = (script?.content ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'));
+
+    // Vor dem Einlesen des Profils muss etwas auf dem Bildschirm stehen,
+    // sonst ist ein Abbruch genau dort nicht von "nichts passiert" zu
+    // unterscheiden.
+    const firstEcho = executable.findIndex((line) => line.startsWith('echo '));
+    const firstProfile = executable.findIndex((line) => line.includes('.sapenv.sh'));
+
+    expect(firstEcho).toBeGreaterThan(-1);
+    expect(firstProfile).toBeGreaterThan(-1);
+    expect(firstEcho).toBeLessThan(firstProfile);
+  });
+
   it('meldet einen Fehler, wenn hdbsql fehlt', () => {
     const broken = { ...config, hdbsqlPath: join(root, 'bin', 'gibtsnicht') };
     const path = join(root, 'broken_export.sh');
