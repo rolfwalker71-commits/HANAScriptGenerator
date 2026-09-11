@@ -139,13 +139,23 @@
                   das ein kleines Skript für Windows.
                 </p>
                 <div class="discover__actions">
-                  <button type="button" id="btnDownloadLister" class="btn">
-                    1 · Helferskript herunterladen
+                  <button type="button" id="btnCopyCommand" class="btn btn--primary">
+                    Befehl kopieren
                   </button>
-                  <label class="btn" for="inputSchemaListing">2 · schemas.txt laden</label>
+                  <button type="button" id="btnDownloadLister" class="btn">
+                    Helferskript herunterladen
+                  </button>
+                  <label class="btn" for="inputSchemaListing">schemas.txt laden</label>
                   <input type="file" id="inputSchemaListing" accept=".txt,.json,text/plain" hidden />
                 </div>
+
                 <p class="discover__hint" id="discoverHint"></p>
+
+                <label class="field discover__paste">
+                  <span>Ausgabe von hdbsql hier einfügen</span>
+                  <textarea id="schemaPaste" rows="3" spellcheck="false"
+                    placeholder="Befehl kopieren, in einem cmd-Fenster ausführen, die Ausgabe markieren und hier einfügen"></textarea>
+                </label>
               </div>
 
               <div class="picker field--wide" id="schemaPicker" hidden></div>

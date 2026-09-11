@@ -9,9 +9,8 @@ export const SCHEMA_MARKER = '##SCHEMA##';
  * einer Marke. Dadurch ist die Auswertung unabhängig davon, wie hdbsql
  * Spaltenköpfe, Trennzeichen und Zeilenzähler formatiert.
  *
- * `%` ist hier bereits für die Batchdatei als `%%` geschrieben.
  */
-const SCHEMA_QUERY = [
+export const SCHEMA_QUERY = [
   `SELECT '${SCHEMA_MARKER}' || S.SCHEMA_NAME || '##'`,
   `|| IFNULL(TO_VARCHAR(T.CNT), '0') || '##'`,
   `|| IFNULL(TO_VARCHAR(ROUND(M.MB, 1)), '') || '##'`,
@@ -20,10 +19,23 @@ const SCHEMA_QUERY = [
   `ON T.SCHEMA_NAME = S.SCHEMA_NAME`,
   `LEFT JOIN (SELECT SCHEMA_NAME, SUM(MEMORY_SIZE_IN_TOTAL)/1048576 AS MB FROM SYS.M_CS_TABLES GROUP BY SCHEMA_NAME) M`,
   `ON M.SCHEMA_NAME = S.SCHEMA_NAME`,
-  `WHERE S.SCHEMA_NAME NOT LIKE '\\_SYS%%' ESCAPE '\\'`,
+  `WHERE S.SCHEMA_NAME NOT LIKE '\\_SYS%' ESCAPE '\\'`,
   `AND S.SCHEMA_NAME NOT IN ('SYS', 'PUBLIC')`,
   `ORDER BY S.SCHEMA_NAME;`,
 ].join(' ');
+
+/**
+ * Dieselbe Abfrage als eine Zeile zum Einfügen in ein offenes cmd-Fenster.
+ *
+ * Damit braucht es gar keine Datei. Windows versieht heruntergeladene Dateien
+ * mit der Mark of the Web und verweigert bei `.cmd` die Ausführung, bis sie
+ * von Hand freigegeben wird. Ein eingefügter Befehl umgeht das vollständig.
+ *
+ * Ohne `-p` fragt hdbsql das Passwort selbst ab und zeigt es nicht an.
+ */
+export function schemaQueryCommand(config: ExportConfig): string {
+  return `hdbsql -n ${config.host}:${config.port} -u ${config.dbUser} "${SCHEMA_QUERY}"`;
+}
 
 /**
  * Windows-Batchdatei, die auf dem Rechner des Beraters läuft und die
@@ -31,7 +43,7 @@ const SCHEMA_QUERY = [
  *
  * Ein Browser darf keine Programme starten – das ist die Sandbox-Grenze, die
  * verhindert, dass beliebige Webseiten Befehle absetzen. Deshalb übernimmt
- * dieses Skript den Aufruf von hdbsql, und der Wizard liest nur die Datei.
+ * dieses Skript den Aufruf von hdbsql, und der Wizard liest nur die Ausgabe.
  */
 export function generateSchemaLister(config: ExportConfig): GeneratedFile {
   const lines = [
@@ -87,7 +99,8 @@ export function generateSchemaLister(config: ExportConfig): GeneratedFile {
     '',
     'rem --- Abfrage ------------------------------------------------',
     '',
-    `set "SQL=${SCHEMA_QUERY}"`,
+    // In einer Batchdatei steht ein literales Prozentzeichen als %%.
+    `set "SQL=${SCHEMA_QUERY.replace(/%/g, '%%')}"`,
     '',
     'if defined USERSTORE_KEY (',
     '',

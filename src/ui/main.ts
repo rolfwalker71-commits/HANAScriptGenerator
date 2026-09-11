@@ -13,6 +13,7 @@ import {
   normalizeConfig,
   parseSchemaList,
   parseSchemaListing,
+  schemaQueryCommand,
   scheduleDescription,
   validateConfig,
   type DiscoveredSchema,
@@ -75,6 +76,8 @@ const ui = {
   schemaPicker: el<HTMLDivElement>('schemaPicker'),
   discoverHint: el<HTMLParagraphElement>('discoverHint'),
   btnDownloadLister: el<HTMLButtonElement>('btnDownloadLister'),
+  btnCopyCommand: el<HTMLButtonElement>('btnCopyCommand'),
+  schemaPaste: el<HTMLTextAreaElement>('schemaPaste'),
   inputSchemaListing: el<HTMLInputElement>('inputSchemaListing'),
   mailFields: el<HTMLDivElement>('mailFields'),
   profileSelect: el<HTMLSelectElement>('profileSelect'),
@@ -289,6 +292,7 @@ function renderStepNav(issues: ValidationIssue[]): void {
 function renderDiscovery(config: ExportConfig): void {
   const ready = config.host.length > 0 && Number.isInteger(config.port) && config.dbUser.length > 0;
   ui.btnDownloadLister.disabled = !ready;
+  ui.btnCopyCommand.disabled = !ready;
 
   if (!ready) {
     ui.discoverHint.textContent =
@@ -302,8 +306,9 @@ function renderDiscovery(config: ExportConfig): void {
   }
 
   ui.discoverHint.textContent =
-    `Das Skript fragt ${config.host}:${config.port} als ${config.dbUser} ab und legt schemas.txt ` +
-    'neben sich ab. Es braucht den SAP HANA Client auf dem Windows-Rechner.';
+    `Beides fragt ${config.host}:${config.port} als ${config.dbUser} ab und setzt den SAP HANA ` +
+    'Client auf dem Windows-Rechner voraus. Der Befehl braucht keine Datei und umgeht damit die ' +
+    'Ausführungssperre, die Windows heruntergeladenen .cmd-Dateien auferlegt.';
 }
 
 /**
@@ -684,6 +689,22 @@ ui.inputImportJson.addEventListener('change', async () => {
   }
 });
 
+ui.btnCopyCommand.addEventListener('click', async () => {
+  const command = schemaQueryCommand(normalizeConfig(readForm()));
+  try {
+    await navigator.clipboard.writeText(command);
+    await flash(ui.btnCopyCommand, 'Kopiert');
+  } catch {
+    // Ohne Clipboard-Recht bleibt der Befehl wenigstens sichtbar.
+    window.prompt('Diesen Befehl in einem cmd-Fenster ausführen:', command);
+  }
+});
+
+ui.schemaPaste.addEventListener('input', () => {
+  discovered = parseSchemaListing(ui.schemaPaste.value);
+  render();
+});
+
 ui.btnDownloadLister.addEventListener('click', () => {
   const file = generateSchemaLister(normalizeConfig(readForm()));
   downloadBlob(new Blob([file.content], { type: 'text/plain;charset=utf-8' }), file.name);
@@ -713,6 +734,7 @@ ui.inputSchemaListing.addEventListener('change', async () => {
 ui.btnReset.addEventListener('click', () => {
   if (!window.confirm('Alle Eingaben verwerfen und neu beginnen?')) return;
   writeForm(defaultConfig());
+  ui.schemaPaste.value = '';
   discovered = [];
   activeFileName = null;
   goToStep(0);

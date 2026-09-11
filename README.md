@@ -28,15 +28,34 @@ nächsten Mal wieder laden.
 
 ## Schemas aus der Datenbank holen
 
-Schemanamen müssen nicht abgetippt werden. Im Schritt *Schemas* gibt es zwei
-Schaltflächen:
+Schemanamen müssen nicht abgetippt werden. Im Schritt *Schemas* führen zwei Wege
+zum selben Ziel.
+
+**Ohne Datei (empfohlen):**
+
+1. **Befehl kopieren** – legt einen fertigen `hdbsql`-Aufruf in die Zwischenablage.
+2. Ein `cmd`-Fenster öffnen, einfügen, ausführen. hdbsql fragt das Passwort selbst
+   ab und zeigt es nicht an.
+3. Die Ausgabe markieren, kopieren und im Wizard in das Feld *Ausgabe von hdbsql
+   hier einfügen* einsetzen.
+
+**Mit Datei:**
 
 1. **Helferskript herunterladen** – erzeugt `00_schemas_auslesen.cmd` mit den
    Verbindungsdaten aus Schritt 1.
-2. Das Skript auf einem Windows-Rechner mit SAP HANA Client ausführen. Es fragt
-   das Passwort verdeckt ab und schreibt `schemas.txt` neben sich.
-3. **schemas.txt laden** – alle gefundenen Schemas erscheinen mit Tabellenzahl
-   und Größe als Auswahlliste zum Anklicken.
+2. Auf einem Windows-Rechner mit SAP HANA Client ausführen. Schreibt `schemas.txt`
+   neben sich.
+3. **schemas.txt laden**.
+
+In beiden Fällen erscheinen die gefundenen Schemas mit Tabellenzahl und Größe als
+Auswahlliste zum Anklicken.
+
+> **Windows blockiert heruntergeladene `.cmd`-Dateien.** Sie tragen die Mark of
+> the Web, und der Anhangsmanager verweigert die Ausführung mit „Durch die
+> Internetsicherheitseinstellungen wurde verhindert…". Abhilfe: Rechtsklick →
+> *Eigenschaften* → unten **Zulassen** ankreuzen, oder `Unblock-File` in
+> PowerShell. Der Weg über *Befehl kopieren* entsteht gar nicht erst als Datei
+> und ist davon nicht betroffen.
 
 Der Umweg über die Datei ist nicht Bequemlichkeit, sondern notwendig: eine
 Webseite darf keine Programme auf dem Rechner starten, auch nicht über

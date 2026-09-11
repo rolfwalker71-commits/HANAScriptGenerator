@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { defaultConfig } from './defaults.js';
+import { generateSchemaLister, schemaQueryCommand } from './files/listSchemas.js';
 import { describeSchema, parseSchemaListing } from './schemaListing.js';
 
 /**
@@ -50,6 +52,35 @@ describe('parseSchemaListing', () => {
 
   it('liefert nichts zurück, wenn die Datei eine Fehlermeldung enthält', () => {
     expect(parseSchemaListing('* 10: authentication failed SQLSTATE: 28000')).toEqual([]);
+  });
+});
+
+describe('schemaQueryCommand', () => {
+  const config = { ...defaultConfig(), host: 'hdbprod', port: 30015, dbUser: 'SYSTEM' };
+
+  it('ist eine einzige Zeile zum Einfügen in ein cmd-Fenster', () => {
+    const command = schemaQueryCommand(config);
+    expect(command).not.toContain('\n');
+    expect(command.startsWith('hdbsql -n hdbprod:30015 -u SYSTEM "')).toBe(true);
+    expect(command.endsWith('"')).toBe(true);
+  });
+
+  it('übergibt kein Passwort, damit hdbsql selbst verdeckt danach fragt', () => {
+    expect(schemaQueryCommand(config)).not.toContain('-p ');
+  });
+
+  it('lässt das Prozentzeichen roh, anders als in der Batchdatei', () => {
+    // Verdoppelt gehört es nur dorthin, wo cmd.exe die Datei zeilenweise liest.
+    expect(schemaQueryCommand(config)).toContain("'\\_SYS%'");
+    expect(generateSchemaLister(config).content).toContain("'\\_SYS%%'");
+  });
+
+  it('liefert eine Ausgabe, die der Parser wieder einlesen kann', () => {
+    // Die Marke aus dem Befehl und die Marke im Parser müssen zusammenpassen.
+    const marker = schemaQueryCommand(config).match(/'(##[A-Z]+##)'/)?.[1] ?? '';
+    expect(parseSchemaListing(`${marker}TESTSCHEMA##3##12##`)).toEqual([
+      { name: 'TESTSCHEMA', tables: 3, sizeMb: 12 },
+    ]);
   });
 });
 

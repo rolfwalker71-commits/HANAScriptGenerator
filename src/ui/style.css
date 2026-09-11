@@ -386,6 +386,15 @@ textarea:focus-visible,
   font-size: 12px;
 }
 
+.discover__paste {
+  margin-top: 12px;
+}
+
+.discover__paste textarea {
+  background: var(--panel);
+  font-size: 12px;
+}
+
 .picker {
   border: 1px solid var(--border);
   border-radius: var(--radius);

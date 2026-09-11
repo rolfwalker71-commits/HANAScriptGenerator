@@ -212,16 +212,28 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(fileContentOf('Hauptskript')).not.toContain('"SALES"');
   });
 
-  it('bietet das Helferskript erst an, wenn die Verbindungsdaten stehen', () => {
-    const button = doc.getElementById('btnDownloadLister') as HTMLButtonElement;
-    expect(button.disabled).toBe(false);
+  it('wertet auch eine eingefügte hdbsql-Ausgabe aus, ganz ohne Datei', () => {
+    // Der Weg für den Fall, dass Windows die heruntergeladene .cmd sperrt.
+    type('schemaPaste', '##SCHEMA##KASSE##42##128##\n##SCHEMA##LAGER##9##64##');
+
+    const names = Array.from(doc.querySelectorAll('.picker__name')).map((n) => n.textContent);
+    expect(names).toEqual(['KASSE', 'LAGER']);
+  });
+
+  it('bietet Helferskript und Befehl erst an, wenn die Verbindungsdaten stehen', () => {
+    const download = doc.getElementById('btnDownloadLister') as HTMLButtonElement;
+    const copy = doc.getElementById('btnCopyCommand') as HTMLButtonElement;
+    expect(download.disabled).toBe(false);
+    expect(copy.disabled).toBe(false);
 
     type('host', '');
-    expect(button.disabled).toBe(true);
+    expect(download.disabled).toBe(true);
+    expect(copy.disabled).toBe(true);
     expect(doc.getElementById('discoverHint')?.textContent).toContain('Schritt 1');
 
     type('host', 'p42prod');
-    expect(button.disabled).toBe(false);
+    expect(download.disabled).toBe(false);
+    expect(copy.disabled).toBe(false);
   });
 
   it('meldet fehlende Pflichtangaben statt stumm nichts zu erzeugen', () => {
