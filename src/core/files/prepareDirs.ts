@@ -56,16 +56,46 @@ chmod 750 "\${EXPORT_BASE}" || true
 
 ${RULE}
 #  Schreibtest
+#
+#  Jedes Verzeichnis einzeln pruefen. Ein bestehendes Unterverzeichnis kann
+#  einem anderen Benutzer gehoeren, obwohl die Basis in Ordnung ist – zum
+#  Beispiel, wenn frueher einmal etwas als root angelegt wurde. Der Export
+#  wuerde daran erst nachts scheitern.
 ${RULE}
 
-TEST_FILE="\${EXPORT_BASE}/.write_test_$$"
+write_test()
+{
+    TEST_FILE="$1/.write_test_$$"
 
-if ! touch "\${TEST_FILE}" 2>/dev/null; then
-    echo "FEHLER: In \${EXPORT_BASE} kann nicht geschrieben werden." >&2
+    if touch "\${TEST_FILE}" 2>/dev/null; then
+        rm -f "\${TEST_FILE}"
+        echo "  schreibbar: $1"
+        return 0
+    fi
+
+    echo "FEHLER: In $1 kann $(whoami) nicht schreiben." >&2
+    ls -ld "$1" >&2
+    return 1
+}
+
+FAILED=0
+
+write_test "\${EXPORT_BASE}" || FAILED=1
+write_test "\${EXPORT_BASE}/logs" || FAILED=1
+
+for SCHEMA in "\${SCHEMAS[@]}"
+do
+    write_test "\${EXPORT_BASE}/\${SCHEMA}" || FAILED=1
+done
+
+if [ \${FAILED} -ne 0 ]; then
+    echo >&2
+    echo "Haeufige Ursache: die Verzeichnisse wurden als root angelegt." >&2
+    echo "Abhilfe als root:" >&2
+    echo "  chown -R ${config.osUser}:sapsys \${EXPORT_BASE}" >&2
+    echo "  chmod -R u+rwX \${EXPORT_BASE}" >&2
     exit 1
 fi
-
-rm -f "\${TEST_FILE}"
 
 echo "Schreibtest erfolgreich."
 

@@ -252,6 +252,35 @@ describe('generiertes Exportskript im Trockenlauf', () => {
     expect(firstEcho).toBeLessThan(firstProfile);
   });
 
+  it('bricht einmal klar ab, wenn das Log-Verzeichnis nicht beschreibbar ist', () => {
+    const readOnlyBase = join(root, 'readonly_exports');
+    mkdirSync(join(readOnlyBase, 'logs'), { recursive: true });
+    chmodSync(join(readOnlyBase, 'logs'), 0o500);
+
+    const blocked = { ...config, exportBase: readOnlyBase };
+    const path = join(root, 'readonly_export.sh');
+    const script = generateAll(blocked).find((file) => file.name.endsWith('schema_export.sh'));
+    writeFileSync(path, script?.content ?? '', 'utf8');
+    chmodSync(path, 0o755);
+
+    try {
+      execFileSync('bash', [path], { stdio: 'pipe', encoding: 'utf8' });
+      throw new Error('Das Skript hätte fehlschlagen müssen.');
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string; stderr?: string };
+      const output = `${failure.stdout ?? ''}${failure.stderr ?? ''}`;
+
+      expect(failure.status).toBe(1);
+      expect(output).toContain('kann nicht geschrieben werden');
+      expect(output).toContain('chown -R');
+
+      // Genau eine Meldung, nicht eine pro Logzeile.
+      expect(output.split('tee:').length - 1).toBe(0);
+    } finally {
+      chmodSync(join(readOnlyBase, 'logs'), 0o700);
+    }
+  });
+
   it('meldet einen Fehler, wenn hdbsql fehlt', () => {
     const broken = { ...config, hdbsqlPath: join(root, 'bin', 'gibtsnicht') };
     const path = join(root, 'broken_export.sh');

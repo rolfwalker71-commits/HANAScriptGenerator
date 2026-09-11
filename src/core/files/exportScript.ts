@@ -139,10 +139,30 @@ ${RULE}
 #  Logging
 ${RULE}
 
-mkdir -p "\${LOG_DIR}" || {
+mkdir -p "\${LOG_DIR}" 2>/dev/null
+
+if [ ! -d "\${LOG_DIR}" ]; then
     echo "FEHLER: Log-Verzeichnis konnte nicht angelegt werden: \${LOG_DIR}" >&2
+    echo "Zuerst 02_prepare_dirs.sh als $(whoami) ausfuehren." >&2
     exit 1
-}
+fi
+
+# Das Schreibrecht wird geprueft, bevor irgendetwas protokolliert wird.
+# Sonst scheitert jede einzelne Logzeile an tee, und der Lauf laeuft unter
+# einem Wust von Fehlermeldungen weiter, statt einmal klar abzubrechen.
+if ! : > "\${LOG_FILE}" 2>/dev/null; then
+    echo "FEHLER: In das Log-Verzeichnis kann nicht geschrieben werden." >&2
+    echo >&2
+    ls -ld "\${EXPORT_BASE}" "\${LOG_DIR}" >&2 2>/dev/null
+    echo >&2
+    echo "Haeufige Ursache: die Verzeichnisse wurden als root angelegt," >&2
+    echo "der Export laeuft aber als $(whoami)." >&2
+    echo >&2
+    echo "Abhilfe als root:" >&2
+    echo "  chown -R ${config.osUser}:sapsys \${EXPORT_BASE}" >&2
+    echo "  chmod -R u+rwX \${EXPORT_BASE}" >&2
+    exit 1
+fi
 
 log()
 {
