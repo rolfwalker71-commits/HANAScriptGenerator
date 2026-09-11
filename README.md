@@ -73,6 +73,7 @@ hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
 | --- | --- |
 | `README_<KUNDE>.md` | Anleitung mit Konfigurationstabelle, Ablauf und Fehlersuche |
 | `00_schemas_auslesen.cmd` | Läuft auf Windows, holt die Schemaliste aus der Datenbank |
+| `00_dateien_uebertragen.cmd` | Läuft auf Windows, überträgt alles per scp und setzt Rechte |
 | `01_setup_userstore.sh` | Legt den hdbuserstore-Key an, Passwort wird interaktiv abgefragt |
 | `02_prepare_dirs.sh` | Export- und Logverzeichnisse samt Schreibtest |
 | `03_preflight.sh` | Prüft Client, Verbindung, Schemas, Werkzeuge, Platz – ändert nichts |
@@ -80,6 +81,20 @@ hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
 | `schema_export.sh` | Das eigentliche Exportskript für Cron |
 | `05_install_cron.sh` | Trägt den Cronjob idempotent ein, `--show` / `--remove` |
 | `90_restore_schema.sh` | Entpackt ein Archiv, `--import` spielt es zurück |
+
+## Übertragung auf den Server
+
+`00_dateien_uebertragen.cmd` erledigt den Weg nach Linux mit Windows-Bordmitteln:
+dem OpenSSH-Client, der seit Windows 10 1809 dabei ist. Es legt das Zielverzeichnis
+an, überträgt die Skripte und die Anleitung per `scp` und setzt danach über `ssh`
+die Zeilenenden, `chmod 750` und die Gruppe `sapsys`.
+
+`chown` kommt bewusst nicht vor: den Eigentümer darf nur `root` ändern, und nötig
+ist es nicht, weil per `scp` übertragene Dateien dem übertragenden Benutzer bereits
+gehören. Die Gruppe lässt sich mit `chgrp` setzen, da `<sid>adm` zu `sapsys` gehört.
+
+Das Passwort wird dreimal abgefragt, einmal je Verbindung. Das Skript zeigt beim
+Start, wie sich das mit einem SSH-Schlüssel einmalig erledigen lässt.
 
 ## Was das Exportskript tut
 

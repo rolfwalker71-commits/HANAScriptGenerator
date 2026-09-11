@@ -57,6 +57,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | Datei | Zweck |
 | --- | --- |
 | \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
+| \`00_dateien_uebertragen.cmd\` | Läuft auf **Windows**: kopiert alles hierher per scp und setzt Rechte. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${config.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
 | \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |
@@ -72,7 +73,15 @@ Key und Cronjob müssen deshalb unter demselben Benutzer liegen.
 
 ### 0. Dateien auf das System bringen
 
-Als \`root\`:
+**Bequem:** auf dem Windows-Rechner \`00_dateien_uebertragen.cmd\` doppelklicken. Es
+kopiert alle Skripte per \`scp\` nach \`${scriptDir}\`, räumt Windows-Zeilenenden weg
+und setzt \`chmod 750\` sowie die Gruppe \`sapsys\`. Dafür genügt der OpenSSH-Client,
+den Windows seit Version 1809 mitbringt. Danach weiter bei Schritt 1.
+
+\`chown\` ist dabei weder enthalten noch nötig: per \`scp\` als \`${config.osUser}\`
+übertragene Dateien gehören bereits \`${config.osUser}\`.
+
+**Von Hand:** als \`root\`:
 
 \`\`\`bash
 su - ${config.osUser}
@@ -139,6 +148,12 @@ Damit sind Export **und** tar-Lauf einmal bewiesen. Bei großen Schemas gibt der
 Lauf zusätzlich ein Gefühl für die spätere Laufzeit.
 
 ### 5. Hauptskript installieren
+
+Wurde \`00_dateien_uebertragen.cmd\` benutzt, liegt \`${script}\` bereits unter
+\`${config.scriptPath}\` und ist fertig eingerichtet — dann direkt zur Syntaxprüfung
+weiter unten springen.
+
+Sonst dorthin kopieren:
 
 \`\`\`bash
 cp ${script} ${config.scriptPath}

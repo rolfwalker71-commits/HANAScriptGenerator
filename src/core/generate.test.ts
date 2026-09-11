@@ -53,6 +53,7 @@ describe('generateAll', () => {
     expect(files.map((f) => f.name)).toEqual([
       'README_BEISPIEL_GMBH.md',
       '00_schemas_auslesen.cmd',
+      '00_dateien_uebertragen.cmd',
       '01_setup_userstore.sh',
       '02_prepare_dirs.sh',
       '03_preflight.sh',
@@ -153,6 +154,60 @@ describe('generateAll', () => {
     expect(helper?.content).toContain(`set "HANA_USER=${config.dbUser}"`);
     // In einer Batchdatei steht ein literales Prozentzeichen als %%.
     expect(helper?.content).toContain("'\\_SYS%%'");
+  });
+});
+
+describe('Übertragungsskript', () => {
+  const deploy = (config = exampleConfig()) =>
+    generateAll(config).find((f) => f.name === '00_dateien_uebertragen.cmd');
+
+  it('überträgt genau die Dateien, die auf den Server gehören', () => {
+    const files = generateAll(exampleConfig());
+    const content = deploy()?.content ?? '';
+
+    for (const file of files) {
+      if (file.name.endsWith('.sh') || file.name.endsWith('.md')) {
+        expect(content, file.name).toContain(file.name);
+      }
+    }
+
+    // Die Windows-Helfer bleiben auf dem Windows-Rechner.
+    expect(content).not.toContain('00_schemas_auslesen.cmd');
+    expect(content.match(/00_dateien_uebertragen\.cmd/g)).toBeNull();
+  });
+
+  it('verzichtet auf chown, weil das nur root darf', () => {
+    // Per scp als <sid>adm übertragene Dateien gehören bereits <sid>adm;
+    // ein chown würde hier nur mit "Operation not permitted" scheitern.
+    const content = deploy()?.content ?? '';
+    expect(content).not.toMatch(/^\s*(ssh|chown)[^\n]*chown /m);
+    expect(content).toContain('chgrp %TARGET_GROUP% *.sh');
+  });
+
+  it('setzt Rechte und räumt Windows-Zeilenenden weg', () => {
+    const content = deploy()?.content ?? '';
+    expect(content).toContain('chmod 750 *.sh');
+    expect(content).toContain("sed -i 's/\\r$//' *.sh");
+  });
+
+  it('zielt auf das Verzeichnis des Exportskripts', () => {
+    const config = { ...exampleConfig(), scriptPath: '/opt/hana/tools/schema_export.sh' };
+    const content = deploy(config)?.content ?? '';
+    expect(content).toContain('set "TARGET_DIR=/opt/hana/tools"');
+    expect(content).toContain(`set "SSH_USER=${config.osUser}"`);
+    expect(content).toContain(`set "SSH_HOST=${config.host}"`);
+  });
+
+  it('hat für jeden Sprung eine Marke und CRLF-Zeilenenden', () => {
+    const content = deploy()?.content ?? '';
+
+    for (const label of [':no_openssh', ':missing', ':scp_failed', ':ssh_failed']) {
+      expect(content, label).toContain(`\r\n${label}\r\n`);
+      expect(content, label).toContain(`goto ${label}`);
+    }
+
+    const lines = content.split('\n').slice(0, -1);
+    expect(lines.every((line) => line.endsWith('\r'))).toBe(true);
   });
 });
 

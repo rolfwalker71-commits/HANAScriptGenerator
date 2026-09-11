@@ -134,6 +134,7 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(tabs).toEqual([
       'Anleitung',
       '0 · Schemaliste',
+      '0 · Übertragen',
       '1 · Userstore',
       '2 · Verzeichnisse',
       '3 · Vorabprüfung',

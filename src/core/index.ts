@@ -23,6 +23,7 @@ export { hasErrors, validateConfig } from './validate.js';
 export { parseSchemaList, normalizePath } from './sh.js';
 export { generateAll } from './generate.js';
 export { generateSchemaLister, schemaQueryCommand, SCHEMA_MARKER } from './files/listSchemas.js';
+export { generateDeployScript } from './files/deploy.js';
 export { describeSchema, parseSchemaListing, type DiscoveredSchema } from './schemaListing.js';
 export { cronLine, cronMarker, scheduleDescription } from './files/installCron.js';
 export { archiveExtension, compressionLabel, customerSlug } from './files/common.js';
