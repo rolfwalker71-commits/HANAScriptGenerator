@@ -21,19 +21,36 @@ HANA_USER="${config.dbUser}"
 ${userGuard(config)}
 
 ${RULE}
+#  hdbuserstore verfuegbar?
+#
+#  Nur die Erreichbarkeit des Programms pruefen. Der Rueckgabewert von
+#  "hdbuserstore list" taugt dafuer nicht: ist noch kein Key hinterlegt,
+#  meldet es "NUMBER OF COMPLETE KEY: 0" und endet ungleich null, obwohl
+#  alles in Ordnung ist. Genau dieser Fall liegt beim ersten Lauf vor.
+${RULE}
+
+if ! command -v hdbuserstore >/dev/null 2>&1; then
+    echo "FEHLER: hdbuserstore wurde nicht gefunden." >&2
+    echo "Hinweis: PATH pruefen, der HANA-Client muss erreichbar sein." >&2
+    exit 1
+fi
+
+${RULE}
 #  Bestehende Keys anzeigen
 ${RULE}
 
 echo "Vorhandene hdbuserstore-Keys fuer $(whoami):"
 echo
-hdbuserstore list || {
-    echo "FEHLER: hdbuserstore konnte nicht ausgefuehrt werden." >&2
-    echo "Hinweis: PATH pruefen, der HANA-Client muss erreichbar sein." >&2
-    exit 1
-}
+hdbuserstore list 2>&1 || true
 echo
 
-if hdbuserstore list "\${HANA_KEY}" >/dev/null 2>&1; then
+# Ob ein Key existiert, steht in der Ausgabe, nicht im Rueckgabewert.
+userstore_has_key()
+{
+    hdbuserstore list "$1" 2>/dev/null | grep -q "KEY[[:space:]][[:space:]]*$1"
+}
+
+if userstore_has_key "\${HANA_KEY}"; then
     echo "Hinweis: Der Key \${HANA_KEY} existiert bereits und wird ueberschrieben."
     echo "Andere Keys bleiben unveraendert."
     printf "Fortfahren? [j/N] "

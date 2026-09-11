@@ -76,6 +76,97 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
+/**
+ * Attrappe für hdbuserstore. `withKey` steuert, ob der gesuchte Key
+ * vorhanden ist. Im leeren Zustand endet das echte hdbuserstore ungleich
+ * null, obwohl es fehlerfrei gelaufen ist – genau das wird hier nachgebaut.
+ */
+function fakeUserstore(withKey: boolean): string {
+  return `#!/bin/bash
+if [ "\${1:-}" = "list" ] && [ -n "\${2:-}" ]; then
+    ${
+      withKey
+        ? `echo "KEY $2"; echo "  ENV : localhost:30015"; echo "  USER: SYSTEM"; exit 0`
+        : `echo "NUMBER OF COMPLETE KEY: 0"; echo "Operation succeed."; exit 1`
+    }
+fi
+echo "DATA FILE       : /usr/sap/SMK/home/.hdb/host/SSFS_HDB.DAT"
+echo "ACTIVE RECORDS  : 1"
+echo "NUMBER OF COMPLETE KEY: ${withKey ? 1 : 0}"
+echo "Operation succeed."
+exit ${withKey ? 0 : 1}
+`;
+}
+
+/** Führt 01_setup_userstore.sh mit einer hdbuserstore-Attrappe aus. */
+function runUserstoreSetup(withKey: boolean): { stdout: string; status: number } {
+  const binDir = join(root, `ustore_${withKey ? 'mit' : 'ohne'}`);
+  mkdirSync(binDir, { recursive: true });
+
+  const fake = join(binDir, 'hdbuserstore');
+  writeFileSync(fake, fakeUserstore(withKey), 'utf8');
+  chmodSync(fake, 0o755);
+
+  try {
+    const stdout = execFileSync('bash', [join(root, '01_setup_userstore.sh')], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf8',
+      input: '',
+      env: { ...process.env, PATH: `${binDir}:${process.env['PATH'] ?? ''}` },
+    });
+    return { stdout, status: 0 };
+  } catch (error) {
+    const failure = error as { status?: number; stdout?: string; stderr?: string };
+    return { stdout: `${failure.stdout ?? ''}${failure.stderr ?? ''}`, status: failure.status ?? -1 };
+  }
+}
+
+describe('generiertes Userstore-Skript', () => {
+  it('läuft auch, wenn noch gar kein Key hinterlegt ist', () => {
+    const { stdout } = runUserstoreSetup(false);
+
+    // Der leere Store endet ungleich null – das ist kein Grund abzubrechen.
+    expect(stdout).not.toContain('hdbuserstore wurde nicht gefunden');
+    expect(stdout).not.toContain('konnte nicht ausgefuehrt werden');
+
+    // Es muss bis zur Passwortabfrage kommen.
+    expect(stdout).toContain('Passwort fuer');
+  });
+
+  it('erkennt einen bereits vorhandenen Key an der Ausgabe', () => {
+    const { stdout } = runUserstoreSetup(true);
+    expect(stdout).toContain('existiert bereits');
+  });
+
+  it('bricht ab, wenn hdbuserstore wirklich fehlt', () => {
+    // Ohne Attrappe im PATH. Auf einem Rechner mit echtem HANA-Client wäre
+    // die Voraussetzung des Tests nicht gegeben.
+    const clientInstalled = (() => {
+      try {
+        execFileSync('command', ['-v', 'hdbuserstore'], { stdio: 'pipe', shell: true });
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    if (clientInstalled) return;
+
+    try {
+      execFileSync('bash', [join(root, '01_setup_userstore.sh')], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        encoding: 'utf8',
+        input: '',
+      });
+      throw new Error('Das Skript hätte fehlschlagen müssen.');
+    } catch (error) {
+      const failure = error as { status?: number; stderr?: string };
+      expect(failure.status).toBe(1);
+      expect(failure.stderr).toContain('hdbuserstore wurde nicht gefunden');
+    }
+  });
+});
+
 describe('generiertes Exportskript im Trockenlauf', () => {
   it('exportiert und archiviert jedes Schema getrennt', () => {
     const output = execFileSync('bash', [join(root, 'schema_export.sh')], {

@@ -87,9 +87,14 @@ ${RULE}
 #  4. hdbuserstore-Key
 ${RULE}
 
-if hdbuserstore list "\${HANA_KEY}" >/dev/null 2>&1; then
+# Der Rueckgabewert von hdbuserstore taugt nicht als Vorhandensein-Pruefung:
+# ohne hinterlegten Key endet der Aufruf ungleich null, obwohl er
+# fehlerfrei gelaufen ist. Deshalb die Ausgabe auswerten.
+if ! command -v hdbuserstore >/dev/null 2>&1; then
+    fail "hdbuserstore wurde nicht gefunden. PATH und HANA-Client pruefen."
+elif hdbuserstore list "\${HANA_KEY}" 2>/dev/null | grep -q "KEY[[:space:]][[:space:]]*\${HANA_KEY}"; then
     ok "hdbuserstore-Key \${HANA_KEY} vorhanden."
-    hdbuserstore list "\${HANA_KEY}" | sed 's/^/           /'
+    hdbuserstore list "\${HANA_KEY}" 2>/dev/null | sed 's/^/           /'
 else
     fail "hdbuserstore-Key \${HANA_KEY} fehlt. Zuerst 01_setup_userstore.sh ausfuehren."
 fi
