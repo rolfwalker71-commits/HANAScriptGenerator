@@ -26,11 +26,34 @@ direkt laufen; die erzeugte Anleitung sagt, wie sich das notfalls prüfen lässt
 Kundenprofile lassen sich im Browser speichern oder als JSON sichern und beim
 nächsten Mal wieder laden.
 
+## Schemas aus der Datenbank holen
+
+Schemanamen müssen nicht abgetippt werden. Im Schritt *Schemas* gibt es zwei
+Schaltflächen:
+
+1. **Helferskript herunterladen** – erzeugt `00_schemas_auslesen.cmd` mit den
+   Verbindungsdaten aus Schritt 1.
+2. Das Skript auf einem Windows-Rechner mit SAP HANA Client ausführen. Es fragt
+   das Passwort verdeckt ab und schreibt `schemas.txt` neben sich.
+3. **schemas.txt laden** – alle gefundenen Schemas erscheinen mit Tabellenzahl
+   und Größe als Auswahlliste zum Anklicken.
+
+Der Umweg über die Datei ist nicht Bequemlichkeit, sondern notwendig: eine
+Webseite darf keine Programme auf dem Rechner starten, auch nicht über
+`file://`. Genau das verhindert, dass beliebige Seiten Befehle absetzen. Das
+Helferskript übernimmt deshalb den Aufruf von `hdbsql`, der Generator liest nur
+dessen Ausgabe.
+
+Die Auswertung erkennt ihre Zeilen an einer Marke, die die SQL-Abfrage selbst
+mitschreibt. Dadurch ist sie unabhängig davon, wie die jeweilige
+hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
+
 ## Ausgegebene Dateien
 
 | Datei | Zweck |
 | --- | --- |
 | `README_<KUNDE>.md` | Anleitung mit Konfigurationstabelle, Ablauf und Fehlersuche |
+| `00_schemas_auslesen.cmd` | Läuft auf Windows, holt die Schemaliste aus der Datenbank |
 | `01_setup_userstore.sh` | Legt den hdbuserstore-Key an, Passwort wird interaktiv abgefragt |
 | `02_prepare_dirs.sh` | Export- und Logverzeichnisse samt Schreibtest |
 | `03_preflight.sh` | Prüft Client, Verbindung, Schemas, Werkzeuge, Platz – ändert nichts |

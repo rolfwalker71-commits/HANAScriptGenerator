@@ -52,6 +52,7 @@ describe('generateAll', () => {
     const files = generateAll(exampleConfig());
     expect(files.map((f) => f.name)).toEqual([
       'README_BEISPIEL_GMBH.md',
+      '00_schemas_auslesen.cmd',
       '01_setup_userstore.sh',
       '02_prepare_dirs.sh',
       '03_preflight.sh',
@@ -129,10 +130,29 @@ describe('generateAll', () => {
       // Kein Skript darf den abgeleiteten Standardpfad zurückbehalten.
       expect(file.content, file.name).not.toContain('/usr/sap/HDB/HDB00/exe/hdbsql');
       expect(file.content, file.name).not.toContain('/usr/sap/HDB/HDB00/work/schema_exports');
-      if (file.content.includes('HDBSQL=')) {
+      // Das Windows-Helferskript sucht hdbsql auf dem Rechner des Beraters,
+      // der Linux-Pfad des Servers gehört dort nicht hinein.
+      if (file.language === 'bash' && file.content.includes('HDBSQL=')) {
         expect(file.content, file.name).toContain('/usr/sap/hdbclient/hdbsql');
       }
     }
+  });
+
+  it('erzeugt das Windows-Helferskript mit CRLF und den Verbindungsdaten', () => {
+    const config = exampleConfig();
+    const helper = generateAll(config).find((f) => f.name === '00_schemas_auslesen.cmd');
+
+    expect(helper?.language).toBe('batch');
+    // cmd.exe verschluckt sich an Batchdateien mit reinen LF-Zeilenenden.
+    const lines = (helper?.content ?? '').split('\n').slice(0, -1);
+    expect(lines.length).toBeGreaterThan(10);
+    expect(lines.every((line) => line.endsWith('\r'))).toBe(true);
+
+    expect(helper?.content).toContain(`set "HANA_HOST=${config.host}"`);
+    expect(helper?.content).toContain(`set "HANA_PORT=${config.port}"`);
+    expect(helper?.content).toContain(`set "HANA_USER=${config.dbUser}"`);
+    // In einer Batchdatei steht ein literales Prozentzeichen als %%.
+    expect(helper?.content).toContain("'\\_SYS%%'");
   });
 });
 

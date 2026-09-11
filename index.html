@@ -132,6 +132,24 @@
             </p>
 
             <div class="group">
+              <div class="discover field--wide">
+                <p class="discover__lead">
+                  Namen nicht zur Hand? Dann die Liste direkt aus der Datenbank holen.
+                  Ein Browser darf selbst kein <code>hdbsql</code> starten, deshalb übernimmt
+                  das ein kleines Skript für Windows.
+                </p>
+                <div class="discover__actions">
+                  <button type="button" id="btnDownloadLister" class="btn">
+                    1 · Helferskript herunterladen
+                  </button>
+                  <label class="btn" for="inputSchemaListing">2 · schemas.txt laden</label>
+                  <input type="file" id="inputSchemaListing" accept=".txt,.json,text/plain" hidden />
+                </div>
+                <p class="discover__hint" id="discoverHint"></p>
+              </div>
+
+              <div class="picker field--wide" id="schemaPicker" hidden></div>
+
               <label class="field field--wide">
                 <span>Ein Schema pro Zeile</span>
                 <textarea id="schemas" rows="7" spellcheck="false" placeholder="SALES&#10;FINANCE"></textarea>

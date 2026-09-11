@@ -7,11 +7,15 @@ import {
   customerSlug,
   defaultConfig,
   derivedDefaults,
+  describeSchema,
   generateAll,
+  generateSchemaLister,
   normalizeConfig,
   parseSchemaList,
+  parseSchemaListing,
   scheduleDescription,
   validateConfig,
+  type DiscoveredSchema,
   type ExportConfig,
   type GeneratedFile,
   type ValidationIssue,
@@ -68,6 +72,10 @@ const ui = {
   filePurpose: el<HTMLParagraphElement>('filePurpose'),
   fileContent: el<HTMLElement>('fileContent'),
   schemaChips: el<HTMLDivElement>('schemaChips'),
+  schemaPicker: el<HTMLDivElement>('schemaPicker'),
+  discoverHint: el<HTMLParagraphElement>('discoverHint'),
+  btnDownloadLister: el<HTMLButtonElement>('btnDownloadLister'),
+  inputSchemaListing: el<HTMLInputElement>('inputSchemaListing'),
   mailFields: el<HTMLDivElement>('mailFields'),
   profileSelect: el<HTMLSelectElement>('profileSelect'),
   btnSaveProfile: el<HTMLButtonElement>('btnSaveProfile'),
@@ -98,6 +106,8 @@ const RESULT_STEP = stepSections.length - 1;
 
 let step = 0;
 let lastDerived = derivedDefaults('', '00');
+/** Aus schemas.txt gelesene Schemas; leer, solange nichts geladen wurde. */
+let discovered: DiscoveredSchema[] = [];
 let activeFileName: string | null = null;
 let currentFiles: GeneratedFile[] = [];
 
@@ -271,6 +281,94 @@ function renderStepNav(issues: ValidationIssue[]): void {
 //  Darstellung
 // -----------------------------------------------------------------------
 
+/**
+ * Steuert den Bereich über der Auswahlliste. Das Helferskript braucht Host,
+ * Port und Datenbankbenutzer aus Schritt 1 – fehlt davon etwas, wäre die
+ * heruntergeladene Datei unbrauchbar.
+ */
+function renderDiscovery(config: ExportConfig): void {
+  const ready = config.host.length > 0 && Number.isInteger(config.port) && config.dbUser.length > 0;
+  ui.btnDownloadLister.disabled = !ready;
+
+  if (!ready) {
+    ui.discoverHint.textContent =
+      'Dafür fehlen noch Host, Port oder Datenbankbenutzer aus Schritt 1.';
+    return;
+  }
+
+  if (discovered.length > 0) {
+    ui.discoverHint.textContent = `Liste geladen: ${discovered.length} Schemas von ${config.host}.`;
+    return;
+  }
+
+  ui.discoverHint.textContent =
+    `Das Skript fragt ${config.host}:${config.port} als ${config.dbUser} ab und legt schemas.txt ` +
+    'neben sich ab. Es braucht den SAP HANA Client auf dem Windows-Rechner.';
+}
+
+/**
+ * Zeigt die aus der Datenbank gelesenen Schemas als Auswahlliste. Die
+ * Textarea bleibt die maßgebliche Quelle – die Haken spiegeln nur wider,
+ * was dort steht, damit getippte und ausgewählte Namen nicht auseinanderlaufen.
+ */
+function renderSchemaPicker(config: ExportConfig): void {
+  ui.schemaPicker.hidden = discovered.length === 0;
+  if (discovered.length === 0) return;
+
+  const chosen = new Set(config.schemas.map((name) => name.toUpperCase()));
+
+  const head = document.createElement('div');
+  head.className = 'picker__head';
+
+  const title = document.createElement('span');
+  title.textContent = `${discovered.length} Schemas gefunden, ${chosen.size} ausgewählt`;
+
+  const all = document.createElement('button');
+  all.type = 'button';
+  all.className = 'btn btn--link';
+  all.textContent = chosen.size === discovered.length ? 'Auswahl aufheben' : 'Alle auswählen';
+  all.addEventListener('click', () => {
+    const next = chosen.size === discovered.length ? [] : discovered.map((entry) => entry.name);
+    fields.schemas.value = next.join('\n');
+    render();
+  });
+
+  head.append(title, all);
+
+  const list = document.createElement('div');
+  list.className = 'picker__list';
+
+  for (const entry of discovered) {
+    const row = document.createElement('label');
+    row.className = 'picker__row';
+
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = chosen.has(entry.name.toUpperCase());
+    box.addEventListener('change', () => {
+      const current = parseSchemaList(fields.schemas.value);
+      const next = box.checked
+        ? [...current, entry.name]
+        : current.filter((name) => name.toUpperCase() !== entry.name.toUpperCase());
+      fields.schemas.value = [...new Set(next)].join('\n');
+      render();
+    });
+
+    const name = document.createElement('span');
+    name.className = 'picker__name';
+    name.textContent = entry.name;
+
+    const meta = document.createElement('span');
+    meta.className = 'picker__meta';
+    meta.textContent = describeSchema(entry);
+
+    row.append(box, name, meta);
+    list.append(row);
+  }
+
+  ui.schemaPicker.replaceChildren(head, list);
+}
+
 function renderSchemaChips(config: ExportConfig): void {
   ui.schemaChips.replaceChildren(
     ...config.schemas.map((schema) => {
@@ -365,6 +463,8 @@ function render(): void {
   renderStepNav(issues);
   renderIssues(issues);
   renderSchemaChips(config);
+  renderSchemaPicker(config);
+  renderDiscovery(config);
   syncConditionalFields();
 
   ui.cronPreview.textContent =
@@ -584,9 +684,36 @@ ui.inputImportJson.addEventListener('change', async () => {
   }
 });
 
+ui.btnDownloadLister.addEventListener('click', () => {
+  const file = generateSchemaLister(normalizeConfig(readForm()));
+  downloadBlob(new Blob([file.content], { type: 'text/plain;charset=utf-8' }), file.name);
+});
+
+ui.inputSchemaListing.addEventListener('change', async () => {
+  const file = ui.inputSchemaListing.files?.[0];
+  if (file === undefined) return;
+
+  const text = await file.text();
+  discovered = parseSchemaListing(text);
+
+  if (discovered.length === 0) {
+    // Ohne Treffer ist die erste nicht leere Zeile meist die Fehlermeldung
+    // von hdbsql – die hilft mehr als ein allgemeiner Hinweis.
+    const firstLine = text.split(/\r?\n/).find((line) => line.trim().length > 0) ?? '';
+    window.alert(
+      `In ${file.name} steht kein Schema.\n\n` +
+        (firstLine.length > 0 ? `Erste Zeile der Datei:\n${firstLine}` : 'Die Datei ist leer.'),
+    );
+  }
+
+  ui.inputSchemaListing.value = '';
+  render();
+});
+
 ui.btnReset.addEventListener('click', () => {
   if (!window.confirm('Alle Eingaben verwerfen und neu beginnen?')) return;
   writeForm(defaultConfig());
+  discovered = [];
   activeFileName = null;
   goToStep(0);
 });

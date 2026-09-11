@@ -20,6 +20,33 @@ function type(id: string, value: string): void {
   input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
 }
 
+function check(box: HTMLInputElement): void {
+  box.checked = !box.checked;
+  box.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+}
+
+/** Wählt einen Ausgabe-Tab und liefert dessen Inhalt. */
+function fileContentOf(tabTitle: string): string {
+  const tab = Array.from(doc.querySelectorAll<HTMLButtonElement>('.tabs .tab')).find(
+    (button) => button.textContent === tabTitle,
+  );
+  tab?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  return doc.getElementById('fileContent')?.textContent ?? '';
+}
+
+/** Schiebt eine schemas.txt in die Dateiauswahl, wie es der Benutzer täte. */
+async function loadListing(text: string): Promise<void> {
+  const input = doc.getElementById('inputSchemaListing') as HTMLInputElement;
+  const file = new dom.window.File([text], 'schemas.txt', { type: 'text/plain' });
+
+  // `files` ist normalerweise schreibgeschützt und lässt sich nur so setzen.
+  Object.defineProperty(input, 'files', { value: [file], configurable: true });
+  input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+
+  // Der Handler liest die Datei asynchron.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
 beforeAll(() => {
   if (!existsSync(BUNDLE)) {
     execFileSync('npx', ['vite', 'build'], { cwd: new URL('../..', import.meta.url).pathname });
@@ -106,6 +133,7 @@ describe('ausgelieferte Einzeldatei', () => {
     const tabs = Array.from(doc.querySelectorAll('.tabs .tab')).map((tab) => tab.textContent);
     expect(tabs).toEqual([
       'Anleitung',
+      '0 · Schemaliste',
       '1 · Userstore',
       '2 · Verzeichnisse',
       '3 · Vorabprüfung',
@@ -136,6 +164,64 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(script).toContain('WITH REPLACE THREADS ${THREADS}');
     // Zeilenenden bleiben LF, auch wenn die Datei unter Windows entsteht.
     expect(script).not.toContain('\r');
+  });
+
+  it('lädt eine schemas.txt und macht daraus eine Auswahlliste', async () => {
+    const listing = [
+      '"##SCHEMA##FINANCE##412##2048.5##"',
+      '"##SCHEMA##SALES##1203##15360.0##"',
+      '"##SCHEMA##STAGING##7##0##"',
+      '3 rows selected (overall time 12.431 msec)',
+    ].join('\r\n');
+
+    await loadListing(listing);
+
+    const rows = Array.from(doc.querySelectorAll('.picker__row'));
+    expect(rows.map((row) => row.querySelector('.picker__name')?.textContent)).toEqual([
+      'FINANCE',
+      'SALES',
+      'STAGING',
+    ]);
+    expect(rows[1]?.querySelector('.picker__meta')?.textContent).toBe('1203 Tabellen · 15.0 GB');
+
+    // Der Hinweistext bestätigt, woher die Liste kommt.
+    expect(doc.getElementById('discoverHint')?.textContent).toContain('3 Schemas');
+  });
+
+  it('übernimmt angehakte Schemas in die Eingabe und wieder heraus', () => {
+    const textarea = doc.getElementById('schemas') as HTMLTextAreaElement;
+    const boxOf = (name: string): HTMLInputElement =>
+      Array.from(doc.querySelectorAll<HTMLElement>('.picker__row'))
+        .find((row) => row.querySelector('.picker__name')?.textContent === name)
+        ?.querySelector('input') as HTMLInputElement;
+
+    // Vorher standen dort ALPHA und BETA von Hand.
+    expect(boxOf('SALES').checked).toBe(false);
+
+    check(boxOf('SALES'));
+    expect(textarea.value.split('\n')).toContain('SALES');
+
+    check(boxOf('FINANCE'));
+    const script = fileContentOf('Hauptskript');
+    expect(script).toContain('"SALES"');
+    expect(script).toContain('"FINANCE"');
+
+    // Abwählen entfernt das Schema wieder aus Eingabe und Skript.
+    check(boxOf('SALES'));
+    expect(textarea.value.split('\n')).not.toContain('SALES');
+    expect(fileContentOf('Hauptskript')).not.toContain('"SALES"');
+  });
+
+  it('bietet das Helferskript erst an, wenn die Verbindungsdaten stehen', () => {
+    const button = doc.getElementById('btnDownloadLister') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+
+    type('host', '');
+    expect(button.disabled).toBe(true);
+    expect(doc.getElementById('discoverHint')?.textContent).toContain('Schritt 1');
+
+    type('host', 'p42prod');
+    expect(button.disabled).toBe(false);
   });
 
   it('meldet fehlende Pflichtangaben statt stumm nichts zu erzeugen', () => {

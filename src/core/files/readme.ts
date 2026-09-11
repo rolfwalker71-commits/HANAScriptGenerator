@@ -56,6 +56,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 
 | Datei | Zweck |
 | --- | --- |
+| \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${config.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
 | \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |

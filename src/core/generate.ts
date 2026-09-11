@@ -1,5 +1,6 @@
 import type { ExportConfig, GeneratedFile } from './types.js';
 import { normalizeConfig } from './defaults.js';
+import { generateSchemaLister } from './files/listSchemas.js';
 import { generateSetupUserstore } from './files/setupUserstore.js';
 import { generatePrepareDirs } from './files/prepareDirs.js';
 import { generatePreflight } from './files/preflight.js';
@@ -17,6 +18,7 @@ export function generateAll(rawConfig: ExportConfig): GeneratedFile[] {
   const config = normalizeConfig(rawConfig);
   return [
     generateReadme(config),
+    generateSchemaLister(config),
     generateSetupUserstore(config),
     generatePrepareDirs(config),
     generatePreflight(config),
