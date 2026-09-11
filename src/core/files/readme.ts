@@ -144,9 +144,32 @@ Lauf zusätzlich ein Gefühl für die spätere Laufzeit.
 cp ${script} ${config.scriptPath}
 \`\`\`
 
+Eigentümer und Rechte setzen:
+
+\`\`\`bash
+chown ${config.osUser}:sapsys ${config.scriptPath}
+\`\`\`
+
 \`\`\`bash
 chmod 750 ${config.scriptPath}
 \`\`\`
+
+Kontrolle:
+
+\`\`\`bash
+ls -l ${config.scriptPath}
+\`\`\`
+
+Erwartet wird \`-rwxr-x--- ${config.osUser} sapsys\`.
+
+**Warum das wichtig ist:** Cron startet das Skript als \`${config.osUser}\`. Wurde es als
+\`root\` hierher kopiert, gehört es \`root:root\`, und bei \`750\` darf \`${config.osUser}\` es
+weder lesen noch ausführen — der Cronjob schlägt dann jede Nacht still fehl. Das
+Ausführungsrecht wird gebraucht, weil die Crontab das Skript direkt aufruft.
+
+\`750\` statt \`755\`, weil im Skript zwar kein Passwort steht (dafür gibt es den
+hdbuserstore), aber Pfade, Schemanamen und der Name des Userstore-Key. Die
+Gruppe \`sapsys\` behält Leserecht, damit andere Administratoren nachsehen können.
 
 Syntaxprüfung ohne Ausführung:
 
@@ -280,6 +303,8 @@ Bestätigung durch Eintippen des Schemanamens.
 
 | Symptom | Ursache | Abhilfe |
 | --- | --- | --- |
+| Cronjob läuft nie, manuell klappt es | Skript gehört \`root\`, nicht \`${config.osUser}\` | \`ls -l ${config.scriptPath}\`, dann \`chown ${config.osUser}:sapsys\` |
+| \`Permission denied\` beim Aufruf | Ausführungsrecht fehlt | \`chmod 750 ${config.scriptPath}\` |
 | \`bad interpreter: ^M\` oder \`: not found\` | Datei kam mit Windows-Zeilenenden an | \`sed -i 's/\\r$//' *.sh\` |
 | \`hdbsql nicht gefunden\` | Anderer Clientpfad | \`which hdbsql\`, Wert für \`HDBSQL\` anpassen |
 | Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${config.osUser}\` ausführen |

@@ -116,8 +116,19 @@ if [ ! -f "\${SCRIPT_PATH}" ]; then
 fi
 
 if [ ! -x "\${SCRIPT_PATH}" ]; then
-    echo "FEHLER: Das Exportskript ist nicht ausfuehrbar: \${SCRIPT_PATH}" >&2
-    echo "Abhilfe: chmod 750 \${SCRIPT_PATH}" >&2
+    echo "FEHLER: Das Exportskript ist fuer $(whoami) nicht ausfuehrbar:" >&2
+    ls -l "\${SCRIPT_PATH}" >&2
+    echo >&2
+    echo "Haeufige Ursache: als root hierher kopiert, also root:root." >&2
+    echo "Cron startet es aber als $(whoami). Abhilfe als root:" >&2
+    echo "  chown ${config.osUser}:sapsys \${SCRIPT_PATH}" >&2
+    echo "  chmod 750 \${SCRIPT_PATH}" >&2
+    exit 1
+fi
+
+if [ ! -r "\${SCRIPT_PATH}" ]; then
+    echo "FEHLER: Das Exportskript ist fuer $(whoami) nicht lesbar." >&2
+    ls -l "\${SCRIPT_PATH}" >&2
     exit 1
 fi
 
