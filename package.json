@@ -1,0 +1,25 @@
+{
+  "name": "hana-script-generator",
+  "version": "0.1.0",
+  "description": "Erzeugt kundenspezifische SAP-HANA-Schema-Export-Skripte inklusive tar-Archivierung und Crontab-Einplanung",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vite build && vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^22.20.2",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}

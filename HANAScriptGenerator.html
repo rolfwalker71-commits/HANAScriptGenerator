@@ -1,0 +1,1621 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HANAScriptGenerator</title>
+    <style>
+:root{color-scheme:light;--bg: #f4f5f7;--panel: #ffffff;--panel-alt: #fafbfc;--border: #dcdfe4;--border-strong: #c3c8d0;--text: #1b1f24;--muted: #626b76;--accent: #0a6ed1;--accent-soft: #e8f1fb;--error: #b42318;--error-soft: #fdeceb;--warning: #8a5a00;--warning-soft: #fdf5e3;--code-bg: #1c2128;--code-text: #d7dde5;--radius: 8px;--gap: 16px}@media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg: #14171c;--panel: #1b1f26;--panel-alt: #21262e;--border: #2e343d;--border-strong: #3d444f;--text: #e4e7eb;--muted: #9aa3af;--accent: #4a9eff;--accent-soft: #16283d;--error: #ff8e85;--error-soft: #33201e;--warning: #e8b44a;--warning-soft: #2e2718;--code-bg: #11151a;--code-text: #d7dde5}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--gap);padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--border)}.topbar h1{margin:0;font-size:17px;letter-spacing:-.01em}.topbar__title p{margin:2px 0 0;color:var(--muted);font-size:12.5px}.topbar__profiles{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.layout{display:grid;grid-template-columns:minmax(360px,460px) minmax(0,1fr);gap:var(--gap);padding:var(--gap);align-items:start}@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius)}.panel--output{position:sticky;top:var(--gap);overflow:hidden}.steps{display:flex;gap:4px;overflow-x:auto;padding:10px 20px 0;background:var(--panel);border-bottom:1px solid var(--border)}.steps__item{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding:8px 12px 10px;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:inherit;font-size:12.5px;white-space:nowrap;cursor:pointer}.steps__item:hover{color:var(--text)}.steps__num{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:var(--panel-alt);border:1px solid var(--border-strong);font-size:11px;font-variant-numeric:tabular-nums}.steps__item[data-state=done] .steps__num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.steps__item[data-state=blocked] .steps__num{background:var(--error-soft);border-color:var(--error);color:var(--error)}.steps__item[aria-current=true]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}.wizard{display:flex;flex-direction:column;min-height:420px}.step{padding:20px 22px 8px}.step h2{margin:0;font-size:17px;letter-spacing:-.01em}.step__lead{margin:6px 0 18px;max-width:62ch;color:var(--muted);font-size:13px}.step__lead code{font-size:12px;background:var(--panel-alt);border:1px solid var(--border);border-radius:3px;padding:0 4px}.wizard__foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding:14px 22px;border-top:1px solid var(--border);background:var(--panel-alt);border-radius:0 0 var(--radius) var(--radius)}.wizard__status{margin:0;color:var(--muted);font-size:12.5px}.hint{margin:0;padding:8px 10px;background:var(--panel-alt);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-x:auto}.summary{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:1px 18px;margin:0;font-size:13px}.summary dt{color:var(--muted)}.summary dd{margin:0;overflow-wrap:anywhere}.group{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:4px;min-width:0}.field--wide{grid-column:1 / -1}.field>span{font-size:12.5px;font-weight:500;color:var(--muted)}.field small{color:var(--muted);font-size:11.5px}.field small code{font-size:11px;background:var(--panel-alt);border:1px solid var(--border);border-radius:3px;padding:0 3px}.field--check{flex-direction:row;align-items:center;gap:8px}.field--check>span{color:var(--text);font-weight:400}input[type=text],input[type=email],input[type=number],input[type=time],select,textarea{width:100%;padding:7px 9px;background:var(--panel-alt);color:var(--text);border:1px solid var(--border-strong);border-radius:6px;font:inherit}textarea{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;font-size:13px;resize:vertical}input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.subgroup{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:12px}.chips{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px}.chip{padding:2px 9px;background:var(--accent-soft);color:var(--accent);border-radius:999px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.btn{padding:6px 12px;background:var(--panel-alt);color:var(--text);border:1px solid var(--border-strong);border-radius:6px;font:inherit;font-size:13px;cursor:pointer}.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn--primary:hover:not(:disabled){color:#fff;filter:brightness(1.1)}.btn--ghost{background:transparent;border-color:var(--border);font-size:12.5px;padding:5px 10px}.btn--link{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline}.issues{display:grid;gap:1px;padding:10px 16px;border-bottom:1px solid var(--border)}.issue{margin:0;padding:5px 9px;border-radius:5px;font-size:12.5px}.issue--error{background:var(--error-soft);color:var(--error)}.issue--warning{background:var(--warning-soft);color:var(--warning)}.tabs{display:flex;overflow-x:auto;background:var(--panel-alt);border-bottom:1px solid var(--border)}.tab{flex:0 0 auto;padding:10px 14px;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:inherit;font-size:12.5px;white-space:nowrap;cursor:pointer}.tab:hover{color:var(--text)}.tab[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}.output__head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px}.output__head h2{margin:0;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.output__head p{margin:3px 0 0;color:var(--muted);font-size:12.5px;max-width:62ch}.output__actions{display:flex;gap:6px}.code{margin:0;padding:16px;max-height:calc(100vh - 230px);overflow:auto;background:var(--code-bg);color:var(--code-text);font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;font-size:12.5px;line-height:1.55;tab-size:4}.code code{white-space:pre}
+
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__title">
+        <h1>HANAScriptGenerator</h1>
+        <p>Fragt alles ab, was für den SAP-HANA-Schema-Export gebraucht wird, und erzeugt daraus den kompletten Satz Skripte.</p>
+      </div>
+      <div class="topbar__profiles">
+        <label class="sr-only" for="profileSelect">Kundenprofil</label>
+        <select id="profileSelect">
+          <option value="">Kundenprofil laden…</option>
+        </select>
+        <button type="button" id="btnSaveProfile" class="btn btn--ghost">Profil speichern</button>
+        <button type="button" id="btnDeleteProfile" class="btn btn--ghost">Löschen</button>
+        <button type="button" id="btnExportJson" class="btn btn--ghost">JSON sichern</button>
+        <label class="btn btn--ghost" for="inputImportJson">JSON laden</label>
+        <input type="file" id="inputImportJson" accept="application/json,.json" hidden />
+        <button type="button" id="btnReset" class="btn btn--ghost">Neu beginnen</button>
+      </div>
+    </header>
+
+    <nav class="steps" id="stepNav" aria-label="Schritte"></nav>
+
+    <main class="layout">
+      <!-- ================================================== Wizard ===== -->
+      <section class="panel wizard">
+        <form id="configForm" autocomplete="off">
+          <!-- ------------------------------------------------ Schritt 1 -->
+          <section class="step" data-title="System">
+            <h2>Um welches System geht es?</h2>
+            <p class="step__lead">
+              Diese Angaben stehen später im Kopf jedes Skripts und bestimmen, wie sich das
+              Exportskript an der Datenbank anmeldet.
+            </p>
+
+            <div class="group">
+              <label class="field field--wide">
+                <span>Kunde</span>
+                <input type="text" id="customer" placeholder="z. B. Muster AG" />
+                <small>Nur zur Kennzeichnung: Skriptkopf, Anleitung, Dateiname des ZIP.</small>
+              </label>
+
+              <label class="field">
+                <span>SID des Tenants</span>
+                <input type="text" id="sid" maxlength="3" placeholder="z. B. HDB" />
+                <small>Dreistellig. Leitet Benutzer und Pfade vor.</small>
+              </label>
+
+              <label class="field">
+                <span>Instanznummer</span>
+                <input type="text" id="instance" maxlength="2" placeholder="00" />
+                <small>Zweistellig, bestimmt den Port 3&lt;nn&gt;15.</small>
+              </label>
+
+              <label class="field">
+                <span>Hostname</span>
+                <input type="text" id="host" placeholder="z. B. hdbprod" />
+              </label>
+
+              <label class="field">
+                <span>SQL-Port</span>
+                <input type="number" id="port" min="1" max="65535" />
+              </label>
+
+              <label class="field">
+                <span>Datenbankbenutzer</span>
+                <input type="text" id="dbUser" placeholder="SYSTEM" />
+                <small>Braucht das Recht EXPORT.</small>
+              </label>
+
+              <label class="field">
+                <span>Linux-Benutzer</span>
+                <input type="text" id="osUser" placeholder="&lt;sid&gt;adm" />
+                <small>Userstore-Key und Cronjob liegen unter diesem Benutzer.</small>
+              </label>
+
+              <label class="field field--wide">
+                <span>Name des hdbuserstore-Key</span>
+                <input type="text" id="userstoreKey" placeholder="SCHEMAEXPORT" />
+                <small>Frei wählbar. Das Passwort liegt im Userstore, nie im Skript.</small>
+              </label>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 2 -->
+          <section class="step" data-title="Pfade">
+            <h2>Wo liegt was auf dem Server?</h2>
+            <p class="step__lead">
+              Aus SID und Instanznummer vorgeschlagen. Weicht die Installation ab, hier
+              überschreiben – auf dem Zielsystem verrät <code>which hdbsql</code> den echten Pfad.
+            </p>
+
+            <div class="group">
+              <label class="field field--wide">
+                <span>hdbsql</span>
+                <input type="text" id="hdbsqlPath" placeholder="/usr/sap/&lt;SID&gt;/HDB&lt;nn&gt;/exe/hdbsql" />
+                <small>Häufige Alternative: <code>/usr/sap/hdbclient/hdbsql</code></small>
+              </label>
+
+              <label class="field field--wide">
+                <span>Exportverzeichnis</span>
+                <input type="text" id="exportBase" placeholder="/usr/sap/&lt;SID&gt;/HDB&lt;nn&gt;/work/schema_exports" />
+                <small>Hier entstehen Archive und Logs. Muss genug Platz haben.</small>
+              </label>
+
+              <label class="field field--wide">
+                <span>Ablageort des Exportskripts</span>
+                <input type="text" id="scriptPath" placeholder="/usr/sap/&lt;SID&gt;/HDB&lt;nn&gt;/work/schema_export.sh" />
+                <small>Von hier ruft Cron das Skript auf.</small>
+              </label>
+
+              <div class="field--wide">
+                <button type="button" id="btnDerivePaths" class="btn btn--ghost">
+                  Vorschläge erneut aus SID ableiten
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 3 -->
+          <section class="step" data-title="Schemas">
+            <h2>Welche Schemas sollen gesichert werden?</h2>
+            <p class="step__lead">
+              Jedes Schema wird einzeln exportiert und einzeln archiviert – pro Schema und Tag
+              entsteht genau ein Archiv, kein Sammelarchiv.
+            </p>
+
+            <div class="group">
+              <label class="field field--wide">
+                <span>Ein Schema pro Zeile</span>
+                <textarea id="schemas" rows="7" spellcheck="false" placeholder="SALES&#10;FINANCE"></textarea>
+                <small>Komma oder Leerzeichen gehen auch. Groß geschrieben, wie in HANA hinterlegt.</small>
+              </label>
+
+              <div class="chips" id="schemaChips"></div>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 4 -->
+          <section class="step" data-title="Archivierung">
+            <h2>Wie soll exportiert und archiviert werden?</h2>
+            <p class="step__lead">
+              Nach jedem Export läuft <code>tar</code> über das Tagesverzeichnis. Das Archiv wird
+              erst gegengelesen und dann umbenannt, damit ein Abbruch nichts Halbfertiges hinterlässt.
+            </p>
+
+            <div class="group">
+              <label class="field">
+                <span>Threads</span>
+                <input type="number" id="threads" min="1" max="64" />
+                <small>Parallelität des EXPORT. Mehr Threads, mehr Last.</small>
+              </label>
+
+              <label class="field">
+                <span>Archivformat</span>
+                <select id="compression">
+                  <option value="gz">tar + gzip (.tar.gz)</option>
+                  <option value="zst">tar + zstd (.tar.zst)</option>
+                  <option value="none">tar ohne Komprimierung (.tar)</option>
+                </select>
+                <small>zstd ist schneller, muss aber installiert sein.</small>
+              </label>
+
+              <label class="field">
+                <span>Mindestens frei (GB)</span>
+                <input type="number" id="minFreeGb" min="0" />
+                <small>Das Skript bricht ab, wenn weniger frei ist. 0 schaltet die Prüfung ab.</small>
+              </label>
+
+              <label class="field field--check field--wide">
+                <input type="checkbox" id="keepRawExport" />
+                <span>Unkomprimierten Export zusätzlich behalten</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 5 -->
+          <section class="step" data-title="Zeitplan">
+            <h2>Wann und wie lange?</h2>
+            <p class="step__lead">
+              Der Zeitplan landet in der Crontab des Linux-Benutzers. Alte Archive und Logs räumt
+              das Skript nach Ablauf der Aufbewahrung selbst weg.
+            </p>
+
+            <div class="group">
+              <label class="field">
+                <span>Aufbewahrung (Tage)</span>
+                <input type="number" id="retentionDays" min="1" />
+              </label>
+
+              <label class="field">
+                <span>Uhrzeit</span>
+                <input type="time" id="scheduleTime" />
+              </label>
+
+              <label class="field field--wide">
+                <span>Wochentage</span>
+                <select id="scheduleDow">
+                  <option value="*">täglich</option>
+                  <option value="1-5">Montag bis Freitag</option>
+                  <option value="6,0">Samstag und Sonntag</option>
+                  <option value="0">nur Sonntag</option>
+                  <option value="__custom">eigener Crontab-Ausdruck…</option>
+                </select>
+                <input type="text" id="scheduleDowCustom" placeholder="z. B. 1,3,5" hidden />
+              </label>
+
+              <p class="hint field--wide" id="cronPreview"></p>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 6 -->
+          <section class="step" data-title="Benachrichtigung">
+            <h2>Soll der Lauf sich melden?</h2>
+            <p class="step__lead">
+              Optional. Ohne Mail bleibt das Log im Exportverzeichnis die einzige Rückmeldung.
+            </p>
+
+            <div class="group">
+              <label class="field field--check field--wide">
+                <input type="checkbox" id="mailEnabled" />
+                <span>Mail nach dem Lauf versenden</span>
+              </label>
+
+              <div id="mailFields" class="subgroup">
+                <label class="field field--wide">
+                  <span>Empfänger</span>
+                  <input type="email" id="mailRecipient" placeholder="ops@example.com" />
+                </label>
+
+                <label class="field">
+                  <span>Mail-Kommando</span>
+                  <input type="text" id="mailCommand" placeholder="mailx" />
+                  <small>Muss auf dem Server eingerichtet sein.</small>
+                </label>
+
+                <label class="field field--check">
+                  <input type="checkbox" id="mailOnlyOnError" />
+                  <span>Nur bei Fehlern</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 7 -->
+          <section class="step step--result" data-title="Ergebnis">
+            <h2>Fertig – das sind die Dateien</h2>
+            <p class="step__lead">
+              Alle Skripte in der Reihenfolge, in der sie auf dem Server ausgeführt werden.
+              <strong>Alle als ZIP</strong> lädt den kompletten Satz auf einmal.
+            </p>
+
+            <dl class="summary" id="summary"></dl>
+          </section>
+        </form>
+
+        <div class="wizard__foot">
+          <button type="button" id="btnBack" class="btn">Zurück</button>
+          <p class="wizard__status" id="wizardStatus"></p>
+          <button type="button" id="btnNext" class="btn btn--primary">Weiter</button>
+        </div>
+      </section>
+
+      <!-- ================================================== Ausgabe ===== -->
+      <section class="panel panel--output" id="output">
+        <div id="issues" class="issues" hidden></div>
+
+        <nav class="tabs" id="fileTabs" aria-label="Generierte Dateien"></nav>
+
+        <div class="output__head">
+          <div>
+            <h2 id="fileName">Noch keine Ausgabe</h2>
+            <p id="filePurpose">Die Vorschau erscheint, sobald System, Pfade und Schemas stehen.</p>
+          </div>
+          <div class="output__actions">
+            <button type="button" id="btnCopy" class="btn" disabled>Kopieren</button>
+            <button type="button" id="btnDownload" class="btn" disabled>Datei</button>
+            <button type="button" id="btnDownloadAll" class="btn btn--primary" disabled>Alle als ZIP</button>
+          </div>
+        </div>
+
+        <pre class="code"><code id="fileContent"></code></pre>
+      </section>
+    </main>
+
+    <script>
+var Ue=Object.defineProperty;var Ke=(_,$,T)=>$ in _?Ue(_,$,{enumerable:!0,configurable:!0,writable:!0,value:T}):_[$]=T;var j=(_,$,T)=>Ke(_,typeof $!="symbol"?$+"":$,T);(function(){"use strict";var oe;const _=/^[A-Za-z_][A-Za-z0-9_#$]*$/,$=/^[A-Za-z][A-Za-z0-9]{2}$/,T=/^[a-z_][a-z0-9_-]*\$?$/;function he(e){return e.replace(/\r?\n/g," ").trim()}function K(e){const t=e.trim().replace(/\/{2,}/g,"/");return t.length>1?t.replace(/\/+$/,""):t}function le(e){const t=new Set,r=[];for(const i of e.split(/[\s,;]+/)){const l=i.trim();if(l.length===0)continue;const a=l.toUpperCase();t.has(a)||(t.add(a),r.push(l))}return r}function G(e){const t=e.padStart(2,"0").slice(0,2);return Number.parseInt(`3${t}15`,10)}function V(e,t){return`/usr/sap/${e.toUpperCase()}/HDB${t.padStart(2,"0")}`}function ue(e,t){return`${V(e,t)}/exe/hdbsql`}function ce(e,t){return`${V(e,t)}/work/schema_exports`}function de(e,t){return`${V(e,t)}/work/schema_export.sh`}function Ee(e){return e.trim().length===0?"":`${e.trim().toLowerCase()}adm`}function v(e,t){const r=e.trim();return r.length===0?{port:G(t),hdbsqlPath:"",exportBase:"",scriptPath:"",osUser:""}:{port:G(t),hdbsqlPath:ue(r,t),exportBase:ce(r,t),scriptPath:de(r,t),osUser:Ee(r)}}function M(){return{customer:"",sid:"",instance:"00",host:"",port:G("00"),dbUser:"SYSTEM",osUser:"",userstoreKey:"SCHEMAEXPORT",hdbsqlPath:"",exportBase:"",scriptPath:"",schemas:[],threads:10,retentionDays:14,compression:"gz",keepRawExport:!1,minFreeGb:0,schedule:{hour:2,minute:0,dayOfWeek:"*"},mail:{enabled:!1,recipient:"",onlyOnError:!0,command:"mailx"}}}function P(e){return{...e,customer:e.customer.trim(),sid:e.sid.trim().toUpperCase(),instance:e.instance.trim().padStart(2,"0"),host:e.host.trim(),dbUser:e.dbUser.trim(),osUser:e.osUser.trim(),userstoreKey:e.userstoreKey.trim(),hdbsqlPath:K(e.hdbsqlPath),scriptPath:K(e.scriptPath),exportBase:K(e.exportBase),schemas:e.schemas.map(t=>t.trim()).filter(t=>t.length>0),mail:{...e.mail,recipient:e.mail.recipient.trim()},schedule:{...e.schedule}}}const $e=/^(\*|([0-7](-[0-7])?)(,[0-7](-[0-7])?)*)(\/\d+)?$/;function pe(e){return e.startsWith("/")&&!e.includes(`
+`)}function me(e){const t=[],r=(u,E)=>t.push({field:u,severity:"error",message:E}),i=(u,E)=>t.push({field:u,severity:"warning",message:E});e.customer.length===0&&i("customer","Ohne Kundenname fehlt die Zuordnung im Skriptkopf."),$.test(e.sid)||r("sid","Die SID muss dreistellig sein und mit einem Buchstaben beginnen, z. B. HDB."),/^\d{2}$/.test(e.instance)||r("instance","Die Instanznummer muss zweistellig sein, z. B. 00."),e.host.length===0?r("host","Der Hostname darf nicht leer sein."):/^[A-Za-z0-9._-]+$/.test(e.host)||r("host","Der Hostname enthält unzulässige Zeichen."),(!Number.isInteger(e.port)||e.port<1||e.port>65535)&&r("port","Der SQL-Port muss zwischen 1 und 65535 liegen."),e.dbUser.length===0&&r("dbUser","Der Datenbankbenutzer darf nicht leer sein."),T.test(e.osUser)||r("osUser","Der Linux-Benutzer enthält unzulässige Zeichen."),/^[A-Za-z0-9_]+$/.test(e.userstoreKey)||r("userstoreKey","Der hdbuserstore-Key darf nur Buchstaben, Ziffern und _ enthalten.");for(const u of["hdbsqlPath","exportBase","scriptPath"])pe(e[u])||r(u,"Es wird ein absoluter Pfad benötigt, beginnend mit /.");(e.exportBase==="/"||e.exportBase.split("/").length<3)&&r("exportBase","Der Exportpfad ist zu nah an der Wurzel – das Aufräumen wäre gefährlich."),e.schemas.length===0&&r("schemas","Mindestens ein Schema muss angegeben werden.");for(const u of e.schemas)_.test(u)?u!==u.toUpperCase()&&i("schemas",`Schemaname "${u}" ist nicht durchgängig groß geschrieben – HANA unterscheidet bei Quoting die Schreibweise.`):r("schemas",`Schemaname "${u}" enthält unzulässige Zeichen.`);!Number.isInteger(e.threads)||e.threads<1||e.threads>64?r("threads","THREADS muss zwischen 1 und 64 liegen."):e.threads>16&&i("threads","Mehr als 16 Threads belasten das Produktivsystem während des Exports spürbar."),(!Number.isInteger(e.retentionDays)||e.retentionDays<1)&&r("retentionDays","Die Aufbewahrung muss mindestens 1 Tag betragen."),(!Number.isInteger(e.minFreeGb)||e.minFreeGb<0)&&r("minFreeGb","Der Mindest-Speicherplatz darf nicht negativ sein.");const{hour:l,minute:a,dayOfWeek:c}=e.schedule;return(!Number.isInteger(l)||l<0||l>23)&&r("schedule","Die Stunde muss zwischen 0 und 23 liegen."),(!Number.isInteger(a)||a<0||a>59)&&r("schedule","Die Minute muss zwischen 0 und 59 liegen."),$e.test(c)||r("schedule","Das Wochentagsfeld entspricht nicht der Crontab-Syntax."),e.mail.enabled&&(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.mail.recipient)||r("mail","Für den Mailversand wird eine gültige Empfängeradresse benötigt."),/^[A-Za-z0-9._/-]+$/.test(e.mail.command)||r("mail","Das Mail-Kommando enthält unzulässige Zeichen.")),e.keepRawExport&&i("keepRawExport","Rohexport und Archiv werden parallel aufbewahrt – der Platzbedarf steigt entsprechend."),t}const Ae="HANAScriptGenerator",n="# ------------------------------------------------------------",H="# ============================================================";function ee(e){var r;const t=e.split("/");return(r=t[t.length-1])!=null?r:e}function te(e){const t=e.lastIndexOf("/");return t<=0?"/":e.slice(0,t)}function W(e,t){const r=e.normalize("NFKD").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"").toUpperCase();return r.length>0?r:t.toUpperCase()}function L(e){switch(e){case"gz":return"tar.gz";case"zst":return"tar.zst";case"none":return"tar"}}function X(e){switch(e){case"gz":return"tar + gzip";case"zst":return"tar + zstd";case"none":return"tar ohne Komprimierung"}}function f(e,t,r=[]){return["#!/bin/bash","#",H,`#  ${t}`,"#",`#  Kunde       : ${he(e.customer)||"-"}`,`#  Tenant      : ${e.sid} (Instanz ${e.instance})`,`#  Host        : ${e.host}:${e.port}`,`#  DB-Benutzer : ${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`,`#  Linux-User  : ${e.osUser}`,"#",...r.map(l=>`#  ${l}`),...r.length>0?["#"]:[],`#  Generiert durch ${Ae}.`,H].join(`
+`)}function C(e,t=""){return[`if [ "$(whoami)" != "${e.osUser}" ]; then`,`    echo "FEHLER: Dieses Skript muss als ${e.osUser} laufen (aktuell: $(whoami))." >&2`,`    echo "Hinweis: der hdbuserstore-Key ${e.userstoreKey} existiert nur für ${e.osUser}." >&2`,"    exit 1","fi"].map(r=>r.length>0?t+r:r).join(`
+`)}function N(e,t="SCHEMAS"){const r=e.schemas.map(i=>`    "${i}"`).join(`
+`);return`${t}=(
+${r}
+)`}function Se(e){return e.schemas.map(t=>`'${t}'`).join(",")}function be(e){const t=`${f(e,"Schritt 1 – hdbuserstore-Key anlegen",["Der hdbuserstore ist benutzerspezifisch. Key und Cronjob muessen",`deshalb beide unter ${e.osUser} eingerichtet werden.`,"Das Passwort wird interaktiv abgefragt und nirgends abgelegt."])}
+
+set -u
+
+HANA_KEY="${e.userstoreKey}"
+HANA_ENV="${e.host}:${e.port}"
+HANA_USER="${e.dbUser}"
+
+${C(e)}
+
+${n}
+#  Bestehende Keys anzeigen
+${n}
+
+echo "Vorhandene hdbuserstore-Keys fuer $(whoami):"
+echo
+hdbuserstore list || {
+    echo "FEHLER: hdbuserstore konnte nicht ausgefuehrt werden." >&2
+    echo "Hinweis: PATH pruefen, der HANA-Client muss erreichbar sein." >&2
+    exit 1
+}
+echo
+
+if hdbuserstore list "\${HANA_KEY}" >/dev/null 2>&1; then
+    echo "Hinweis: Der Key \${HANA_KEY} existiert bereits und wird ueberschrieben."
+    echo "Andere Keys bleiben unveraendert."
+    printf "Fortfahren? [j/N] "
+    read -r ANSWER
+    case "\${ANSWER}" in
+        j|J|y|Y) ;;
+        *) echo "Abgebrochen."; exit 1 ;;
+    esac
+    echo
+fi
+
+${n}
+#  Passwort abfragen
+${n}
+
+printf "Passwort fuer %s auf %s: " "\${HANA_USER}" "\${HANA_ENV}"
+read -rs HANA_PASSWORD
+echo
+
+if [ -z "\${HANA_PASSWORD}" ]; then
+    echo "FEHLER: Es wurde kein Passwort eingegeben." >&2
+    exit 1
+fi
+
+printf "Passwort wiederholen: "
+read -rs HANA_PASSWORD_CONFIRM
+echo
+
+if [ "\${HANA_PASSWORD}" != "\${HANA_PASSWORD_CONFIRM}" ]; then
+    echo "FEHLER: Die Eingaben stimmen nicht ueberein." >&2
+    unset HANA_PASSWORD HANA_PASSWORD_CONFIRM
+    exit 1
+fi
+
+${n}
+#  Key setzen
+#
+#  hdbuserstore nimmt das Passwort nur als Argument entgegen. Es ist dadurch
+#  fuer die Dauer des Aufrufs in der Prozessliste sichtbar. Genau deshalb wird
+#  der Key interaktiv gesetzt und nicht aus einer Datei oder der Crontab.
+${n}
+
+hdbuserstore set "\${HANA_KEY}" "\${HANA_ENV}" "\${HANA_USER}" "\${HANA_PASSWORD}"
+RC=$?
+
+unset HANA_PASSWORD HANA_PASSWORD_CONFIRM
+
+if [ \${RC} -ne 0 ]; then
+    echo "FEHLER: Key konnte nicht gesetzt werden (RC \${RC})." >&2
+    exit 1
+fi
+
+echo
+echo "Key \${HANA_KEY} wurde gesetzt:"
+hdbuserstore list "\${HANA_KEY}"
+
+${n}
+#  Verbindung sofort testen
+${n}
+
+echo
+echo "Teste Verbindung..."
+
+if [ -x "${e.hdbsqlPath}" ]; then
+    HDBSQL="${e.hdbsqlPath}"
+else
+    HDBSQL="$(command -v hdbsql || true)"
+fi
+
+if [ -z "\${HDBSQL}" ]; then
+    echo "WARNUNG: hdbsql nicht gefunden, Verbindungstest uebersprungen." >&2
+    echo "Bitte 'which hdbsql' ausfuehren und den Pfad in den Skripten anpassen." >&2
+    exit 0
+fi
+
+"\${HDBSQL}" -U "\${HANA_KEY}" "SELECT CURRENT_USER FROM DUMMY;"
+RC=$?
+
+if [ \${RC} -ne 0 ]; then
+    echo "FEHLER: Verbindung mit Key \${HANA_KEY} fehlgeschlagen (RC \${RC})." >&2
+    exit 1
+fi
+
+echo
+echo "Schritt 1 abgeschlossen."
+`;return{name:"01_setup_userstore.sh",title:"1 · Userstore",purpose:`Legt den hdbuserstore-Key ${e.userstoreKey} für ${e.osUser} an und testet ihn sofort.`,language:"bash",executable:!0,content:t}}function Re(e){const t=te(e.scriptPath),r=`${f(e,"Schritt 2 – Verzeichnisse vorbereiten",[`Exportbasis: ${e.exportBase}`,"Legt pro Schema ein eigenes Unterverzeichnis an, damit jeder Export","und jedes Archiv getrennt abgelegt werden koennen."])}
+
+set -u
+
+EXPORT_BASE="${e.exportBase}"
+SCRIPT_DIR="${t}"
+
+${N(e)}
+
+${C(e)}
+
+${n}
+#  Verzeichnisse anlegen
+${n}
+
+echo "Lege Exportverzeichnisse an..."
+
+mkdir -p "\${EXPORT_BASE}/logs" || {
+    echo "FEHLER: \${EXPORT_BASE}/logs konnte nicht angelegt werden." >&2
+    exit 1
+}
+
+for SCHEMA in "\${SCHEMAS[@]}"
+do
+    mkdir -p "\${EXPORT_BASE}/\${SCHEMA}" || {
+        echo "FEHLER: \${EXPORT_BASE}/\${SCHEMA} konnte nicht angelegt werden." >&2
+        exit 1
+    }
+    echo "  \${EXPORT_BASE}/\${SCHEMA}"
+done
+
+mkdir -p "\${SCRIPT_DIR}" || {
+    echo "FEHLER: \${SCRIPT_DIR} konnte nicht angelegt werden." >&2
+    exit 1
+}
+
+${n}
+#  Rechte setzen
+#
+#  Die Exporte enthalten Nutzdaten der Datenbank. Sie gehen deshalb nur den
+#  Instanzbenutzer und seine Gruppe etwas an.
+${n}
+
+chmod 750 "\${EXPORT_BASE}" || true
+
+${n}
+#  Schreibtest
+${n}
+
+TEST_FILE="\${EXPORT_BASE}/.write_test_$"
+
+if ! touch "\${TEST_FILE}" 2>/dev/null; then
+    echo "FEHLER: In \${EXPORT_BASE} kann nicht geschrieben werden." >&2
+    exit 1
+fi
+
+rm -f "\${TEST_FILE}"
+
+echo "Schreibtest erfolgreich."
+
+${n}
+#  Ergebnis
+${n}
+
+echo
+ls -ld "\${EXPORT_BASE}" "\${EXPORT_BASE}/logs"
+echo
+df -h "\${EXPORT_BASE}"
+echo
+echo "Schritt 2 abgeschlossen."
+`;return{name:"02_prepare_dirs.sh",title:"2 · Verzeichnisse",purpose:`Legt ${e.exportBase} samt Log- und Schema-Unterverzeichnissen an und prüft das Schreibrecht.`,language:"bash",executable:!0,content:r}}function _e(e){const t=e.compression==="zst";return{name:"03_preflight.sh",title:"3 · Vorabprüfung",purpose:"Prüft Client, Verbindung, Schemas, Werkzeuge und Speicherplatz, ohne etwas zu verändern.",language:"bash",executable:!0,content:`${f(e,"Schritt 3 – Vorabpruefung",["Prueft alle Voraussetzungen des spaeteren Exports.","Dieses Skript veraendert nichts und kann jederzeit wiederholt werden."])}
+
+set -u
+
+HANA_KEY="${e.userstoreKey}"
+HDBSQL="${e.hdbsqlPath}"
+EXPORT_BASE="${e.exportBase}"
+MIN_FREE_GB=${e.minFreeGb}
+
+${N(e)}
+
+CHECKS_OK=0
+CHECKS_FAILED=0
+
+ok()
+{
+    echo "  [ OK ]   $*"
+    CHECKS_OK=$((CHECKS_OK + 1))
+}
+
+fail()
+{
+    echo "  [FEHLER] $*"
+    CHECKS_FAILED=$((CHECKS_FAILED + 1))
+}
+
+note()
+{
+    echo "  [ INFO ] $*"
+}
+
+echo
+echo "Vorabpruefung fuer ${e.sid} auf ${e.host}"
+echo
+
+${n}
+#  1. Linux-Benutzer
+${n}
+
+${C(e)}
+
+ok "Linux-Benutzer ist ${e.osUser}."
+note "Host: $(hostname)"
+
+${n}
+#  2. HANA-Client
+${n}
+
+if [ -x "\${HDBSQL}" ]; then
+    ok "hdbsql gefunden: \${HDBSQL}"
+else
+    fail "hdbsql fehlt oder ist nicht ausfuehrbar: \${HDBSQL}"
+    FOUND="$(command -v hdbsql || true)"
+    if [ -n "\${FOUND}" ]; then
+        note "Im PATH liegt stattdessen: \${FOUND}"
+        note "Diesen Pfad in allen Skripten als HDBSQL eintragen."
+    fi
+fi
+
+${n}
+#  3. Werkzeuge
+${n}
+
+for TOOL in tar find du df flock${t?" zstd":""}
+do
+    if command -v "\${TOOL}" >/dev/null 2>&1; then
+        ok "\${TOOL} verfuegbar."
+    else
+        fail "\${TOOL} fehlt – das Exportskript benoetigt es."
+    fi
+done
+
+${n}
+#  4. hdbuserstore-Key
+${n}
+
+if hdbuserstore list "\${HANA_KEY}" >/dev/null 2>&1; then
+    ok "hdbuserstore-Key \${HANA_KEY} vorhanden."
+    hdbuserstore list "\${HANA_KEY}" | sed 's/^/           /'
+else
+    fail "hdbuserstore-Key \${HANA_KEY} fehlt. Zuerst 01_setup_userstore.sh ausfuehren."
+fi
+
+${n}
+#  5. Verbindung und Zieldatenbank
+${n}
+
+if [ -x "\${HDBSQL}" ]; then
+
+    if "\${HDBSQL}" -U "\${HANA_KEY}" "SELECT CURRENT_USER FROM DUMMY;" >/dev/null 2>&1; then
+        ok "Anmeldung ueber \${HANA_KEY} erfolgreich."
+    else
+        fail "Anmeldung ueber \${HANA_KEY} fehlgeschlagen."
+    fi
+
+    echo
+    note "Zieldatenbank laut SYS.M_DATABASE:"
+    "\${HDBSQL}" -U "\${HANA_KEY}" \\
+        "SELECT DATABASE_NAME, HOST FROM SYS.M_DATABASE;" 2>&1 | sed 's/^/           /'
+    echo
+
+${n}
+#  6. Schemas
+${n}
+
+    note "Erwartet werden: \${SCHEMAS[*]}"
+
+    for SCHEMA in "\${SCHEMAS[@]}"
+    do
+        COUNT="$("\${HDBSQL}" -U "\${HANA_KEY}" -a -x \\
+            "SELECT COUNT(*) FROM SYS.SCHEMAS WHERE SCHEMA_NAME = '\${SCHEMA}';" 2>/dev/null | tr -dc '0-9')"
+
+        if [ "\${COUNT:-0}" -ge 1 ]; then
+            ok "Schema \${SCHEMA} existiert."
+        else
+            fail "Schema \${SCHEMA} wurde nicht gefunden – Schreibweise pruefen."
+        fi
+    done
+
+    echo
+    note "Ungefaehre Groesse der Schemas im Hauptspeicher:"
+    "\${HDBSQL}" -U "\${HANA_KEY}" \\
+        "SELECT SCHEMA_NAME, ROUND(SUM(MEMORY_SIZE_IN_TOTAL)/1024/1024/1024,2) AS MEMORY_GB
+         FROM SYS.M_CS_TABLES
+         WHERE SCHEMA_NAME IN (${Se(e)})
+         GROUP BY SCHEMA_NAME ORDER BY SCHEMA_NAME;" 2>&1 | sed 's/^/           /'
+    note "Das ist nicht die spaetere Exportgroesse, aber eine Groessenordnung."
+    echo
+
+else
+    fail "Verbindungs- und Schemapruefung uebersprungen, da hdbsql fehlt."
+fi
+
+${n}
+#  7. Exportverzeichnis
+${n}
+
+if [ -d "\${EXPORT_BASE}" ]; then
+    ok "Exportverzeichnis vorhanden: \${EXPORT_BASE}"
+    if [ -w "\${EXPORT_BASE}" ]; then
+        ok "Exportverzeichnis ist beschreibbar."
+    else
+        fail "Exportverzeichnis ist nicht beschreibbar."
+    fi
+else
+    fail "Exportverzeichnis fehlt. Zuerst 02_prepare_dirs.sh ausfuehren."
+fi
+
+${n}
+#  8. Speicherplatz
+${n}
+
+if [ -d "\${EXPORT_BASE}" ]; then
+    df -h "\${EXPORT_BASE}" | sed 's/^/           /'
+
+    if [ "\${MIN_FREE_GB}" -gt 0 ]; then
+        FREE_GB="$(df -BG --output=avail "\${EXPORT_BASE}" 2>/dev/null | tail -1 | tr -dc '0-9')"
+        if [ -z "\${FREE_GB}" ]; then
+            note "Freier Speicherplatz konnte nicht automatisch ermittelt werden."
+        elif [ "\${FREE_GB}" -ge "\${MIN_FREE_GB}" ]; then
+            ok "Freier Speicherplatz: \${FREE_GB} GB (Mindestwert \${MIN_FREE_GB} GB)."
+        else
+            fail "Nur \${FREE_GB} GB frei, gefordert sind \${MIN_FREE_GB} GB."
+        fi
+    else
+        note "Keine Mindestgroesse konfiguriert (MIN_FREE_GB=0)."
+    fi
+fi
+
+${n}
+#  Ergebnis
+${n}
+
+echo
+echo "Bestanden: \${CHECKS_OK}   Fehlgeschlagen: \${CHECKS_FAILED}"
+echo
+
+if [ \${CHECKS_FAILED} -ne 0 ]; then
+    echo "Vorabpruefung NICHT bestanden. Bitte zuerst die Fehler beheben."
+    exit 1
+fi
+
+echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."
+`}}function fe(e){var i;const t=(i=e.schemas[0])!=null?i:"SCHEMA",r=`${f(e,"Schritt 4 – Einmaliger Testexport",["Exportiert genau ein Schema in ein Testverzeichnis und archiviert es.","Damit sind Export und tar-Lauf bewiesen, bevor Cron uebernimmt.","Aufruf: ./04_test_export.sh [SCHEMA]"])}
+
+set -u
+
+HANA_KEY="${e.userstoreKey}"
+HDBSQL="${e.hdbsqlPath}"
+EXPORT_BASE="${e.exportBase}"
+THREADS=${e.threads}
+COMPRESSION="${e.compression}"
+
+SCHEMA="\${1:-${t}}"
+
+TEST_DIR="\${EXPORT_BASE}/\${SCHEMA}/manual_test"
+TEST_ARCHIVE="\${EXPORT_BASE}/\${SCHEMA}/manual_test.tar"
+
+case "\${COMPRESSION}" in
+    gz)   TAR_CREATE=(-czf); TEST_ARCHIVE="\${TEST_ARCHIVE}.gz" ;;
+    zst)  TAR_CREATE=(--zstd -cf); TEST_ARCHIVE="\${TEST_ARCHIVE}.zst" ;;
+    none) TAR_CREATE=(-cf) ;;
+    *)    echo "FEHLER: Unbekannte Komprimierung \${COMPRESSION}" >&2; exit 1 ;;
+esac
+
+${C(e)}
+
+if [ ! -x "\${HDBSQL}" ]; then
+    echo "FEHLER: hdbsql nicht gefunden: \${HDBSQL}" >&2
+    exit 1
+fi
+
+${n}
+#  Testexport
+${n}
+
+echo "Testexport von Schema \${SCHEMA}"
+echo "Zielverzeichnis: \${TEST_DIR}"
+echo
+
+rm -rf "\${TEST_DIR}"
+mkdir -p "\${TEST_DIR}" || {
+    echo "FEHLER: \${TEST_DIR} konnte nicht angelegt werden." >&2
+    exit 1
+}
+
+SQL="EXPORT \\"\${SCHEMA}\\".\\"*\\" AS BINARY INTO '\${TEST_DIR}' WITH REPLACE THREADS \${THREADS};"
+
+echo "Setze ab:"
+echo "  \${SQL}"
+echo
+
+START="$(date +%s)"
+
+"\${HDBSQL}" -U "\${HANA_KEY}" "\${SQL}"
+RC=$?
+
+END="$(date +%s)"
+
+if [ \${RC} -ne 0 ]; then
+    echo >&2
+    echo "FEHLER: Export fehlgeschlagen (RC \${RC})." >&2
+    exit 1
+fi
+
+echo
+echo "Export erfolgreich in $((END - START)) Sekunden."
+echo "Groesse: $(du -sh "\${TEST_DIR}" | awk '{print $1}')"
+echo
+echo "Erste Dateien im Export:"
+find "\${TEST_DIR}" -maxdepth 3 -type f | head -20 | sed 's/^/  /'
+
+${n}
+#  Testarchivierung
+${n}
+
+echo
+echo "Archiviere Testexport nach \${TEST_ARCHIVE} ..."
+
+START="$(date +%s)"
+
+tar -C "\${EXPORT_BASE}/\${SCHEMA}" "\${TAR_CREATE[@]}" "\${TEST_ARCHIVE}" "manual_test"
+RC=$?
+
+END="$(date +%s)"
+
+if [ \${RC} -ne 0 ]; then
+    echo "FEHLER: Archivierung fehlgeschlagen (RC \${RC})." >&2
+    exit 1
+fi
+
+echo "Archiv erstellt in $((END - START)) Sekunden."
+echo "Archivgroesse: $(du -sh "\${TEST_ARCHIVE}" | awk '{print $1}')"
+
+${n}
+#  Aufraeumen
+${n}
+
+echo
+printf "Testexport und Testarchiv jetzt entfernen? [J/n] "
+read -r ANSWER
+
+case "\${ANSWER}" in
+    n|N)
+        echo "Testdaten bleiben liegen:"
+        echo "  \${TEST_DIR}"
+        echo "  \${TEST_ARCHIVE}"
+        ;;
+    *)
+        rm -rf "\${TEST_DIR}"
+        rm -f "\${TEST_ARCHIVE}"
+        echo "Testdaten entfernt."
+        ;;
+esac
+
+echo
+echo "Schritt 4 abgeschlossen. Jetzt das Hauptskript einmal manuell starten:"
+echo "  ${e.scriptPath}"
+`;return{name:"04_test_export.sh",title:"4 · Testexport",purpose:`Exportiert einmalig ${t} in ein Testverzeichnis und archiviert es, bevor Cron übernimmt.`,language:"bash",executable:!0,content:r}}function Ce(e){const t=ee(e.scriptPath),r=L(e.compression),i=`${f(e,"SAP HANA Schema-Export",["Jedes Schema wird einzeln exportiert und einzeln archiviert.",`Archivformat: ${X(e.compression)} (*.${r})`,`Aufbewahrung: ${e.retentionDays} Tage`,`Aufruf: ${e.scriptPath}`])}
+
+set -u
+
+${n}
+#  Konfiguration
+${n}
+
+RUN_AS_USER="${e.osUser}"
+HANA_KEY="${e.userstoreKey}"
+HDBSQL="${e.hdbsqlPath}"
+EXPORT_BASE="${e.exportBase}"
+
+THREADS=${e.threads}
+RETENTION_DAYS=${e.retentionDays}
+
+# gz | zst | none
+COMPRESSION="${e.compression}"
+
+# yes = unkomprimiertes Exportverzeichnis zusaetzlich behalten
+KEEP_RAW_EXPORT="${e.keepRawExport?"yes":"no"}"
+
+# Mindestens freier Speicher in GB vor dem Export, 0 = Pruefung aus
+MIN_FREE_GB=${e.minFreeGb}
+
+MAIL_ENABLED="${e.mail.enabled?"yes":"no"}"
+MAIL_RECIPIENT="${e.mail.recipient}"
+MAIL_ONLY_ON_ERROR="${e.mail.onlyOnError?"yes":"no"}"
+MAIL_COMMAND="${e.mail.command}"
+
+# Jedes Schema wird getrennt exportiert. Weitere Schemas hier ergaenzen.
+${N(e)}
+
+${n}
+#  SAP-Umgebung laden
+#
+#  Cron startet ohne Anmeldeprofil. Ohne die SAP-Umgebung findet hdbsql seine
+#  Bibliotheken unter Umstaenden nicht. Interaktiv ist das Laden wirkungslos.
+${n}
+
+if [ -f "\${HOME}/.sapenv.sh" ]; then
+    . "\${HOME}/.sapenv.sh" >/dev/null 2>&1 || true
+fi
+
+${n}
+#  Laufzeitwerte
+${n}
+
+DATE="$(date +%Y-%m-%d)"
+TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+
+LOG_DIR="\${EXPORT_BASE}/logs"
+LOG_FILE="\${LOG_DIR}/schema_export_\${TIMESTAMP}.log"
+LOCK_FILE="\${EXPORT_BASE}/.schema_export.lock"
+
+EXITCODE=0
+OK_SCHEMAS=()
+FAILED_SCHEMAS=()
+
+case "\${COMPRESSION}" in
+    gz)
+        TAR_CREATE=(-czf)
+        TAR_TEST=(-tzf)
+        ARCHIVE_EXT="tar.gz"
+        ;;
+    zst)
+        TAR_CREATE=(--zstd -cf)
+        TAR_TEST=(--zstd -tf)
+        ARCHIVE_EXT="tar.zst"
+        ;;
+    none)
+        TAR_CREATE=(-cf)
+        TAR_TEST=(-tf)
+        ARCHIVE_EXT="tar"
+        ;;
+    *)
+        echo "FEHLER: Unbekannter Wert fuer COMPRESSION: \${COMPRESSION}" >&2
+        exit 1
+        ;;
+esac
+
+${n}
+#  Logging
+${n}
+
+mkdir -p "\${LOG_DIR}" || {
+    echo "FEHLER: Log-Verzeichnis konnte nicht angelegt werden: \${LOG_DIR}" >&2
+    exit 1
+}
+
+log()
+{
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "\${LOG_FILE}"
+}
+
+${n}
+#  Vorabpruefungen
+${n}
+
+${C(e)}
+
+log "${H.slice(2)}"
+log "SAP HANA Schema-Export gestartet"
+log "Host: $(hostname)"
+log "Linux-Benutzer: $(whoami)"
+log "Datum: \${DATE}"
+log "Schemas: \${SCHEMAS[*]}"
+log "${H.slice(2)}"
+
+if [ ! -x "\${HDBSQL}" ]; then
+    log "FEHLER: hdbsql nicht gefunden oder nicht ausfuehrbar: \${HDBSQL}"
+    log "Hinweis: 'which hdbsql' ausfuehren und HDBSQL im Skript anpassen."
+    exit 1
+fi
+
+if [ ! -d "\${EXPORT_BASE}" ]; then
+    log "FEHLER: Exportverzeichnis existiert nicht: \${EXPORT_BASE}"
+    exit 1
+fi
+
+if [ ! -w "\${EXPORT_BASE}" ]; then
+    log "FEHLER: Exportverzeichnis ist nicht beschreibbar: \${EXPORT_BASE}"
+    exit 1
+fi
+
+# Parallel laufende Exporte verhindern. Ein Lauf, der laenger als das
+# Cron-Intervall dauert, wuerde sonst mit sich selbst um die Dateien streiten.
+exec 9>"\${LOCK_FILE}" || {
+    log "FEHLER: Lockdatei konnte nicht geoeffnet werden: \${LOCK_FILE}"
+    exit 1
+}
+
+if ! flock -n 9; then
+    log "ABBRUCH: Ein Export laeuft bereits (Lock: \${LOCK_FILE})."
+    exit 1
+fi
+
+if [ "\${MIN_FREE_GB}" -gt 0 ]; then
+    FREE_GB="$(df -BG --output=avail "\${EXPORT_BASE}" 2>/dev/null | tail -1 | tr -dc '0-9')"
+    if [ -z "\${FREE_GB}" ]; then
+        log "WARNUNG: Freier Speicherplatz konnte nicht ermittelt werden."
+    elif [ "\${FREE_GB}" -lt "\${MIN_FREE_GB}" ]; then
+        log "FEHLER: Nur \${FREE_GB} GB frei, benoetigt werden \${MIN_FREE_GB} GB."
+        exit 1
+    else
+        log "Freier Speicherplatz: \${FREE_GB} GB."
+    fi
+fi
+
+log "Teste Verbindung zur HANA-Datenbank..."
+
+"\${HDBSQL}" -U "\${HANA_KEY}" "SELECT CURRENT_USER FROM DUMMY;" >> "\${LOG_FILE}" 2>&1
+RC=$?
+
+if [ \${RC} -ne 0 ]; then
+    log "FEHLER: Verbindung ueber hdbuserstore-Key \${HANA_KEY} fehlgeschlagen (RC \${RC})."
+    exit 1
+fi
+
+log "HANA-Verbindung erfolgreich."
+
+${n}
+#  Export und Archivierung eines einzelnen Schemas
+${n}
+
+export_schema()
+{
+    SCHEMA="$1"
+    SCHEMA_DIR="\${EXPORT_BASE}/\${SCHEMA}"
+    WORK_DIR="\${SCHEMA_DIR}/\${DATE}"
+    ARCHIVE="\${SCHEMA_DIR}/\${SCHEMA}_\${DATE}.\${ARCHIVE_EXT}"
+
+    log "${n.slice(2)}"
+    log "Schema \${SCHEMA}: Export nach \${WORK_DIR}"
+
+    if ! mkdir -p "\${WORK_DIR}"; then
+        log "FEHLER: Exportverzeichnis konnte nicht angelegt werden: \${WORK_DIR}"
+        return 1
+    fi
+
+    # WITH REPLACE erlaubt einen erneuten Lauf am selben Tag.
+    SQL="EXPORT \\"\${SCHEMA}\\".\\"*\\" AS BINARY INTO '\${WORK_DIR}' WITH REPLACE THREADS \${THREADS};"
+
+    "\${HDBSQL}" -U "\${HANA_KEY}" "\${SQL}" >> "\${LOG_FILE}" 2>&1
+    RC=$?
+
+    if [ \${RC} -ne 0 ]; then
+        log "FEHLER: Export von \${SCHEMA} fehlgeschlagen (RC \${RC})."
+        return 1
+    fi
+
+    RAW_SIZE="$(du -sh "\${WORK_DIR}" 2>/dev/null | awk '{print $1}')"
+    log "Schema \${SCHEMA}: Export erfolgreich (Rohgroesse \${RAW_SIZE:-unbekannt})."
+
+    # Archivierung: erst in eine .tmp-Datei, dann umbenennen. So liegt nie
+    # ein halb geschriebenes Archiv im Aufbewahrungsbestand.
+
+    log "Schema \${SCHEMA}: Archiviere nach \${ARCHIVE}"
+
+    rm -f "\${ARCHIVE}.tmp"
+
+    tar -C "\${SCHEMA_DIR}" "\${TAR_CREATE[@]}" "\${ARCHIVE}.tmp" "\${DATE}" >> "\${LOG_FILE}" 2>&1
+    RC=$?
+
+    if [ \${RC} -ne 0 ]; then
+        log "FEHLER: Archivierung von \${SCHEMA} fehlgeschlagen (RC \${RC})."
+        rm -f "\${ARCHIVE}.tmp"
+        return 1
+    fi
+
+    tar "\${TAR_TEST[@]}" "\${ARCHIVE}.tmp" >/dev/null 2>> "\${LOG_FILE}"
+    RC=$?
+
+    if [ \${RC} -ne 0 ]; then
+        log "FEHLER: Archiv von \${SCHEMA} ist nicht lesbar (RC \${RC}). Rohexport bleibt erhalten."
+        rm -f "\${ARCHIVE}.tmp"
+        return 1
+    fi
+
+    mv -f "\${ARCHIVE}.tmp" "\${ARCHIVE}"
+
+    ARCHIVE_SIZE="$(du -sh "\${ARCHIVE}" 2>/dev/null | awk '{print $1}')"
+    log "Schema \${SCHEMA}: Archiv erstellt (\${ARCHIVE_SIZE:-unbekannt})."
+
+    if [ "\${KEEP_RAW_EXPORT}" = "yes" ]; then
+        log "Schema \${SCHEMA}: Rohexport bleibt unter \${WORK_DIR} erhalten."
+    else
+        rm -rf "\${WORK_DIR}"
+        log "Schema \${SCHEMA}: Rohexport entfernt, es bleibt nur das Archiv."
+    fi
+
+    return 0
+}
+
+${n}
+#  Alle Schemas nacheinander abarbeiten
+${n}
+
+for SCHEMA in "\${SCHEMAS[@]}"
+do
+    if export_schema "\${SCHEMA}"; then
+        OK_SCHEMAS+=("\${SCHEMA}")
+    else
+        FAILED_SCHEMAS+=("\${SCHEMA}")
+        EXITCODE=1
+    fi
+done
+
+${n}
+#  Aufbewahrung
+#
+#  -mtime +N liefert Dateien, die aelter als N+1 Tage sind. Fuer
+#  RETENTION_DAYS Tage Aufbewahrung ist deshalb N = RETENTION_DAYS - 1.
+${n}
+
+PRUNE_MTIME=$((RETENTION_DAYS - 1))
+
+log "${n.slice(2)}"
+log "Entferne Archive aelter als \${RETENTION_DAYS} Tage..."
+
+for SCHEMA in "\${SCHEMAS[@]}"
+do
+    SCHEMA_DIR="\${EXPORT_BASE}/\${SCHEMA}"
+
+    [ -d "\${SCHEMA_DIR}" ] || continue
+
+    find "\${SCHEMA_DIR}" \\
+        -mindepth 1 -maxdepth 1 \\
+        -type f -name "\${SCHEMA}_*.\${ARCHIVE_EXT}" \\
+        -mtime +\${PRUNE_MTIME} \\
+        -print -delete >> "\${LOG_FILE}" 2>&1
+
+    # Rohexport-Verzeichnisse aus frueheren Laeufen ebenfalls bereinigen.
+    find "\${SCHEMA_DIR}" \\
+        -mindepth 1 -maxdepth 1 \\
+        -type d \\
+        -mtime +\${PRUNE_MTIME} \\
+        -print -exec rm -rf {} + >> "\${LOG_FILE}" 2>&1
+done
+
+find "\${LOG_DIR}" \\
+    -type f -name 'schema_export_*.log' \\
+    -mtime +\${PRUNE_MTIME} \\
+    -delete >> "\${LOG_FILE}" 2>&1
+
+${n}
+#  Abschluss
+${n}
+
+log "${H.slice(2)}"
+
+if [ \${#OK_SCHEMAS[@]} -gt 0 ]; then
+    log "Erfolgreich: \${OK_SCHEMAS[*]}"
+fi
+
+if [ \${#FAILED_SCHEMAS[@]} -gt 0 ]; then
+    log "Fehlgeschlagen: \${FAILED_SCHEMAS[*]}"
+    log "Schema-Export mit Fehlern abgeschlossen."
+else
+    log "Alle Schema-Exporte erfolgreich abgeschlossen."
+fi
+
+log "Logdatei: \${LOG_FILE}"
+log "${H.slice(2)}"
+
+if [ "\${MAIL_ENABLED}" = "yes" ]; then
+    if [ "\${MAIL_ONLY_ON_ERROR}" = "no" ] || [ \${EXITCODE} -ne 0 ]; then
+        if [ \${EXITCODE} -eq 0 ]; then
+            SUBJECT="[HANA ${e.sid}] Schema-Export erfolgreich auf $(hostname)"
+        else
+            SUBJECT="[HANA ${e.sid}] Schema-Export FEHLGESCHLAGEN auf $(hostname)"
+        fi
+        "\${MAIL_COMMAND}" -s "\${SUBJECT}" "\${MAIL_RECIPIENT}" < "\${LOG_FILE}"
+    fi
+fi
+
+exit \${EXITCODE}
+`;return{name:t,title:"Hauptskript",purpose:`Der eigentliche Export. Wird nach ${e.scriptPath} kopiert und von Cron aufgerufen.`,language:"bash",executable:!0,content:i}}function g(e){const t=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,r=e.schedule.dayOfWeek;return r==="*"?`täglich um ${t} Uhr`:r==="1-5"?`montags bis freitags um ${t} Uhr`:r==="0"||r==="7"?`sonntags um ${t} Uhr`:r==="6"?`samstags um ${t} Uhr`:r==="6,0"||r==="0,6"?`samstags und sonntags um ${t} Uhr`:`um ${t} Uhr an den Wochentagen ${r}`}function k(e){const{hour:t,minute:r,dayOfWeek:i}=e.schedule;return`${r} ${t} * * ${i} ${e.scriptPath} >/dev/null 2>&1`}function Te(e){return`# HANAScriptGenerator: Schema-Export ${e.sid}`}function He(e){const t=Te(e),r=k(e),i=`${f(e,"Schritt 5 – Cronjob einrichten",[`Zeitplan: ${g(e)}`,`Eintrag:  ${r}`,"","Aufruf:","  ./05_install_cron.sh           Eintrag setzen oder aktualisieren","  ./05_install_cron.sh --show    Nur anzeigen, nichts aendern","  ./05_install_cron.sh --remove  Eintrag entfernen"])}
+
+set -u
+
+SCRIPT_PATH="${e.scriptPath}"
+CRON_MARKER="${t}"
+CRON_LINE="${r}"
+
+MODE="\${1:-install}"
+
+${C(e)}
+
+${n}
+#  Nur anzeigen
+${n}
+
+if [ "\${MODE}" = "--show" ]; then
+    echo "Geplanter Eintrag fuer $(whoami):"
+    echo
+    echo "\${CRON_MARKER}"
+    echo "\${CRON_LINE}"
+    echo
+    echo "Aktuelle Crontab:"
+    crontab -l 2>/dev/null || echo "  (leer)"
+    exit 0
+fi
+
+${n}
+#  Bestehende Crontab sichern
+${n}
+
+BACKUP="\${HOME}/crontab_backup_$(date +%Y-%m-%d_%H-%M-%S).txt"
+TMP_CRON="$(mktemp)"
+
+trap 'rm -f "\${TMP_CRON}"' EXIT
+
+crontab -l > "\${BACKUP}" 2>/dev/null || true
+
+if [ -s "\${BACKUP}" ]; then
+    echo "Bestehende Crontab gesichert: \${BACKUP}"
+else
+    rm -f "\${BACKUP}"
+    echo "Es existierte noch keine Crontab."
+fi
+
+# Alten Eintrag herausfiltern: sowohl den Marker als auch jede Zeile, die
+# unser Skript aufruft. So bleibt bei wiederholtem Lauf kein Duplikat zurueck.
+crontab -l 2>/dev/null \\
+    | grep -v -F -- "\${CRON_MARKER}" \\
+    | grep -v -F -- "\${SCRIPT_PATH}" \\
+    > "\${TMP_CRON}" || true
+
+${n}
+#  Entfernen
+${n}
+
+if [ "\${MODE}" = "--remove" ]; then
+    crontab "\${TMP_CRON}"
+    echo "Cronjob entfernt."
+    echo
+    echo "Aktuelle Crontab:"
+    crontab -l 2>/dev/null || echo "  (leer)"
+    exit 0
+fi
+
+${n}
+#  Einrichten
+${n}
+
+if [ ! -f "\${SCRIPT_PATH}" ]; then
+    echo "FEHLER: Das Exportskript fehlt: \${SCRIPT_PATH}" >&2
+    echo "Bitte zuerst dorthin kopieren und ausfuehrbar machen." >&2
+    exit 1
+fi
+
+if [ ! -x "\${SCRIPT_PATH}" ]; then
+    echo "FEHLER: Das Exportskript ist nicht ausfuehrbar: \${SCRIPT_PATH}" >&2
+    echo "Abhilfe: chmod 750 \${SCRIPT_PATH}" >&2
+    exit 1
+fi
+
+if ! bash -n "\${SCRIPT_PATH}"; then
+    echo "FEHLER: Das Exportskript hat einen Syntaxfehler. Cron wird nicht eingerichtet." >&2
+    exit 1
+fi
+
+{
+    echo "\${CRON_MARKER}"
+    echo "\${CRON_LINE}"
+} >> "\${TMP_CRON}"
+
+crontab "\${TMP_CRON}"
+
+echo "Cronjob eingerichtet (${g(e)})."
+echo
+echo "Aktuelle Crontab:"
+crontab -l | sed 's/^/  /'
+`;return{name:"05_install_cron.sh",title:"5 · Cronjob",purpose:`Trägt den Lauf ${g(e)} idempotent in die Crontab von ${e.osUser} ein.`,language:"bash",executable:!0,content:i}}function ge(e){const t=L(e.compression);return{name:"90_restore_schema.sh",title:"90 · Restore",purpose:"Listet Archive, entpackt eines davon und spielt es nach Rückfrage per IMPORT zurück.",language:"bash",executable:!0,content:`${f(e,"Wiederherstellung aus einem Archiv",["Entpackt ein Export-Archiv und spielt es auf Wunsch zurueck.","","Aufruf:","  ./90_restore_schema.sh --list","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT            nur entpacken","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT --import   entpacken und IMPORT","","ACHTUNG: --import ueberschreibt vorhandene Objekte des Schemas."])}
+
+set -u
+
+HANA_KEY="${e.userstoreKey}"
+HDBSQL="${e.hdbsqlPath}"
+EXPORT_BASE="${e.exportBase}"
+THREADS=${e.threads}
+ARCHIVE_EXT="${t}"
+COMPRESSION="${e.compression}"
+
+RESTORE_BASE="\${EXPORT_BASE}/_restore"
+
+${N(e)}
+
+case "\${COMPRESSION}" in
+    gz)   TAR_EXTRACT=(-xzf) ;;
+    zst)  TAR_EXTRACT=(--zstd -xf) ;;
+    none) TAR_EXTRACT=(-xf) ;;
+    *)    echo "FEHLER: Unbekannte Komprimierung \${COMPRESSION}" >&2; exit 1 ;;
+esac
+
+${C(e)}
+
+${n}
+#  Vorhandene Archive auflisten
+${n}
+
+if [ "\${1:-}" = "--list" ] || [ -z "\${1:-}" ]; then
+
+    echo "Vorhandene Archive unter \${EXPORT_BASE}:"
+    echo
+
+    for SCHEMA in "\${SCHEMAS[@]}"
+    do
+        echo "  \${SCHEMA}"
+        find "\${EXPORT_BASE}/\${SCHEMA}" -maxdepth 1 -type f \\
+            -name "\${SCHEMA}_*.\${ARCHIVE_EXT}" 2>/dev/null \\
+            | sort \\
+            | while read -r FILE
+              do
+                  echo "    $(basename "\${FILE}")  $(du -sh "\${FILE}" | awk '{print $1}')"
+              done
+        echo
+    done
+
+    echo "Wiederherstellen mit:"
+    echo "  $0 SCHEMA JJJJ-MM-TT [--import]"
+    exit 0
+fi
+
+SCHEMA="$1"
+RESTORE_DATE="\${2:-}"
+DO_IMPORT="\${3:-}"
+
+if [ -z "\${RESTORE_DATE}" ]; then
+    echo "FEHLER: Es fehlt das Datum im Format JJJJ-MM-TT." >&2
+    echo "Uebersicht mit: $0 --list" >&2
+    exit 1
+fi
+
+ARCHIVE="\${EXPORT_BASE}/\${SCHEMA}/\${SCHEMA}_\${RESTORE_DATE}.\${ARCHIVE_EXT}"
+TARGET_DIR="\${RESTORE_BASE}/\${SCHEMA}_\${RESTORE_DATE}"
+
+if [ ! -f "\${ARCHIVE}" ]; then
+    echo "FEHLER: Archiv nicht gefunden: \${ARCHIVE}" >&2
+    echo "Uebersicht mit: $0 --list" >&2
+    exit 1
+fi
+
+${n}
+#  Entpacken
+${n}
+
+echo "Archiv:     \${ARCHIVE}"
+echo "Zielordner: \${TARGET_DIR}"
+echo
+
+rm -rf "\${TARGET_DIR}"
+mkdir -p "\${TARGET_DIR}" || {
+    echo "FEHLER: \${TARGET_DIR} konnte nicht angelegt werden." >&2
+    exit 1
+}
+
+tar -C "\${TARGET_DIR}" "\${TAR_EXTRACT[@]}" "\${ARCHIVE}"
+RC=$?
+
+if [ \${RC} -ne 0 ]; then
+    echo "FEHLER: Archiv konnte nicht entpackt werden (RC \${RC})." >&2
+    exit 1
+fi
+
+# Im Archiv liegt das Tagesverzeichnis, der Export selbst eine Ebene tiefer.
+IMPORT_DIR="\${TARGET_DIR}/\${RESTORE_DATE}"
+
+if [ ! -d "\${IMPORT_DIR}" ]; then
+    IMPORT_DIR="\${TARGET_DIR}"
+fi
+
+echo "Entpackt nach \${IMPORT_DIR}"
+echo "Groesse: $(du -sh "\${IMPORT_DIR}" | awk '{print $1}')"
+echo
+
+if [ "\${DO_IMPORT}" != "--import" ]; then
+    echo "Es wurde nur entpackt. Fuer den eigentlichen IMPORT:"
+    echo "  $0 \${SCHEMA} \${RESTORE_DATE} --import"
+    exit 0
+fi
+
+${n}
+#  Sicherheitsabfrage
+${n}
+
+echo "ACHTUNG"
+echo "Der folgende IMPORT ueberschreibt Objekte des Schemas \${SCHEMA}"
+echo "in der Datenbank ${e.sid} auf ${e.host}."
+echo
+printf "Zur Bestaetigung den Schemanamen eintippen: "
+read -r CONFIRM
+
+if [ "\${CONFIRM}" != "\${SCHEMA}" ]; then
+    echo "Abgebrochen. Die entpackten Daten liegen unter \${IMPORT_DIR}."
+    exit 1
+fi
+
+${n}
+#  IMPORT
+${n}
+
+if [ ! -x "\${HDBSQL}" ]; then
+    echo "FEHLER: hdbsql nicht gefunden: \${HDBSQL}" >&2
+    exit 1
+fi
+
+SQL="IMPORT \\"\${SCHEMA}\\".\\"*\\" AS BINARY FROM '\${IMPORT_DIR}' WITH REPLACE THREADS \${THREADS};"
+
+echo
+echo "Setze ab:"
+echo "  \${SQL}"
+echo
+
+"\${HDBSQL}" -U "\${HANA_KEY}" "\${SQL}"
+RC=$?
+
+if [ \${RC} -ne 0 ]; then
+    echo "FEHLER: IMPORT fehlgeschlagen (RC \${RC})." >&2
+    echo "Die entpackten Daten bleiben unter \${IMPORT_DIR} liegen." >&2
+    exit 1
+fi
+
+echo
+echo "IMPORT von \${SCHEMA} abgeschlossen."
+echo "Die entpackten Daten koennen jetzt entfernt werden:"
+echo "  rm -rf \${TARGET_DIR}"
+`}}function De(e){var m;const t=W(e.customer,e.sid),r=ee(e.scriptPath),i=te(e.scriptPath),l=L(e.compression),a=(m=e.schemas[0])!=null?m:"SCHEMA",c=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,u=e.schemas.map(b=>`├── ${b}/
+│   ├── ${b}_2026-01-14.${l}
+│   ├── ${b}_2026-01-15.${l}
+│   └── ...`).join(`
+`),E=`# SAP HANA Schema-Export – ${e.customer||e.sid}
+
+Erzeugt durch HANAScriptGenerator.
+
+Jedes Schema wird **einzeln exportiert und einzeln archiviert**. Es entsteht also
+pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Schemas.
+
+## Konfiguration
+
+| Einstellung | Wert |
+| --- | --- |
+| Kunde | ${e.customer||"–"} |
+| Tenant / SID | ${e.sid} (Instanz ${e.instance}) |
+| Host | ${e.host} |
+| SQL-Port | ${e.port} |
+| DB-Benutzer | ${e.dbUser} |
+| Linux-Benutzer | ${e.osUser} |
+| hdbuserstore-Key | ${e.userstoreKey} |
+| hdbsql | ${e.hdbsqlPath} |
+| Exportpfad | ${e.exportBase} |
+| Skriptpfad | ${e.scriptPath} |
+| Schemas | ${e.schemas.join(", ")} |
+| Threads | ${e.threads} |
+| Archivformat | ${X(e.compression)} (\`*.${l}\`) |
+| Rohexport behalten | ${e.keepRawExport?"ja":"nein, nur das Archiv bleibt"} |
+| Aufbewahrung | ${e.retentionDays} Tage |
+| Zeitplan | ${g(e)} |
+| Mindestens frei | ${e.minFreeGb>0?`${e.minFreeGb} GB`:"keine Prüfung"} |
+| Mailbenachrichtigung | ${e.mail.enabled?`${e.mail.recipient} (${e.mail.onlyOnError?"nur bei Fehlern":"nach jedem Lauf"})`:"nein"} |
+
+## Dateien
+
+| Datei | Zweck |
+| --- | --- |
+| \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${e.userstoreKey}\` an. |
+| \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
+| \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |
+| \`04_test_export.sh\` | Einmaliger Testexport inklusive tar-Lauf. |
+| \`${r}\` | Das eigentliche Exportskript für den Cronlauf. |
+| \`05_install_cron.sh\` | Trägt den Cronjob ein, aktualisiert oder entfernt ihn. |
+| \`90_restore_schema.sh\` | Entpackt ein Archiv und spielt es per IMPORT zurück. |
+
+## Einrichtung
+
+Alle Schritte laufen als \`${e.osUser}\`. Der hdbuserstore ist benutzerspezifisch –
+Key und Cronjob müssen deshalb unter demselben Benutzer liegen.
+
+### 0. Dateien auf das System bringen
+
+Als \`root\`:
+
+\`\`\`bash
+su - ${e.osUser}
+\`\`\`
+
+Skripte in ein Arbeitsverzeichnis kopieren, zum Beispiel \`${i}\`, und
+ausführbar machen:
+
+\`\`\`bash
+chmod 750 *.sh
+\`\`\`
+
+Wurden die Dateien über Windows übertragen, vorsichtshalber die Zeilenenden prüfen:
+
+\`\`\`bash
+file *.sh
+\`\`\`
+
+Steht dort \`with CRLF line terminators\`, einmal umstellen:
+
+\`\`\`bash
+sed -i 's/\\r$//' *.sh
+\`\`\`
+
+Prüfen, ob der hdbsql-Pfad stimmt:
+
+\`\`\`bash
+which hdbsql
+\`\`\`
+
+Erwartet wird \`${e.hdbsqlPath}\`. Weicht die Ausgabe ab, muss in allen
+Skripten die Zeile \`HDBSQL="..."\` auf den tatsächlichen Pfad geändert werden.
+
+### 1. Userstore-Key anlegen
+
+\`\`\`bash
+./01_setup_userstore.sh
+\`\`\`
+
+Das Passwort für \`${e.dbUser}\` wird interaktiv abgefragt und landet weder im
+Skript noch in der Crontab.
+
+### 2. Verzeichnisse anlegen
+
+\`\`\`bash
+./02_prepare_dirs.sh
+\`\`\`
+
+### 3. Vorabprüfung
+
+\`\`\`bash
+./03_preflight.sh
+\`\`\`
+
+Erst weitermachen, wenn dieser Lauf ohne Fehler durchgeht.
+
+### 4. Testexport
+
+\`\`\`bash
+./04_test_export.sh ${a}
+\`\`\`
+
+Damit sind Export **und** tar-Lauf einmal bewiesen. Bei großen Schemas gibt der
+Lauf zusätzlich ein Gefühl für die spätere Laufzeit.
+
+### 5. Hauptskript installieren
+
+\`\`\`bash
+cp ${r} ${e.scriptPath}
+\`\`\`
+
+\`\`\`bash
+chmod 750 ${e.scriptPath}
+\`\`\`
+
+Syntaxprüfung ohne Ausführung:
+
+\`\`\`bash
+bash -n ${e.scriptPath}
+\`\`\`
+
+Dann einmal vollständig manuell starten:
+
+\`\`\`bash
+${e.scriptPath}
+\`\`\`
+
+Ergebnis prüfen:
+
+\`\`\`bash
+echo $?
+\`\`\`
+
+Muss \`0\` sein.
+
+### 6. Cronjob einrichten
+
+\`\`\`bash
+./05_install_cron.sh
+\`\`\`
+
+Das Skript sichert eine bestehende Crontab, entfernt einen früheren Eintrag zu
+diesem Export und setzt:
+
+\`\`\`
+${k(e)}
+\`\`\`
+
+Kontrolle:
+
+\`\`\`bash
+crontab -l
+\`\`\`
+
+Entfernen lässt sich der Eintrag jederzeit mit \`./05_install_cron.sh --remove\`.
+
+## Was täglich passiert
+
+Um ${c} Uhr (${g(e)}) läuft der Export. Pro Schema
+nacheinander:
+
+1. \`EXPORT "SCHEMA"."*" AS BINARY INTO '.../SCHEMA/JJJJ-MM-TT' WITH REPLACE THREADS ${e.threads}\`
+2. \`tar\` über das Tagesverzeichnis nach \`SCHEMA_JJJJ-MM-TT.${l}\`
+3. Prüfen, ob sich das Archiv lesen lässt
+4. ${e.keepRawExport?"Rohexport bleibt zusätzlich liegen":"Rohexport löschen, es bleibt nur das Archiv"}
+
+Erst danach werden Archive und Logs älter als ${e.retentionDays} Tage entfernt.
+
+Das Archiv wird zuerst als \`.tmp\` geschrieben und erst nach erfolgreicher
+Prüfung umbenannt. Ein abgebrochener Lauf hinterlässt dadurch kein
+unvollständiges Archiv im Aufbewahrungsbestand.
+
+\`\`\`
+${e.exportBase}/
+${u}
+└── logs/
+    ├── schema_export_2026-01-15_${String(e.schedule.hour).padStart(2,"0")}-${String(e.schedule.minute).padStart(2,"0")}-01.log
+    └── ...
+\`\`\`
+
+Durch \`WITH REPLACE\` kann das Skript am selben Tag mehrfach laufen; der Export
+des Tages wird dann ersetzt. Ein \`flock\` verhindert, dass sich zwei Läufe
+überschneiden.
+
+## Betrieb
+
+Letztes Log ansehen:
+
+\`\`\`bash
+tail -50 "$(ls -1t ${e.exportBase}/logs/schema_export_*.log | head -1)"
+\`\`\`
+
+Nach Fehlern suchen:
+
+\`\`\`bash
+grep -i "fehler\\|error" "$(ls -1t ${e.exportBase}/logs/schema_export_*.log | head -1)"
+\`\`\`
+
+Belegten Platz prüfen:
+
+\`\`\`bash
+du -sh ${e.exportBase}/*
+\`\`\`
+
+Vorhandene Archive auflisten:
+
+\`\`\`bash
+./90_restore_schema.sh --list
+\`\`\`
+
+## Weiteres Schema aufnehmen
+
+Im Exportskript den Block \`SCHEMAS=(...)\` ergänzen:
+
+\`\`\`bash
+vi ${e.scriptPath}
+\`\`\`
+
+Danach die Syntax prüfen:
+
+\`\`\`bash
+bash -n ${e.scriptPath}
+\`\`\`
+
+An der Crontab ändert sich nichts. Alternativ das Schema im
+HANAScriptGenerator ergänzen und die Skripte neu erzeugen.
+
+## Wiederherstellung
+
+\`\`\`bash
+./90_restore_schema.sh ${a} 2026-01-15
+\`\`\`
+
+Entpackt das Archiv nach \`${e.exportBase}/_restore\`, ohne die Datenbank zu
+berühren. Erst mit \`--import\` wird tatsächlich zurückgespielt:
+
+\`\`\`bash
+./90_restore_schema.sh ${a} 2026-01-15 --import
+\`\`\`
+
+Das überschreibt vorhandene Objekte des Schemas und verlangt deshalb eine
+Bestätigung durch Eintippen des Schemanamens.
+
+## Fehlersuche
+
+| Symptom | Ursache | Abhilfe |
+| --- | --- | --- |
+| \`bad interpreter: ^M\` oder \`: not found\` | Datei kam mit Windows-Zeilenenden an | \`sed -i 's/\\r$//' *.sh\` |
+| \`hdbsql nicht gefunden\` | Anderer Clientpfad | \`which hdbsql\`, Wert für \`HDBSQL\` anpassen |
+| Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${e.osUser}\` ausführen |
+| Lauf funktioniert interaktiv, per Cron nicht | Cron startet ohne Anmeldeprofil | Das Skript lädt \`~/.sapenv.sh\`; prüfen, ob die Datei existiert |
+| \`Ein Export laeuft bereits\` | Vorheriger Lauf dauert noch an | Log prüfen, Laufzeit oder Zeitplan anpassen |
+| Export bricht mit Platzmangel ab | Zielverzeichnis zu klein | \`MIN_FREE_GB\` setzen, Aufbewahrung verkürzen |
+| Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |
+`;return{name:`README_${t}.md`,title:"Anleitung",purpose:"Kundenspezifischer Ablauf von der Einrichtung bis zur Wiederherstellung.",language:"markdown",executable:!1,content:E}}function xe(e){const t=P(e);return[De(t),be(t),Re(t),_e(t),fe(t),Ce(t),He(t),ge(t)]}const Ie=(()=>{const e=new Uint32Array(256);for(let t=0;t<256;t++){let r=t;for(let i=0;i<8;i++)r=r&1?3988292384^r>>>1:r>>>1;e[t]=r>>>0}return e})();function Pe(e){let t=4294967295;for(const r of e)t=t>>>8^Ie[(t^r)&255];return(t^4294967295)>>>0}function Oe(e){return{time:e.getHours()<<11|e.getMinutes()<<5|Math.floor(e.getSeconds()/2)&31,date:e.getFullYear()-1980<<9|e.getMonth()+1<<5|e.getDate()}}class ve{constructor(){j(this,"chunks",[]);j(this,"length",0)}push(t){this.chunks.push(t),this.length+=t.length}u16(t){this.push(new Uint8Array([t&255,t>>>8&255]))}u32(t){this.push(new Uint8Array([t&255,t>>>8&255,t>>>16&255,t>>>24&255]))}toBlob(t){return new Blob(this.chunks,{type:t})}}function Me(e,t=new Date){const r=new TextEncoder,{time:i,date:l}=Oe(t),a=new ve,c=[];for(const m of e){const b=r.encode(m.name),R=r.encode(m.content),y=Pe(R),U=a.length;a.u32(67324752),a.u16(20),a.u16(2048),a.u16(0),a.u16(i),a.u16(l),a.u32(y),a.u32(R.length),a.u32(R.length),a.u16(b.length),a.u16(0),a.push(b),a.push(R),c.push({entry:m,crc:y,size:R.length,offset:U})}const u=a.length;for(const{entry:m,crc:b,size:R,offset:y}of c){const U=r.encode(m.name);a.u32(33639248),a.u16(788),a.u16(20),a.u16(2048),a.u16(0),a.u16(i),a.u16(l),a.u32(b),a.u32(R),a.u32(R),a.u16(U.length),a.u16(0),a.u16(0),a.u16(0),a.u16(0),a.u32((32768|m.mode)<<16>>>0),a.u32(y),a.push(U)}const E=a.length-u;return a.u32(101010256),a.u16(0),a.u16(0),a.u16(c.length),a.u16(c.length),a.u32(E),a.u32(u),a.u16(0),a.toBlob("application/zip")}const Y="hana-script-generator.profiles.v1",re="hana-script-generator.last.v1";function h(e){const t=document.getElementById(e);if(t===null)throw new Error(`Element #${e} fehlt im Dokument.`);return t}const s={customer:h("customer"),sid:h("sid"),instance:h("instance"),host:h("host"),port:h("port"),dbUser:h("dbUser"),osUser:h("osUser"),userstoreKey:h("userstoreKey"),hdbsqlPath:h("hdbsqlPath"),exportBase:h("exportBase"),scriptPath:h("scriptPath"),schemas:h("schemas"),threads:h("threads"),compression:h("compression"),minFreeGb:h("minFreeGb"),keepRawExport:h("keepRawExport"),retentionDays:h("retentionDays"),scheduleTime:h("scheduleTime"),scheduleDow:h("scheduleDow"),scheduleDowCustom:h("scheduleDowCustom"),mailEnabled:h("mailEnabled"),mailRecipient:h("mailRecipient"),mailCommand:h("mailCommand"),mailOnlyOnError:h("mailOnlyOnError")},o={form:h("configForm"),stepNav:h("stepNav"),btnBack:h("btnBack"),btnNext:h("btnNext"),wizardStatus:h("wizardStatus"),summary:h("summary"),cronPreview:h("cronPreview"),issues:h("issues"),tabs:h("fileTabs"),fileName:h("fileName"),filePurpose:h("filePurpose"),fileContent:h("fileContent"),schemaChips:h("schemaChips"),mailFields:h("mailFields"),profileSelect:h("profileSelect"),btnSaveProfile:h("btnSaveProfile"),btnDeleteProfile:h("btnDeleteProfile"),btnExportJson:h("btnExportJson"),inputImportJson:h("inputImportJson"),btnReset:h("btnReset"),btnDerivePaths:h("btnDerivePaths"),btnCopy:h("btnCopy"),btnDownload:h("btnDownload"),btnDownloadAll:h("btnDownloadAll")},O=Array.from(o.form.querySelectorAll(".step")),Le=[["customer","sid","instance","host","port","dbUser","osUser","userstoreKey"],["hdbsqlPath","exportBase","scriptPath"],["schemas"],["threads","compression","keepRawExport","minFreeGb"],["retentionDays","schedule"],["mail"],[]],A=O.length-1;let d=0,S=v("","00"),D=null,p=[];function w(){const[e="2",t="0"]=s.scheduleTime.value.split(":"),r=s.scheduleDow.value;return{customer:s.customer.value,sid:s.sid.value,instance:s.instance.value,host:s.host.value,port:Number.parseInt(s.port.value,10),dbUser:s.dbUser.value,osUser:s.osUser.value,userstoreKey:s.userstoreKey.value,hdbsqlPath:s.hdbsqlPath.value,exportBase:s.exportBase.value,scriptPath:s.scriptPath.value,schemas:le(s.schemas.value),threads:Number.parseInt(s.threads.value,10),retentionDays:Number.parseInt(s.retentionDays.value,10),compression:s.compression.value,keepRawExport:s.keepRawExport.checked,minFreeGb:Number.parseInt(s.minFreeGb.value,10),schedule:{hour:Number.parseInt(e,10),minute:Number.parseInt(t,10),dayOfWeek:r==="__custom"?s.scheduleDowCustom.value.trim():r},mail:{enabled:s.mailEnabled.checked,recipient:s.mailRecipient.value,command:s.mailCommand.value,onlyOnError:s.mailOnlyOnError.checked}}}function B(e){s.customer.value=e.customer,s.sid.value=e.sid,s.instance.value=e.instance,s.host.value=e.host,s.port.value=String(e.port),s.dbUser.value=e.dbUser,s.osUser.value=e.osUser,s.userstoreKey.value=e.userstoreKey,s.hdbsqlPath.value=e.hdbsqlPath,s.exportBase.value=e.exportBase,s.scriptPath.value=e.scriptPath,s.schemas.value=e.schemas.join(`
+`),s.threads.value=String(e.threads),s.retentionDays.value=String(e.retentionDays),s.compression.value=e.compression,s.keepRawExport.checked=e.keepRawExport,s.minFreeGb.value=String(e.minFreeGb);const{hour:t,minute:r,dayOfWeek:i}=e.schedule;s.scheduleTime.value=`${String(t).padStart(2,"0")}:${String(r).padStart(2,"0")}`,Array.from(s.scheduleDow.options).map(a=>a.value).includes(i)?(s.scheduleDow.value=i,s.scheduleDowCustom.value=""):(s.scheduleDow.value="__custom",s.scheduleDowCustom.value=i),s.mailEnabled.checked=e.mail.enabled,s.mailRecipient.value=e.mail.recipient,s.mailCommand.value=e.mail.command,s.mailOnlyOnError.checked=e.mail.onlyOnError,S=v(e.sid,e.instance),ne()}function ne(){s.scheduleDowCustom.hidden=s.scheduleDow.value!=="__custom",o.mailFields.hidden=!s.mailEnabled.checked}function Ne(){const e=v(s.sid.value.trim().toUpperCase(),s.instance.value.trim()),t=(r,i,l)=>{l.length!==0&&(r.value.trim().length===0||r.value===i)&&(r.value=l)};t(s.port,String(S.port),String(e.port)),t(s.osUser,S.osUser,e.osUser),t(s.hdbsqlPath,S.hdbsqlPath,e.hdbsqlPath),t(s.exportBase,S.exportBase,e.exportBase),t(s.scriptPath,S.scriptPath,e.scriptPath),S=e}function z(e,t){var i;const r=(i=Le[t])!=null?i:[];return e.filter(l=>r.includes(l.field))}function ke(e){for(let t=0;t<O.length;t++)if(z(e,t).some(r=>r.severity==="error"))return t;return null}function x(e){d=Math.max(0,Math.min(A,e)),I(),window.scrollTo({top:0,behavior:"smooth"})}function we(e){o.stepNav.replaceChildren(...O.map((t,r)=>{var u;const i=z(e,r).some(E=>E.severity==="error"),l=document.createElement("button");l.type="button",l.className="steps__item",l.setAttribute("aria-current",String(r===d)),i?l.dataset.state="blocked":r<d&&(l.dataset.state="done");const a=document.createElement("span");a.className="steps__num",a.textContent=r===A?"✓":String(r+1);const c=document.createElement("span");return c.textContent=(u=t.dataset.title)!=null?u:`Schritt ${r+1}`,l.append(a,c),l.addEventListener("click",()=>x(r)),l}))}function Be(e){o.schemaChips.replaceChildren(...e.schemas.map(t=>{const r=document.createElement("span");return r.className="chip",r.textContent=t,r}))}function ze(e){const t=d===A?e:z(e,d);o.issues.hidden=t.length===0,o.issues.replaceChildren(...t.map(r=>{const i=document.createElement("p");return i.className=`issue issue--${r.severity}`,i.textContent=r.message,i}))}function Fe(e){const t=L(e.compression),r=[["Kunde",e.customer||"–"],["System",`${e.sid} (Instanz ${e.instance}) auf ${e.host}:${e.port}`],["Anmeldung",`${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`],["Linux-Benutzer",e.osUser],["Schemas",`${e.schemas.join(", ")} – je ein eigenes Archiv`],["Exportpfad",e.exportBase],["Skriptpfad",e.scriptPath],["Archiv",`${X(e.compression)} als SCHEMA_JJJJ-MM-TT.${t}`],["Aufbewahrung",`${e.retentionDays} Tage`],["Zeitplan",`${g(e)} – ${k(e)}`],["Mail",e.mail.enabled?`${e.mail.recipient} (${e.mail.onlyOnError?"nur bei Fehlern":"nach jedem Lauf"})`:"keine"]];o.summary.replaceChildren(...r.flatMap(([i,l])=>{const a=document.createElement("dt");a.textContent=i;const c=document.createElement("dd");return c.textContent=l,[a,c]}))}function ye(e){o.tabs.replaceChildren(...e.map(t=>{const r=document.createElement("button");return r.type="button",r.className="tab",r.textContent=t.title,r.setAttribute("aria-selected",String(t.name===D)),r.addEventListener("click",()=>{D=t.name,I()}),r}))}function q(){var e;return(e=p.find(t=>t.name===D))!=null?e:p[0]}function se(e){o.btnCopy.disabled=!e,o.btnDownload.disabled=!e,o.btnDownloadAll.disabled=!e}function I(){var a,c;const e=P(w()),t=me(e);O.forEach((u,E)=>{u.hidden=E!==d}),we(t),ze(t),Be(e),ne(),o.cronPreview.textContent=e.scriptPath.length>0?`Crontab-Eintrag: ${k(e)}`:"Crontab-Eintrag erscheint, sobald der Skriptpfad feststeht.",o.btnBack.disabled=d===0,o.btnNext.hidden=d===A;const r=z(t,d).some(u=>u.severity==="error");o.btnNext.disabled=r,o.btnNext.textContent=d===A-1?"Skripte erzeugen":"Weiter";const i=ke(t);if(d===A&&i!==null?o.wizardStatus.textContent=`Es fehlt noch etwas in Schritt ${i+1}.`:o.wizardStatus.textContent=`Schritt ${d+1} von ${O.length}`,i!==null){o.tabs.replaceChildren(),o.summary.replaceChildren(),o.fileName.textContent="Noch keine Ausgabe",o.filePurpose.textContent="Die Vorschau erscheint, sobald alle Pflichtangaben stehen.",o.fileContent.textContent="",p=[],se(!1);return}p=xe(e),p.some(u=>u.name===D)||(D=(c=(a=p[0])==null?void 0:a.name)!=null?c:null),Fe(e),ye(p);const l=q();l!==void 0&&(o.fileName.textContent=l.name,o.filePurpose.textContent=l.purpose,o.fileContent.textContent=l.content,se(!0),Q(re,e))}function J(e,t){const r=URL.createObjectURL(e),i=document.createElement("a");i.href=r,i.download=t,document.body.append(i),i.click(),i.remove(),setTimeout(()=>URL.revokeObjectURL(r),5e3)}async function ae(e,t){const r=e.textContent;e.textContent=t,await new Promise(i=>setTimeout(i,1200)),e.textContent=r}function Q(e,t){try{localStorage.setItem(e,JSON.stringify(t))}catch{}}function ie(e){try{const t=localStorage.getItem(e);return t===null?null:JSON.parse(t)}catch{return null}}function F(){var e;return(e=ie(Y))!=null?e:{}}function Z(e=""){const t=F(),r=Object.keys(t).sort((i,l)=>i.localeCompare(l,"de"));o.profileSelect.replaceChildren(new Option("Kundenprofil laden…",""),...r.map(i=>new Option(i,i))),o.profileSelect.value=e}o.form.addEventListener("input",e=>{(e.target===s.sid||e.target===s.instance)&&Ne(),I()}),o.form.addEventListener("change",()=>I()),o.form.addEventListener("submit",e=>e.preventDefault()),o.btnNext.addEventListener("click",()=>x(d+1)),o.btnBack.addEventListener("click",()=>x(d-1)),o.btnDerivePaths.addEventListener("click",()=>{const e=v(s.sid.value.trim().toUpperCase(),s.instance.value.trim());e.hdbsqlPath.length!==0&&(s.port.value=String(e.port),s.hdbsqlPath.value=e.hdbsqlPath,s.exportBase.value=e.exportBase,s.scriptPath.value=e.scriptPath,S=e,I())}),o.btnCopy.addEventListener("click",async()=>{const e=q();if(e!==void 0)try{await navigator.clipboard.writeText(e.content),await ae(o.btnCopy,"Kopiert")}catch{await ae(o.btnCopy,"Nicht erlaubt")}}),o.btnDownload.addEventListener("click",()=>{const e=q();e!==void 0&&J(new Blob([e.content],{type:"text/plain;charset=utf-8"}),e.name)}),o.btnDownloadAll.addEventListener("click",()=>{if(p.length===0)return;const e=P(w()),t=`hana_schema_export_${W(e.customer,e.sid)}`,r=Me(p.map(i=>({name:`${t}/${i.name}`,content:i.content,mode:i.executable?488:416})));J(r,`${t}.zip`)}),o.btnSaveProfile.addEventListener("click",()=>{const e=P(w()),t=window.prompt("Profilname",e.customer||e.sid);if(t===null||t.trim().length===0)return;const r=F();r[t.trim()]=e,Q(Y,r),Z(t.trim())}),o.profileSelect.addEventListener("change",()=>{const e=F()[o.profileSelect.value];e!==void 0&&(B({...M(),...e}),x(A))}),o.btnDeleteProfile.addEventListener("click",()=>{const e=o.profileSelect.value;if(e===""||!window.confirm(`Profil "${e}" löschen?`))return;const t=F();delete t[e],Q(Y,t),Z()}),o.btnExportJson.addEventListener("click",()=>{const e=P(w());J(new Blob([JSON.stringify(e,null,2)],{type:"application/json"}),`hana_export_${W(e.customer,e.sid)}.json`)}),o.inputImportJson.addEventListener("change",async()=>{var t;const e=(t=o.inputImportJson.files)==null?void 0:t[0];if(e!==void 0)try{const r=JSON.parse(await e.text());B({...M(),...r}),x(A)}catch{window.alert("Die Datei konnte nicht als Konfiguration gelesen werden.")}finally{o.inputImportJson.value=""}}),o.btnReset.addEventListener("click",()=>{window.confirm("Alle Eingaben verwerfen und neu beginnen?")&&(B(M()),D=null,x(0))}),B({...M(),...(oe=ie(re))!=null?oe:{}}),Z(),I()})();
+
+    </script>
+  </body>
+</html>
