@@ -46,13 +46,56 @@ describe('ausgelieferte Einzeldatei', () => {
     expect((doc.getElementById('btnDownloadAll') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('schlägt Benutzer und Pfade vor, sobald die SID steht', () => {
-    type('sid', 'P42');
-    expect((doc.getElementById('osUser') as HTMLInputElement).value).toBe('p42adm');
-    expect((doc.getElementById('exportBase') as HTMLInputElement).value).toBe(
-      '/usr/sap/P42/HDB00/work/schema_exports',
+  it('schlägt erst bei vollständiger SID vor, nicht schon beim ersten Buchstaben', () => {
+    const exportBase = doc.getElementById('exportBase') as HTMLInputElement;
+
+    // Buchstabe für Buchstabe tippen: unterwegs darf kein /usr/sap/N/… stehen.
+    type('sid', 'N');
+    expect(exportBase.value).toBe('');
+    type('sid', 'ND');
+    expect(exportBase.value).toBe('');
+
+    type('sid', 'NDB');
+    expect(exportBase.value).toBe('/usr/sap/NDB/HDB00/work/schema_exports');
+    expect((doc.getElementById('osUser') as HTMLInputElement).value).toBe('ndbadm');
+    expect((doc.getElementById('hdbsqlPath') as HTMLInputElement).value).toBe(
+      '/usr/sap/NDB/HDB00/exe/hdbsql',
     );
     expect((doc.getElementById('port') as HTMLInputElement).value).toBe('30015');
+  });
+
+  it('zieht die Pfade nach, wenn die SID nachträglich korrigiert wird', () => {
+    const exportBase = doc.getElementById('exportBase') as HTMLInputElement;
+
+    // Zurück auf eine unvollständige SID, dann eine andere zu Ende tippen.
+    type('sid', 'ND');
+    type('sid', 'P42');
+    expect(exportBase.value).toBe('/usr/sap/P42/HDB00/work/schema_exports');
+    expect((doc.getElementById('osUser') as HTMLInputElement).value).toBe('p42adm');
+  });
+
+  it('leitet den Port aus der Instanznummer ab', () => {
+    type('instance', '05');
+    expect((doc.getElementById('port') as HTMLInputElement).value).toBe('30515');
+    expect((doc.getElementById('hdbsqlPath') as HTMLInputElement).value).toBe(
+      '/usr/sap/P42/HDB05/exe/hdbsql',
+    );
+    type('instance', '00');
+  });
+
+  it('lässt einen von Hand gesetzten Pfad in Ruhe', () => {
+    const exportBase = doc.getElementById('exportBase') as HTMLInputElement;
+    type('exportBase', '/backup/hana/exports');
+    type('sid', 'XYZ');
+
+    expect(exportBase.value).toBe('/backup/hana/exports');
+    // Die unangetasteten Felder folgen der neuen SID weiterhin.
+    expect((doc.getElementById('hdbsqlPath') as HTMLInputElement).value).toBe(
+      '/usr/sap/XYZ/HDB00/exe/hdbsql',
+    );
+
+    type('sid', 'P42');
+    type('exportBase', '/usr/sap/P42/HDB00/work/schema_exports');
   });
 
   it('erzeugt nach vollständiger Eingabe alle Dateien', () => {

@@ -199,7 +199,17 @@ function syncDerivedFields(): void {
     if (input.value.trim().length === 0 || input.value === previous) input.value = proposal;
   };
 
+  // Der Port hängt allein an der Instanznummer und lässt sich immer vorschlagen.
   adopt(fields.port, String(lastDerived.port), String(next.port));
+
+  // Bei halb getippter SID gibt es keinen Vorschlag. Dann bleibt auch der
+  // zuletzt gültige Vorschlag als Vergleichswert stehen – sonst gälten die
+  // Felder nach einer Korrektur als von Hand geändert und würden einfrieren.
+  if (next.hdbsqlPath.length === 0) {
+    lastDerived = { ...lastDerived, port: next.port };
+    return;
+  }
+
   adopt(fields.osUser, lastDerived.osUser, next.osUser);
   adopt(fields.hdbsqlPath, lastDerived.hdbsqlPath, next.hdbsqlPath);
   adopt(fields.exportBase, lastDerived.exportBase, next.exportBase);

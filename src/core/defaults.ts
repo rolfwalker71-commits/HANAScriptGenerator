@@ -1,5 +1,5 @@
 import type { ExportConfig } from './types.js';
-import { normalizePath } from './sh.js';
+import { SID_PATTERN, normalizePath } from './sh.js';
 
 /** SAP-Konvention für den SQL-Port einer Single-Tenant-Instanz: 3<nn>15. */
 export function defaultSqlPort(instance: string): number {
@@ -30,15 +30,18 @@ export function defaultOsUser(sid: string): string {
 }
 
 /**
- * Alle Felder, die sich aus SID und Instanznummer ableiten lassen. Ohne SID
- * bleiben die Pfade leer, damit nichts wie `/usr/sap//HDB00` entsteht.
+ * Alle Felder, die sich aus SID und Instanznummer ableiten lassen.
+ *
+ * Vorgeschlagen wird erst bei vollständiger SID. Sonst stünde während des
+ * Tippens kurz `/usr/sap/N/HDB00/...` in den Pfadfeldern, was aussieht wie
+ * ein fester Platzhalter statt wie ein Zwischenstand.
  */
 export function derivedDefaults(
   sid: string,
   instance: string,
 ): Pick<ExportConfig, 'port' | 'hdbsqlPath' | 'exportBase' | 'scriptPath' | 'osUser'> {
   const trimmed = sid.trim();
-  if (trimmed.length === 0) {
+  if (!SID_PATTERN.test(trimmed)) {
     return {
       port: defaultSqlPort(instance),
       hdbsqlPath: '',

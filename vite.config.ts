@@ -1,3 +1,5 @@
+import { copyFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 const OUTPUT_NAME = 'HANAScriptGenerator.html';
@@ -53,6 +55,13 @@ function singleFile(): Plugin {
       delete bundle[html.fileName];
       this.emitFile({ type: 'asset', fileName: OUTPUT_NAME, source });
     },
+
+    closeBundle() {
+      // Die fertige Datei liegt zusätzlich im Wurzelverzeichnis, damit sie
+      // mitversioniert und ohne Build benutzbar ist. Gebaut wird trotzdem
+      // nach dist/, sonst wäre outDir das Projektverzeichnis selbst.
+      copyFileSync(resolve('dist', OUTPUT_NAME), resolve(OUTPUT_NAME));
+    },
   };
 }
 
@@ -67,10 +76,7 @@ export default defineConfig({
     port: 5180,
   },
   build: {
-    // Direkt ins Repo-Wurzelverzeichnis, damit die fertige Datei mitversioniert
-    // wird und ohne Build benutzbar ist.
-    outDir: '.',
-    emptyOutDir: false,
+    outDir: 'dist',
     target: 'es2019',
     cssCodeSplit: false,
     modulePreload: false,
