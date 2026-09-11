@@ -233,6 +233,20 @@ describe('validateConfig', () => {
     expect(hasErrors(issues)).toBe(true);
   });
 
+  it('akzeptiert den aus der SID abgeleiteten Instanzbenutzer ohne Hinweis', () => {
+    const config = { ...exampleConfig(), sid: 'ANG', osUser: 'angadm' };
+    expect(validateConfig(config).some((i) => i.field === 'osUser')).toBe(false);
+  });
+
+  it('weist auf die Konvention hin, blockiert einen anderen Benutzer aber nicht', () => {
+    const issues = validateConfig({ ...exampleConfig(), sid: 'ANG', osUser: 'hdbadm' });
+    const hint = issues.find((i) => i.field === 'osUser');
+
+    expect(hasErrors(issues)).toBe(false);
+    expect(hint?.severity).toBe('warning');
+    expect(hint?.message).toContain('angadm');
+  });
+
   it('warnt bei sehr vielen Threads, blockiert aber nicht', () => {
     const issues = validateConfig({ ...exampleConfig(), threads: 32 });
     expect(hasErrors(issues)).toBe(false);

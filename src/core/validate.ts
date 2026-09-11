@@ -1,4 +1,5 @@
 import type { ExportConfig, ValidationIssue } from './types.js';
+import { defaultOsUser } from './defaults.js';
 import { OS_USER_PATTERN, SCHEMA_NAME_PATTERN, SID_PATTERN } from './sh.js';
 
 const CRON_DOW_PATTERN = /^(\*|([0-7](-[0-7])?)(,[0-7](-[0-7])?)*)(\/\d+)?$/;
@@ -46,6 +47,14 @@ export function validateConfig(config: ExportConfig): ValidationIssue[] {
 
   if (!OS_USER_PATTERN.test(config.osUser)) {
     error('osUser', 'Der Linux-Benutzer enthält unzulässige Zeichen.');
+  } else if (SID_PATTERN.test(config.sid) && config.osUser !== defaultOsUser(config.sid)) {
+    // Der Instanzbenutzer heißt bei SAP immer <sid>adm. Eine Abweichung kann
+    // gewollt sein, ist aber meistens ein Tippfehler – deshalb nur ein Hinweis.
+    warn(
+      'osUser',
+      `Üblich wäre ${defaultOsUser(config.sid)}: der SAP-Instanzbenutzer heißt <sid>adm. ` +
+        `Weicht ${config.osUser} bewusst ab, kann der Hinweis stehen bleiben.`,
+    );
   }
 
   if (!/^[A-Za-z0-9_]+$/.test(config.userstoreKey)) {
