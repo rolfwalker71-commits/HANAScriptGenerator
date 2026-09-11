@@ -12,7 +12,12 @@ export function generateTestExport(config: ExportConfig): GeneratedFile {
   const content = `${scriptHeader(config, 'Schritt 4 – Einmaliger Testexport', [
     'Exportiert genau ein Schema in ein Testverzeichnis und archiviert es.',
     'Damit sind Export und tar-Lauf bewiesen, bevor Cron uebernimmt.',
-    'Aufruf: ./04_test_export.sh [SCHEMA]',
+    '',
+    'Aufruf:',
+    '  ./04_test_export.sh [SCHEMA]         Testdaten danach entfernen',
+    '  ./04_test_export.sh [SCHEMA] --keep  Testdaten liegen lassen',
+    '',
+    'Laeuft ohne Rueckfrage durch und endet von selbst.',
   ])}
 
 set -u
@@ -23,7 +28,26 @@ EXPORT_BASE="${config.exportBase}"
 THREADS=${config.threads}
 COMPRESSION="${config.compression}"
 
-SCHEMA="\${1:-${firstSchema}}"
+${RULE}
+#  Aufrufparameter
+#
+#  Bewusst ohne Rueckfrage am Ende: bei einem Skript, das auf eine Eingabe
+#  wartet, laesst sich "wartet" nicht von "haengt" unterscheiden.
+${RULE}
+
+SCHEMA=""
+KEEP_TEST_DATA="no"
+
+for ARG in "$@"
+do
+    case "\${ARG}" in
+        --keep) KEEP_TEST_DATA="yes" ;;
+        -*)     echo "FEHLER: Unbekannter Schalter \${ARG}" >&2; exit 1 ;;
+        *)      SCHEMA="\${ARG}" ;;
+    esac
+done
+
+SCHEMA="\${SCHEMA:-${firstSchema}}"
 
 TEST_DIR="\${EXPORT_BASE}/\${SCHEMA}/manual_test"
 TEST_ARCHIVE="\${EXPORT_BASE}/\${SCHEMA}/manual_test.tar"
@@ -109,25 +133,26 @@ ${RULE}
 ${RULE}
 
 echo
-printf "Testexport und Testarchiv jetzt entfernen? [J/n] "
-read -r ANSWER
 
-case "\${ANSWER}" in
-    n|N)
-        echo "Testdaten bleiben liegen:"
-        echo "  \${TEST_DIR}"
-        echo "  \${TEST_ARCHIVE}"
-        ;;
-    *)
-        rm -rf "\${TEST_DIR}"
-        rm -f "\${TEST_ARCHIVE}"
-        echo "Testdaten entfernt."
-        ;;
-esac
+if [ "\${KEEP_TEST_DATA}" = "yes" ]; then
+    echo "Testdaten bleiben auf Wunsch liegen:"
+    echo "  \${TEST_DIR}"
+    echo "  \${TEST_ARCHIVE}"
+    echo
+    echo "Entfernen mit:"
+    echo "  rm -rf \${TEST_DIR}"
+    echo "  rm -f \${TEST_ARCHIVE}"
+else
+    rm -rf "\${TEST_DIR}"
+    rm -f "\${TEST_ARCHIVE}"
+    echo "Testdaten entfernt. Behalten mit dem Schalter --keep."
+fi
 
 echo
 echo "Schritt 4 abgeschlossen. Jetzt das Hauptskript einmal manuell starten:"
 echo "  ${config.scriptPath}"
+
+exit 0
 `;
 
   return {

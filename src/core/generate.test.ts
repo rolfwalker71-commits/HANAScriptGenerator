@@ -157,6 +157,56 @@ describe('generateAll', () => {
   });
 });
 
+describe('Warten auf Eingaben', () => {
+  const scriptNamed = (name: string) =>
+    generateAll(exampleConfig()).find((f) => f.name === name)?.content ?? '';
+
+  it('lässt das Cron-Skript niemals auf eine Eingabe warten', () => {
+    // Ein read im Hauptskript würde den nächtlichen Lauf stehen lassen,
+    // bis das Lock irgendwann jeden weiteren Lauf verhindert.
+    expect(scriptNamed('schema_export.sh')).not.toMatch(/^\s*read\b/m);
+  });
+
+  it('lässt auch den Testexport durchlaufen, statt am Ende zu fragen', () => {
+    // "Wartet auf Eingabe" ist von "hängt" nicht zu unterscheiden.
+    const content = scriptNamed('04_test_export.sh');
+    expect(content).not.toMatch(/^\s*read\b/m);
+    expect(content).toContain('--keep');
+    expect(content).toContain('KEEP_TEST_DATA="no"');
+  });
+
+  it('fragt nur dort, wo eine Eingabe die Sache ist', () => {
+    // Passwort und die Bestätigung vor dem Überschreiben von Produktivdaten
+    // sind genau die Stellen, an denen eine Rückfrage hingehört.
+    expect(scriptNamed('01_setup_userstore.sh')).toMatch(/^\s*read -rs HANA_PASSWORD/m);
+    expect(scriptNamed('90_restore_schema.sh')).toMatch(/^\s*read -r CONFIRM/m);
+  });
+});
+
+describe('Protokollierung', () => {
+  const mainScript = () =>
+    generateAll(exampleConfig()).find((f) => f.name === 'schema_export.sh')?.content ?? '';
+
+  it('schreibt jede Zeile mit Zeitstempel in Datei und auf den Bildschirm', () => {
+    const content = mainScript();
+    expect(content).toContain(`date '+%Y-%m-%d %H:%M:%S'`);
+    expect(content).toContain('tee -a "${LOG_FILE}"');
+    expect(content).toContain('LOG_FILE="${LOG_DIR}/schema_export_${TIMESTAMP}.log"');
+  });
+
+  it('hängt auch die Ausgabe von hdbsql und tar ins Log', () => {
+    const content = mainScript();
+    expect(content).toContain('"${SQL}" >> "${LOG_FILE}" 2>&1');
+    expect(content).toContain('"${DATE}" >> "${LOG_FILE}" 2>&1');
+  });
+
+  it('räumt alte Logs nach derselben Frist weg wie die Archive', () => {
+    const content = mainScript();
+    expect(content).toContain(`-type f -name 'schema_export_*.log'`);
+    expect(content).toContain('-mtime +${PRUNE_MTIME}');
+  });
+});
+
 describe('Übertragungsskript', () => {
   const deploy = (config = exampleConfig()) =>
     generateAll(config).find((f) => f.name === '00_dateien_uebertragen.cmd');

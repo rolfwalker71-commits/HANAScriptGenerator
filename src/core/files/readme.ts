@@ -147,6 +147,13 @@ Erst weitermachen, wenn dieser Lauf ohne Fehler durchgeht.
 Damit sind Export **und** tar-Lauf einmal bewiesen. Bei großen Schemas gibt der
 Lauf zusätzlich ein Gefühl für die spätere Laufzeit.
 
+Der Lauf endet von selbst und räumt die Testdaten weg. Sollen sie zum Ansehen
+liegen bleiben:
+
+\`\`\`bash
+./04_test_export.sh ${first} --keep
+\`\`\`
+
 ### 5. Hauptskript installieren
 
 Wurde \`00_dateien_uebertragen.cmd\` benutzt, liegt \`${script}\` bereits unter
