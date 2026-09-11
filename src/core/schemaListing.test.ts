@@ -84,6 +84,59 @@ describe('schemaQueryCommand', () => {
   });
 });
 
+describe('generateSchemaLister', () => {
+  const helper = () => generateSchemaLister({ ...defaultConfig(), host: 'vmhanach', dbUser: 'SYSTEM' });
+
+  it('verzichtet auf verzögerte Erweiterung', () => {
+    // Mit enabledelayedexpansion verstümmelt die for-Schleife ein Passwort,
+    // das "!" oder "^" enthält – die Anmeldung scheitert dann unerklärlich.
+    // Im erklärenden rem-Kommentar darf das Wort stehen, nur nicht als Befehl.
+    const commands = helper()
+      .content.split('\r\n')
+      .filter((line) => !line.trimStart().toLowerCase().startsWith('rem'));
+
+    expect(commands.join('\n').toLowerCase()).not.toContain('enabledelayedexpansion');
+    expect(commands.join('\n')).not.toContain('!HANA_PW!');
+  });
+
+  it('liest das Passwort über set /p statt über eine for-Schleife', () => {
+    const content = helper().content;
+    expect(content).toContain('set /p HANA_PW=<"%PWFILE%"');
+    expect(content).not.toMatch(/for \/f[^\n]*HANA_PW/);
+    // Die Zwischendatei darf nicht liegen bleiben.
+    expect(content).toContain('del "%PWFILE%"');
+  });
+
+  it('enthält keine Reste aus dem Generator', () => {
+    // Ein JS-Kommentar, der versehentlich in der Zeilenliste landet, wäre
+    // in der Batchdatei eine ungültige Anweisung.
+    for (const line of helper().content.split('\r\n')) {
+      expect(line.startsWith('//'), line).toBe(false);
+    }
+  });
+
+  it('springt zu Marken, statt Blöcke zu klammern', () => {
+    const content = helper().content;
+    for (const label of [':have_hdbsql', ':use_key', ':no_password', ':check', ':done']) {
+      expect(content, label).toContain(`\r\n${label}\r\n`);
+      expect(content, label).toContain(`goto ${label}`);
+    }
+  });
+
+  it('lässt sich auf ein Mandantensystem umstellen', () => {
+    const content = helper().content;
+    expect(content).toContain('set "HANA_DB="');
+    expect(content).toContain('if defined HANA_DB set "DBOPT=-d %HANA_DB%"');
+    expect(content).toContain('%DBOPT%');
+  });
+
+  it('erklärt bei Anmeldefehlern, was zu prüfen ist', () => {
+    const content = helper().content;
+    expect(content).toContain('authentication failed');
+    expect(content).toContain('SYSTEMDB');
+  });
+});
+
 describe('describeSchema', () => {
   it('rechnet große Schemas in GB um', () => {
     expect(describeSchema({ name: 'X', tables: 1203, sizeMb: 15360 })).toBe('1203 Tabellen · 15.0 GB');
