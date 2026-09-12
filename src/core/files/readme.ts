@@ -1,5 +1,12 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { archiveExtension, baseName, compressionLabel, customerSlug, dirName } from './common.js';
+import {
+  GENERATOR_VERSION,
+  archiveExtension,
+  baseName,
+  compressionLabel,
+  customerSlug,
+  dirName,
+} from './common.js';
 import { cronLine, scheduleDescription } from './installCron.js';
 
 /** Kundenspezifische Anleitung: Reihenfolge, Kommandos, Betrieb, Fehlersuche. */
@@ -21,7 +28,7 @@ export function generateReadme(config: ExportConfig): GeneratedFile {
 
   const content = `# SAP HANA Schema-Export – ${config.customer || config.sid}
 
-Erzeugt durch HANAScriptGenerator.
+Erzeugt durch HANAScriptGenerator, Stand ${GENERATOR_VERSION}.
 
 Jedes Schema wird **einzeln exportiert und einzeln archiviert**. Es entsteht also
 pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Schemas.

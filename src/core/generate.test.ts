@@ -9,6 +9,7 @@ import { generateAll } from './generate.js';
 import { cronLine, scheduleDescription } from './files/installCron.js';
 import { hasErrors, validateConfig } from './validate.js';
 import { parseSchemaList } from './sh.js';
+import { GENERATOR_VERSION } from './files/common.js';
 import type { ExportConfig } from './types.js';
 
 
@@ -215,6 +216,21 @@ describe('generateAll', () => {
     expect(helper?.content).toContain(`set "HANA_USER=${config.dbUser}"`);
     // In einer Batchdatei steht ein literales Prozentzeichen als %%.
     expect(helper?.content).toContain("'\\_SYS%%'");
+  });
+});
+
+describe('Stand des Generators', () => {
+  it('steht im Kopf jeder erzeugten Datei', () => {
+    // Auf dem Server ist sonst nicht zu erkennen, ob ein Skript vom
+    // aktuellen Generator stammt oder von einem älteren Stand.
+    for (const file of generateAll(offloadConfig())) {
+      expect(file.content, file.name).toContain(`Stand ${GENERATOR_VERSION}`);
+    }
+  });
+
+  it('ist gesetzt und nicht der Ersatzwert', () => {
+    expect(GENERATOR_VERSION).not.toBe('Stand unbekannt');
+    expect(GENERATOR_VERSION).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
   });
 });
 

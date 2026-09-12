@@ -29,4 +29,9 @@ export { generateDeployScript } from './files/deploy.js';
 export { generateOffloadScript } from './files/offload.js';
 export { describeSchema, parseSchemaListing, type DiscoveredSchema } from './schemaListing.js';
 export { cronLine, cronMarker, scheduleDescription } from './files/installCron.js';
-export { archiveExtension, compressionLabel, customerSlug } from './files/common.js';
+export {
+  GENERATOR_VERSION,
+  archiveExtension,
+  compressionLabel,
+  customerSlug,
+} from './files/common.js';

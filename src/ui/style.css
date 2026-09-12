@@ -132,6 +132,14 @@ body {
   white-space: nowrap;
 }
 
+.brandbox__version {
+  margin: 0;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 .topbar__profiles {
   display: flex;
   flex-wrap: wrap;
@@ -701,7 +709,8 @@ textarea:focus-visible,
   height: 22px;
 }
 
-:root[data-compact='1'] .brandbox__by {
+:root[data-compact='1'] .brandbox__by,
+:root[data-compact='1'] .brandbox__version {
   font-size: 9px;
 }
 

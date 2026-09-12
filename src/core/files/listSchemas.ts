@@ -1,5 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { shCommentSafe } from '../sh.js';
+import { GENERATOR_VERSION } from './common.js';
 
 /** Zeilenmarke, an der die Auswertung die Schemazeilen wiedererkennt. */
 export const SCHEMA_MARKER = '##SCHEMA##';
@@ -64,7 +65,7 @@ export function generateSchemaLister(config: ExportConfig): GeneratedFile {
     'rem  Schreibt schemas.txt neben diese Datei. Die Datei anschliessend',
     'rem  im HANAScriptGenerator ueber "schemas.txt laden" oeffnen.',
     'rem',
-    'rem  Generiert durch HANAScriptGenerator.',
+    `rem  Erzeugt durch HANAScriptGenerator, Stand ${GENERATOR_VERSION}.`,
     'rem ============================================================',
     '',
     'rem --- Konfiguration ------------------------------------------',

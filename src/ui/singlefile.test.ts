@@ -118,6 +118,11 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(html).toMatch(/body\{height:auto;display:block;overflow:auto\}/);
   });
 
+  it('zeigt den Stand des Builds in der Kopfzeile', () => {
+    const shown = doc.getElementById('buildVersion')?.textContent ?? '';
+    expect(shown).toMatch(/^Stand \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+  });
+
   it('startet und zeigt den ersten Schritt', () => {
     expect(doc.querySelectorAll('.steps__item')).toHaveLength(8);
     expect(doc.querySelector('.steps__item[aria-current="true"]')?.textContent).toContain('System');

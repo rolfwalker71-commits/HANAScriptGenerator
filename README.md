@@ -26,6 +26,19 @@ direkt laufen; die erzeugte Anleitung sagt, wie sich das notfalls prüfen lässt
 Kundenprofile lassen sich im Browser speichern oder als JSON sichern und beim
 nächsten Mal wieder laden.
 
+### Stand erkennen
+
+Oben rechts unter dem Logo steht der Stand des Builds, etwa
+`Stand 2026-09-12 10:46 · 9e52315` — Zeitpunkt und Git-Commit. **Dieselbe
+Angabe steht im Kopf jeder erzeugten Datei.** Damit lässt sich auf dem Server
+prüfen, ob ein Skript vom aktuellen Generator stammt:
+
+```bash
+head -30 schema_export.sh | grep Stand
+```
+
+Weichen die beiden ab, wurde mit einer älteren Fassung gearbeitet.
+
 ### Platzbedarf
 
 Die Seite ist eine feste Fläche: Kopf, Schrittleiste und Inhalt teilen sich die

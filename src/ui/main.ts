@@ -6,6 +6,7 @@ import {
   cronLine,
   customerSlug,
   defaultConfig,
+  GENERATOR_VERSION,
   derivedDefaults,
   describeSchema,
   generateAll,
@@ -97,6 +98,7 @@ const ui = {
   inputImportJson: el<HTMLInputElement>('inputImportJson'),
   btnReset: el<HTMLButtonElement>('btnReset'),
   btnDensity: el<HTMLButtonElement>('btnDensity'),
+  buildVersion: el<HTMLParagraphElement>('buildVersion'),
   btnDerivePaths: el<HTMLButtonElement>('btnDerivePaths'),
   btnCopy: el<HTMLButtonElement>('btnCopy'),
   btnDownload: el<HTMLButtonElement>('btnDownload'),
@@ -799,6 +801,11 @@ ui.btnReset.addEventListener('click', () => {
 // -----------------------------------------------------------------------
 //  Start
 // -----------------------------------------------------------------------
+
+// Damit sich auf einen Blick prüfen lässt, ob eine erzeugte Datei vom
+// aktuellen Stand kommt: dieselbe Angabe steht im Kopf jedes Skripts.
+ui.buildVersion.textContent = `Stand ${GENERATOR_VERSION}`;
+ui.buildVersion.title = 'Dieser Stand steht auch im Kopf jedes erzeugten Skripts';
 
 applyDensity(loadJson<boolean>(DENSITY_KEY) === true);
 writeForm({ ...defaultConfig(), ...(loadJson<ExportConfig>(LAST_CONFIG_KEY) ?? {}) });

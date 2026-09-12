@@ -3,6 +3,14 @@ import { shCommentSafe } from '../sh.js';
 
 export const GENERATOR_NAME = 'HANAScriptGenerator';
 
+/**
+ * Stand des Generators. Der typeof-Test faengt den Fall ab, dass der Wert
+ * nicht eingesetzt wurde – dann steht dort ein ehrliches "unbekannt" statt
+ * eines Absturzes.
+ */
+export const GENERATOR_VERSION =
+  typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : 'Stand unbekannt';
+
 /** Dateiname des Auslagerungsskripts, an mehreren Stellen gebraucht. */
 export const OFFLOAD_SCRIPT_NAME = '06_offload_storagebox.sh';
 
@@ -75,7 +83,7 @@ export function scriptHeader(config: ExportConfig, title: string, lines: string[
     '#',
     ...lines.map((line) => `#  ${line}`),
     ...(lines.length > 0 ? ['#'] : []),
-    `#  Generiert durch ${GENERATOR_NAME}.`,
+    `#  Erzeugt durch ${GENERATOR_NAME}, Stand ${GENERATOR_VERSION}.`,
     HEAVY_RULE,
   ];
   return header.join('\n');

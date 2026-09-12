@@ -1,6 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { shCommentSafe } from '../sh.js';
-import { dirName } from './common.js';
+import { GENERATOR_VERSION, dirName } from './common.js';
 
 /**
  * Windows-Batchdatei, die den erzeugten Satz auf den Server bringt und dort
@@ -54,7 +54,7 @@ export function generateDeployScript(
     'rem',
     'rem  Diese Datei muss im selben Ordner liegen wie die Skripte.',
     'rem',
-    'rem  Generiert durch HANAScriptGenerator.',
+    `rem  Erzeugt durch HANAScriptGenerator, Stand ${GENERATOR_VERSION}.`,
     'rem ============================================================',
     '',
     'rem --- Konfiguration ------------------------------------------',

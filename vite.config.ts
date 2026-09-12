@@ -1,8 +1,33 @@
+import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 const OUTPUT_NAME = 'HANAScriptGenerator.html';
+
+/**
+ * Stand des Builds, sichtbar in der Oberfläche und im Kopf jedes erzeugten
+ * Skripts. Ohne das lässt sich auf dem Server nicht unterscheiden, ob ein
+ * Skript vom aktuellen Generator stammt oder von einem älteren.
+ */
+function buildVersion(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const stamp =
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    ` ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  try {
+    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return `${stamp} · ${sha}`;
+  } catch {
+    // Kein Git zur Hand – der Zeitstempel allein tut es auch.
+    return stamp;
+  }
+}
 
 /** Platzhalter im HTML, den das eingebettete Logo ersetzt. */
 const LOGO_TOKEN = '__BRAND_LOGO__';
@@ -108,6 +133,9 @@ function escapeRegExp(value: string): string {
 
 export default defineConfig({
   base: './',
+  define: {
+    __BUILD_VERSION__: JSON.stringify(buildVersion()),
+  },
   plugins: [brandLogo(), singleFile()],
   server: {
     port: 5180,
