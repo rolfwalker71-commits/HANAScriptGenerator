@@ -7,6 +7,11 @@
  * anlegt.
  */
 
+/** Ein Eintrag im Archiv, Ordner wie Datei. */
+interface Record_ extends ZipEntry {
+  isDirectory: boolean;
+}
+
 export interface ZipEntry {
   name: string;
   content: string;
@@ -66,13 +71,57 @@ class ByteWriter {
   }
 }
 
+/**
+ * Sammelt alle Ordnerpfade, die in den Dateinamen vorkommen.
+ *
+ * Ohne eigene Ordnereinträge zeigt der Windows-Explorer ein Archiv, dessen
+ * Dateien alle in einem Unterordner liegen, als leeren Ordner an. Andere
+ * Programme stört das nicht, weshalb es leicht unentdeckt bleibt.
+ */
+function directoryPrefixes(names: readonly string[]): string[] {
+  const dirs = new Set<string>();
+
+  for (const name of names) {
+    const parts = name.split('/');
+    parts.pop();
+
+    let prefix = '';
+    for (const part of parts) {
+      prefix += `${part}/`;
+      dirs.add(prefix);
+    }
+  }
+
+  return [...dirs].sort();
+}
+
+/** Dateityp und Rechte im oberen Wort, DOS-Attribute im unteren. */
+function externalAttributes(mode: number, isDirectory: boolean): number {
+  const unix = (isDirectory ? 0o040000 : 0o100000) | mode;
+  const dos = isDirectory ? 0x10 : 0x20;
+
+  // Multiplikation statt Schiebeoperator: << rechnet mit 32 Bit mit
+  // Vorzeichen, und 0o100000 << 16 kippt dabei ins Negative.
+  return unix * 0x10000 + dos;
+}
+
 export function createZip(entries: ZipEntry[], now = new Date()): Blob {
   const encoder = new TextEncoder();
   const { time, date } = dosDateTime(now);
   const out = new ByteWriter();
-  const central: Array<{ entry: ZipEntry; crc: number; size: number; offset: number }> = [];
+  const central: Array<{ record: Record_; crc: number; size: number; offset: number }> = [];
 
-  for (const entry of entries) {
+  const records: Record_[] = [
+    ...directoryPrefixes(entries.map((entry) => entry.name)).map((name) => ({
+      name,
+      content: '',
+      mode: 0o755,
+      isDirectory: true,
+    })),
+    ...entries.map((entry) => ({ ...entry, isDirectory: false })),
+  ];
+
+  for (const entry of records) {
     const nameBytes = encoder.encode(entry.name);
     const data = encoder.encode(entry.content);
     const crc = crc32(data);
@@ -92,13 +141,13 @@ export function createZip(entries: ZipEntry[], now = new Date()): Blob {
     out.push(nameBytes);
     out.push(data);
 
-    central.push({ entry, crc, size: data.length, offset });
+    central.push({ record: entry, crc, size: data.length, offset });
   }
 
   const centralStart = out.length;
 
-  for (const { entry, crc, size, offset } of central) {
-    const nameBytes = encoder.encode(entry.name);
+  for (const { record, crc, size, offset } of central) {
+    const nameBytes = encoder.encode(record.name);
 
     out.u32(0x02014b50);
     out.u16((3 << 8) | 20); // erzeugt unter Unix
@@ -115,8 +164,7 @@ export function createZip(entries: ZipEntry[], now = new Date()): Blob {
     out.u16(0);
     out.u16(0);
     out.u16(0);
-    // Obere 16 Bit: Unix-Modus inklusive Dateityp (0o100000 = reguläre Datei).
-    out.u32(((0o100000 | entry.mode) << 16) >>> 0);
+    out.u32(externalAttributes(record.mode, record.isDirectory));
     out.u32(offset);
     out.push(nameBytes);
   }
