@@ -132,6 +132,17 @@ export function validateConfig(config: ExportConfig): ValidationIssue[] {
       error('offload', 'Der Benutzer der StorageBox fehlt oder enthält unzulässige Zeichen.');
     }
 
+    // u123456 ist der Beispielwert aus der Anleitung. Dummerweise existiert
+    // diese Adresse wirklich, ein Tippversuch landet also bei einem fremden
+    // Konto – deshalb blockiert das hier und warnt nicht nur.
+    if (/^u(123456|XXXXXX)\b/i.test(box.user) || /^u(123456|XXXXXX)\./i.test(box.host)) {
+      error(
+        'offload',
+        'Das sind die Beispielwerte aus der Anleitung, nicht deine Zugangsdaten. ' +
+          'Benutzer und Adresse stehen im Hetzner Robot bei der Storage Box.',
+      );
+    }
+
     if (!Number.isInteger(box.port) || box.port < 1 || box.port > 65535) {
       error('offload', 'Der SSH-Port der StorageBox muss zwischen 1 und 65535 liegen.');
     } else if (box.port === 22) {

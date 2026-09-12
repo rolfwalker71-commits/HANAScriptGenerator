@@ -332,8 +332,8 @@ describe('ausgelieferte Einzeldatei', () => {
     set('host', 'p42prod');
 
     tick('offloadEnabled');
-    set('offloadHost', 'u1.your-storagebox.de');
-    set('offloadUser', 'u1-sub1');
+    set('offloadHost', 'box.example.invalid');
+    set('offloadUser', 'backup-kunde');
     set('offloadRemotePath', '/home/hana');
 
     const script = fileContentOf('6 · Auslagern');

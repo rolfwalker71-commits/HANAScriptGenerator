@@ -42,8 +42,8 @@ function offloadConfig(): ExportConfig {
     offload: {
       ...base.offload,
       enabled: true,
-      host: 'u123456.your-storagebox.de',
-      user: 'u123456-sub1',
+      host: 'box.example.invalid',
+      user: 'backup-kunde',
       port: 23,
       remotePath: '/home/hana-export',
       keyPath: '/usr/sap/HDB/HDB00/work/.ssh/id_ed25519',
@@ -216,6 +216,29 @@ describe('generateAll', () => {
     expect(helper?.content).toContain(`set "HANA_USER=${config.dbUser}"`);
     // In einer Batchdatei steht ein literales Prozentzeichen als %%.
     expect(helper?.content).toContain("'\\_SYS%%'");
+  });
+});
+
+describe('Beispielwerte der StorageBox', () => {
+  it('weist die Beispieladresse aus der Anleitung zurück', () => {
+    // u123456.your-storagebox.de löst wirklich auf und gehört jemand
+    // anderem. Übernommen statt ersetzt, landet ein Anmeldeversuch dort.
+    const base = offloadConfig();
+
+    for (const box of [
+      { ...base.offload, user: 'u123456-sub1' },
+      { ...base.offload, host: 'u123456.your-storagebox.de' },
+      { ...base.offload, user: 'uXXXXXX-sub1' },
+    ]) {
+      const issues = validateConfig({ ...base, offload: box });
+      expect(hasErrors(issues), box.user + ' ' + box.host).toBe(true);
+      expect(issues.some((i) => i.message.includes('Beispielwerte'))).toBe(true);
+    }
+  });
+
+  it('lässt echte Zugangsdaten durch', () => {
+    const config = offloadConfig();
+    expect(validateConfig(config).filter((i) => i.severity === 'error')).toEqual([]);
   });
 });
 

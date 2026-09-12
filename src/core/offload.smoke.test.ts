@@ -163,8 +163,8 @@ beforeAll(() => {
     offload: {
       ...base.offload,
       enabled: true,
-      host: 'u1.your-storagebox.de',
-      user: 'u1-sub1',
+      host: 'box.example.invalid',
+      user: 'backup-kunde',
       port: 23,
       remotePath: '/home/hana',
       keyPath,
