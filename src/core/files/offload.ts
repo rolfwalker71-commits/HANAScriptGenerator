@@ -111,6 +111,12 @@ quit
 SFTP_BATCH
 }
 
+# Wie box_sftp, nur gespraechig. Nur fuer die Fehlersuche.
+box_sftp_verbose()
+{
+    sftp -vvv \${SFTP_OPTS} "\${BOX_USER}@\${BOX_HOST}"
+}
+
 box_list()
 {
     box_sftp <<SFTP_BATCH 2>/dev/null
@@ -249,14 +255,49 @@ check_connection()
     box_pwd >> "\${LOG_FILE}" 2>&1
     RC=$?
 
-    if [ \${RC} -ne 0 ]; then
-        log "FEHLER: Keine Verbindung zur StorageBox (RC \${RC})."
-        log "Zu pruefen: Port \${BOX_PORT}, hinterlegter Schluessel, Firewall."
-        return 1
+    if [ \${RC} -eq 0 ]; then
+        log "Verbindung steht."
+        return 0
     fi
 
-    log "Verbindung steht."
-    return 0
+    log "FEHLER: Keine Verbindung zur StorageBox (RC \${RC})."
+    log ""
+
+    if [ -r "\${SSH_KEY}.pub" ]; then
+        log "Angebotener Schluessel:"
+        ssh-keygen -lf "\${SSH_KEY}.pub" 2>&1 | while read -r LINE
+        do
+            log "  \${LINE}"
+        done
+    fi
+
+    # Die ausfuehrliche Ausgabe sagt, ob der Schluessel ueberhaupt angeboten
+    # und warum er abgelehnt wurde. Nur die aussagekraeftigen Zeilen.
+    log ""
+    log "Aus dem Verbindungsversuch:"
+
+    box_sftp_verbose </dev/null 2>&1 \\
+        | grep -E 'Connecting to|Offering public key|Server accepts key|Authentications that can continue|Permission denied|Connection refused|No route to host|Connection timed out|key_verify failed|not accessible' \\
+        | head -12 \\
+        | while read -r LINE
+          do
+              log "  \${LINE}"
+          done
+
+    log ""
+    log "Zu pruefen:"
+    log "  - Ist der Schluessel beim Konto \${BOX_USER} hinterlegt? Ein"
+    log "    Schluessel am Hauptkonto gilt nicht fuer ein Unterkonto."
+    log "  - Ist fuer dieses Konto der SSH-Zugang freigeschaltet? Bei"
+    log "    Unterkonten ist er einzeln zu erlauben."
+    log "  - Port \${BOX_PORT} richtig? Hetzner verwendet 23, nicht 22."
+    log "  - Passt der Fingerabdruck oben zu dem, was im Robot steht?"
+    log ""
+    log "  Gegenprobe mit Passwort. Klappt sie, stimmen Host, Benutzer und"
+    log "  Port, und es liegt allein am Schluessel:"
+    log "      sftp -P \${BOX_PORT} \${BOX_USER}@\${BOX_HOST}"
+
+    return 1
 }
 
 ${RULE}
