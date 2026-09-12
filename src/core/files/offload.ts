@@ -103,13 +103,22 @@ quit
 SFTP_BATCH
 }
 
-box_mkdir()
+# sftp kennt kein "mkdir -p". Ein Zielpfad mit mehreren Ebenen entsteht
+# deshalb Ebene fuer Ebene; bereits vorhandene melden nur einen Fehler,
+# den die Gegenpruefung spaeter ohnehin abfaengt.
+box_mkdir_path()
 {
-    box_sftp <<SFTP_BATCH
-mkdir $1
-mkdir $2
-quit
-SFTP_BATCH
+    (
+        IFS='/'
+        LEVEL=""
+        for PART in $1
+        do
+            [ -n "\${PART}" ] || continue
+            LEVEL="\${LEVEL}/\${PART}"
+            echo "mkdir \${LEVEL}"
+        done
+        echo "quit"
+    ) | box_sftp
 }
 
 # Wie box_sftp, nur gespraechig. Nur fuer die Fehlersuche.
@@ -380,7 +389,7 @@ offload_day()
 
     # Das Zielverzeichnis muss vorhanden sein, rsync legt auf der Box keine
     # tieferen Pfade an.
-    box_mkdir "\${BOX_PATH}" "\${BOX_PATH}/\${DAY}" >> "\${LOG_FILE}" 2>&1
+    box_mkdir_path "\${BOX_PATH}/\${DAY}" >> "\${LOG_FILE}" 2>&1
 
     log "\${DAY}: uebertrage ..."
 

@@ -166,7 +166,7 @@ beforeAll(() => {
       host: 'box.example.invalid',
       user: 'backup-kunde',
       port: 23,
-      remotePath: '/home/hana',
+      remotePath: '/home/hana_exporte/kunde',
       keyPath,
       runAfterExport: true,
       remoteRetentionDays: 30,
@@ -197,6 +197,17 @@ describe('generiertes Auslagerungsskript', () => {
     expect(existsSync(join(remote, 'home'))).toBe(false);
   });
 
+  it('legt einen mehrstufigen Zielpfad an', () => {
+    // sftp kennt kein mkdir -p. Ohne eigenes Anlegen je Ebene scheitert
+    // jeder Zielpfad, der tiefer als eine Ebene liegt.
+    const day = dayBefore(0);
+    makeDay(day, config.schemas);
+    run([day]);
+
+    expect(existsSync(join(remote, 'home/hana_exporte'))).toBe(true);
+    expect(existsSync(join(remote, 'home/hana_exporte/kunde'))).toBe(true);
+  });
+
   it('kopiert einen Tagesordner und lässt ihn lokal liegen', () => {
     const day = dayBefore(0);
     makeDay(day, config.schemas);
@@ -207,7 +218,7 @@ describe('generiertes Auslagerungsskript', () => {
     const expected = config.schemas.map((s) => `${s}_${day}.tar.gz`).sort();
 
     // Auf der Gegenstelle liegen beide Archive.
-    expect(readdirSync(join(remote, 'home/hana', day)).sort()).toEqual(expected);
+    expect(readdirSync(join(remote, 'home/hana_exporte/kunde', day)).sort()).toEqual(expected);
 
     // Kopiert, nicht verschoben: lokal ist alles unverändert da.
     expect(readdirSync(join(config.exportBase, day)).sort()).toEqual(expected);
@@ -224,8 +235,8 @@ describe('generiertes Auslagerungsskript', () => {
     const { stdout, status } = run(['--pending']);
     expect(status, stdout).toBe(0);
 
-    expect(existsSync(join(remote, 'home/hana', gestern, `ALPHA_${gestern}.tar.gz`))).toBe(true);
-    expect(existsSync(join(remote, 'home/hana', vorgestern, `BETA_${vorgestern}.tar.gz`))).toBe(true);
+    expect(existsSync(join(remote, 'home/hana_exporte/kunde', gestern, `ALPHA_${gestern}.tar.gz`))).toBe(true);
+    expect(existsSync(join(remote, 'home/hana_exporte/kunde', vorgestern, `BETA_${vorgestern}.tar.gz`))).toBe(true);
 
     // Der bereits vermerkte Tag wurde nicht erneut angefasst.
     expect(stdout).not.toContain(`${dayBefore(0)}: uebertrage`);
@@ -244,7 +255,7 @@ describe('generiertes Auslagerungsskript', () => {
     expect(status, stdout).toBe(0);
 
     expect(stdout).toContain(`entferne ${alt}`);
-    expect(existsSync(join(remote, 'home/hana', alt))).toBe(false);
+    expect(existsSync(join(remote, 'home/hana_exporte/kunde', alt))).toBe(false);
     expect(existsSync(join(config.exportBase, alt))).toBe(true);
   });
 

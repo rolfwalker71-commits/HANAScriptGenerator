@@ -196,7 +196,7 @@ describe('generateAll', () => {
 
     expect(code).not.toContain('printf');
     expect(code).toContain('<<SFTP_BATCH');
-    for (const helper of ['box_pwd', 'box_mkdir', 'box_list', 'box_remove_day']) {
+    for (const helper of ['box_pwd', 'box_mkdir_path', 'box_list', 'box_remove_day']) {
       expect(code, helper).toContain(`${helper}()`);
     }
   });
