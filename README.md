@@ -174,6 +174,11 @@ unbemerkt fehlgeschlagene Übertragung kostet dadurch nicht den Tag.
 ein Ordner mit Dateien in einer Ebene – und genau das macht das Aufräumen dort
 über `sftp` möglich, denn eine Storage Box hat keine vollwertige Shell.
 
+Eingeplant wird sie über `05_install_cron.sh`, das dann **zwei** Zeilen setzt:
+den Export und die Auslagerung. Läuft die Auslagerung bereits direkt nach dem
+Export, ist der zweite Termin ein `--pending`-Lauf, der nur aufsammelt, was
+liegengeblieben ist – etwa nach einer Nacht ohne Netz.
+
 | Aufruf | Wirkung |
 | --- | --- |
 | `--setup-key` | Schlüsselpaar anlegen und den öffentlichen Teil zeigen |
@@ -197,6 +202,10 @@ besten Unterkonten mit eigenem Verzeichnis.
 
 Beim Hinterlegen braucht `ssh-copy-id` das Flag `-s`, weil der Schlüssel mangels
 Shell über SFTP abgelegt werden muss.
+
+Die Vorabprüfung (`03_preflight.sh`) läuft **vor** der Schlüsseleinrichtung und
+meldet einen fehlenden Schlüssel deshalb nur als Hinweis. Erst ein vorhandener
+Schlüssel, mit dem die Anmeldung scheitert, ist dort ein Fehler.
 
 Betrieblich abgesichert ist der Lauf durch `flock` gegen Überschneidungen, eine
 Prüfung des ausführenden Linux-Benutzers (der hdbuserstore ist benutzerspezifisch),

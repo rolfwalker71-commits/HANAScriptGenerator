@@ -1,5 +1,5 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, scriptHeader, userGuard } from './common.js';
+import { OFFLOAD_SCRIPT_NAME, RULE, dirName, scriptHeader, userGuard } from './common.js';
 
 /** Klartextbeschreibung des Zeitplans für Kommentare und Anleitung. */
 export function scheduleDescription(config: ExportConfig): string {
@@ -24,6 +24,38 @@ export function cronMarker(config: ExportConfig): string {
   return `# HANAScriptGenerator: Schema-Export ${config.sid}`;
 }
 
+export function offloadMarker(config: ExportConfig): string {
+  return `# HANAScriptGenerator: Auslagerung ${config.sid}`;
+}
+
+/** Vollständiger Pfad des Auslagerungsskripts auf dem Server. */
+export function offloadScriptPath(config: ExportConfig): string {
+  return `${dirName(config.scriptPath)}/${OFFLOAD_SCRIPT_NAME}`;
+}
+
+/**
+ * Crontab-Zeile für die Auslagerung.
+ *
+ * Läuft sie schon direkt nach dem Export, holt dieser Termin nur nach, was
+ * liegengeblieben ist – etwa nach einer Nacht ohne Netz. Sonst ist er der
+ * eigentliche tägliche Auslagerungslauf.
+ */
+export function offloadCronLine(config: ExportConfig): string {
+  const { hour, minute, runAfterExport } = config.offload;
+  const mode = runAfterExport ? ' --pending' : '';
+  return `${minute} ${hour} * * * ${offloadScriptPath(config)}${mode} >/dev/null 2>&1`;
+}
+
+/** Klartext für Kommentare und Anleitung. */
+export function offloadScheduleDescription(config: ExportConfig): string {
+  const time =
+    `${String(config.offload.hour).padStart(2, '0')}:` +
+    `${String(config.offload.minute).padStart(2, '0')}`;
+  return config.offload.runAfterExport
+    ? `täglich um ${time} Uhr, holt Liegengebliebenes nach`
+    : `täglich um ${time} Uhr`;
+}
+
 /**
  * Trägt den Cronjob idempotent in die Crontab des Instanzbenutzers ein.
  * `--remove` entfernt ihn wieder, `--show` zeigt nur den geplanten Eintrag.
@@ -32,9 +64,17 @@ export function generateInstallCron(config: ExportConfig): GeneratedFile {
   const marker = cronMarker(config);
   const line = cronLine(config);
 
+  const offload = config.offload.enabled;
+
   const content = `${scriptHeader(config, 'Schritt 5 – Cronjob einrichten', [
-    `Zeitplan: ${scheduleDescription(config)}`,
-    `Eintrag:  ${line}`,
+    `Export:     ${scheduleDescription(config)}`,
+    `            ${line}`,
+    ...(offload
+      ? [
+          `Auslagerung: ${offloadScheduleDescription(config)}`,
+          `            ${offloadCronLine(config)}`,
+        ]
+      : []),
     '',
     'Aufruf:',
     '  ./05_install_cron.sh           Eintrag setzen oder aktualisieren',
@@ -47,6 +87,14 @@ set -u
 SCRIPT_PATH="${config.scriptPath}"
 CRON_MARKER="${marker}"
 CRON_LINE="${line}"
+${
+  offload
+    ? `
+OFFLOAD_SCRIPT="${offloadScriptPath(config)}"
+OFFLOAD_MARKER="${offloadMarker(config)}"
+OFFLOAD_LINE="${offloadCronLine(config)}"`
+    : ''
+}
 
 MODE="\${1:-install}"
 
@@ -60,7 +108,13 @@ if [ "\${MODE}" = "--show" ]; then
     echo "Geplanter Eintrag fuer $(whoami):"
     echo
     echo "\${CRON_MARKER}"
-    echo "\${CRON_LINE}"
+    echo "\${CRON_LINE}"${
+      offload
+        ? `
+    echo "\${OFFLOAD_MARKER}"
+    echo "\${OFFLOAD_LINE}"`
+        : ''
+    }
     echo
     echo "Aktuelle Crontab:"
     crontab -l 2>/dev/null || echo "  (leer)"
@@ -89,7 +143,13 @@ fi
 # unser Skript aufruft. So bleibt bei wiederholtem Lauf kein Duplikat zurueck.
 crontab -l 2>/dev/null \\
     | grep -v -F -- "\${CRON_MARKER}" \\
-    | grep -v -F -- "\${SCRIPT_PATH}" \\
+    | grep -v -F -- "\${SCRIPT_PATH}" \\${
+      offload
+        ? `
+    | grep -v -F -- "\${OFFLOAD_MARKER}" \\
+    | grep -v -F -- "\${OFFLOAD_SCRIPT}" \\`
+        : ''
+    }
     > "\${TMP_CRON}" || true
 
 ${RULE}
@@ -139,12 +199,21 @@ fi
 
 {
     echo "\${CRON_MARKER}"
-    echo "\${CRON_LINE}"
+    echo "\${CRON_LINE}"${
+      offload
+        ? `
+    echo "\${OFFLOAD_MARKER}"
+    echo "\${OFFLOAD_LINE}"`
+        : ''
+    }
 } >> "\${TMP_CRON}"
 
 crontab "\${TMP_CRON}"
 
-echo "Cronjob eingerichtet (${scheduleDescription(config)})."
+echo "Export eingerichtet: ${scheduleDescription(config)}."${
+  offload ? `
+echo "Auslagerung eingerichtet: ${offloadScheduleDescription(config)}."` : ''
+}
 echo
 echo "Aktuelle Crontab:"
 crontab -l | sed 's/^/  /'
@@ -153,7 +222,9 @@ crontab -l | sed 's/^/  /'
   return {
     name: '05_install_cron.sh',
     title: '5 · Cronjob',
-    purpose: `Trägt den Lauf ${scheduleDescription(config)} idempotent in die Crontab von ${config.osUser} ein.`,
+    purpose: offload
+      ? `Trägt Export (${scheduleDescription(config)}) und Auslagerung (${offloadScheduleDescription(config)}) idempotent in die Crontab von ${config.osUser} ein.`
+      : `Trägt den Lauf ${scheduleDescription(config)} idempotent in die Crontab von ${config.osUser} ein.`,
     language: 'bash',
     executable: true,
     content,

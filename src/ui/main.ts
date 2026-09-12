@@ -67,6 +67,7 @@ const fields = {
   offloadKeyPath: el<HTMLInputElement>('offloadKeyPath'),
   offloadRunAfter: el<HTMLInputElement>('offloadRunAfter'),
   offloadRetention: el<HTMLInputElement>('offloadRetention'),
+  offloadTime: el<HTMLInputElement>('offloadTime'),
 };
 
 const ui = {
@@ -91,6 +92,7 @@ const ui = {
   inputSchemaListing: el<HTMLInputElement>('inputSchemaListing'),
   mailFields: el<HTMLDivElement>('mailFields'),
   offloadFields: el<HTMLDivElement>('offloadFields'),
+  offloadTimeHint: el<HTMLElement>('offloadTimeHint'),
   profileSelect: el<HTMLSelectElement>('profileSelect'),
   btnSaveProfile: el<HTMLButtonElement>('btnSaveProfile'),
   btnDeleteProfile: el<HTMLButtonElement>('btnDeleteProfile'),
@@ -166,6 +168,10 @@ function readForm(): ExportConfig {
       onlyOnError: fields.mailOnlyOnError.checked,
     },
     offload: {
+      ...(() => {
+        const [hour = '4', minute = '0'] = fields.offloadTime.value.split(':');
+        return { hour: Number.parseInt(hour, 10), minute: Number.parseInt(minute, 10) };
+      })(),
       enabled: fields.offloadEnabled.checked,
       host: fields.offloadHost.value,
       user: fields.offloadUser.value,
@@ -222,6 +228,9 @@ function writeForm(config: ExportConfig): void {
   fields.offloadKeyPath.value = config.offload.keyPath;
   fields.offloadRunAfter.checked = config.offload.runAfterExport;
   fields.offloadRetention.value = String(config.offload.remoteRetentionDays);
+  fields.offloadTime.value =
+    `${String(config.offload.hour).padStart(2, '0')}:` +
+    `${String(config.offload.minute).padStart(2, '0')}`;
 
   lastDerived = derivedDefaults(config.sid, config.instance);
   syncConditionalFields();
@@ -232,6 +241,11 @@ function syncConditionalFields(): void {
   fields.scheduleDowCustom.hidden = fields.scheduleDow.value !== '__custom';
   ui.mailFields.hidden = !fields.mailEnabled.checked;
   ui.offloadFields.hidden = !fields.offloadEnabled.checked;
+
+  // Läuft die Auslagerung schon nach dem Export, holt der Termin nur nach.
+  ui.offloadTimeHint.textContent = fields.offloadRunAfter.checked
+    ? 'Holt nach, was liegengeblieben ist – etwa nach einer Nacht ohne Netz.'
+    : 'Eigener täglicher Auslagerungslauf, da nicht direkt nach dem Export.';
 }
 
 /**

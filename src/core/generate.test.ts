@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { defaultConfig, defaultSqlPort, derivedDefaults } from './defaults.js';
 import { generateAll } from './generate.js';
-import { cronLine, scheduleDescription } from './files/installCron.js';
+import { cronLine, offloadCronLine, scheduleDescription } from './files/installCron.js';
 import { hasErrors, validateConfig } from './validate.js';
 import { parseSchemaList } from './sh.js';
 import { GENERATOR_VERSION } from './files/common.js';
@@ -216,6 +216,51 @@ describe('generateAll', () => {
     expect(helper?.content).toContain(`set "HANA_USER=${config.dbUser}"`);
     // In einer Batchdatei steht ein literales Prozentzeichen als %%.
     expect(helper?.content).toContain("'\\_SYS%%'");
+  });
+});
+
+describe('Cron-Eintrag für die Auslagerung', () => {
+  it('trägt neben dem Export auch die Auslagerung ein', () => {
+    const config = offloadConfig();
+    const script = generateAll(config).find((f) => f.name === '05_install_cron.sh')?.content ?? '';
+
+    expect(script).toContain(`CRON_LINE="${cronLine(config)}"`);
+    expect(script).toContain(`OFFLOAD_LINE="${offloadCronLine(config)}"`);
+
+    // Beide Zeilen müssen beim erneuten Lauf weggefiltert werden, sonst
+    // sammeln sich Duplikate in der Crontab.
+    expect(script).toContain('grep -v -F -- "${OFFLOAD_MARKER}"');
+    expect(script).toContain('grep -v -F -- "${OFFLOAD_SCRIPT}"');
+  });
+
+  it('holt nur nach, wenn das Exportskript schon auslagert', () => {
+    const nach = offloadConfig();
+    expect(offloadCronLine(nach)).toContain('--pending');
+
+    const eigen = { ...nach, offload: { ...nach.offload, runAfterExport: false } };
+    expect(offloadCronLine(eigen)).not.toContain('--pending');
+    expect(offloadCronLine(eigen)).toContain('06_offload_storagebox.sh >/dev/null');
+  });
+
+  it('lässt die Crontab unverändert, wenn nicht ausgelagert wird', () => {
+    const script =
+      generateAll(exampleConfig()).find((f) => f.name === '05_install_cron.sh')?.content ?? '';
+    expect(script).not.toContain('OFFLOAD_LINE');
+    expect(script).not.toContain('06_offload_storagebox.sh');
+  });
+});
+
+describe('Vorabprüfung und Reihenfolge', () => {
+  it('wertet einen fehlenden StorageBox-Schlüssel nicht als Fehler', () => {
+    // Sie läuft als Schritt 3, der Schlüssel entsteht in Schritt 5b. Als
+    // Fehler gewertet könnte die Prüfung nie bestehen.
+    const script =
+      generateAll(offloadConfig()).find((f) => f.name === '03_preflight.sh')?.content ?? '';
+
+    const zeile = script.split('\n').find((l) => l.includes('noch nicht angelegt')) ?? '';
+    expect(zeile).toContain('note ');
+    expect(zeile).not.toContain('fail ');
+    expect(script).toContain('--setup-key');
   });
 });
 

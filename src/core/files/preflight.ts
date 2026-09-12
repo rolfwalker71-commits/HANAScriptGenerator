@@ -217,6 +217,10 @@ ${
     ? `
 ${RULE}
 #  10. StorageBox
+#
+#  Diese Pruefung laeuft vor der Schluesseleinrichtung. Ein fehlender
+#  Schluessel ist deshalb ein Hinweis und kein Fehler; erst ein vorhandener
+#  Schluessel, mit dem die Anmeldung scheitert, ist einer.
 ${RULE}
 
 if [ -r "${box.keyPath}" ]; then
@@ -242,8 +246,11 @@ if [ -r "${box.keyPath}" ]; then
         note "  ./${'06_offload_storagebox.sh'} --setup-key"
     fi
 else
-    fail "SSH-Schluessel fehlt: ${box.keyPath}"
-    note "Anlegen mit: ./06_offload_storagebox.sh --setup-key"
+    # Kein Fehler: dieser Lauf kommt vor der Schluesseleinrichtung. Erst
+    # wenn der Schluessel da ist, muss auch die Anmeldung klappen.
+    note "SSH-Schluessel noch nicht angelegt: ${box.keyPath}"
+    note "Das ist hier in Ordnung – er entsteht in einem spaeteren Schritt:"
+    note "  ./06_offload_storagebox.sh --setup-key"
 fi
 
 for TOOL in rsync sftp
@@ -270,7 +277,15 @@ if [ \${CHECKS_FAILED} -ne 0 ]; then
     exit 1
 fi
 
-echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."
+echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."${
+  box.enabled
+    ? `
+echo
+echo "Fuer die Auslagerung fehlt danach noch der Schluessel:"
+echo "  ./06_offload_storagebox.sh --setup-key"
+echo "  ./06_offload_storagebox.sh --check"`
+    : ''
+}
 `;
 
   return {

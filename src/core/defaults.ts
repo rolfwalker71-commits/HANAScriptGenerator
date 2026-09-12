@@ -108,6 +108,9 @@ export function defaultConfig(): ExportConfig {
       remotePath: '',
       keyPath: '',
       runAfterExport: true,
+      // Zwei Stunden nach dem Export: bis dahin ist er in aller Regel durch.
+      hour: 4,
+      minute: 0,
       // Aufraeumen auf der Box loescht Daten, die lokal schon weg sein
       // koennen. Deshalb aus, bis es jemand bewusst einschaltet.
       remoteRetentionDays: 0,

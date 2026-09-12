@@ -44,8 +44,16 @@ export interface OffloadConfig {
    * abzulegen und zusaetzlich sshpass zu installieren.
    */
   keyPath: string;
-  /** true = das Exportskript laegert direkt nach dem Lauf aus. */
+  /**
+   * true = das Exportskript laegert direkt nach dem Lauf aus. Dann traegt
+   * der Cronjob zusaetzlich einen Nachholtermin ein, der liegengebliebene
+   * Tage aufsammelt. false = die Auslagerung bekommt einen eigenen Termin.
+   */
   runAfterExport: boolean;
+  /** Stunde des eigenen Auslagerungstermins. */
+  hour: number;
+  /** Minute des eigenen Auslagerungstermins. */
+  minute: number;
   /**
    * Aufbewahrung auf der Box in Tagen. 0 schaltet das Aufraeumen ab und
    * laesst alles liegen – der sichere Ausgangspunkt.

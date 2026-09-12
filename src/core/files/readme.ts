@@ -1,4 +1,5 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
+import { offloadCronLine, offloadScheduleDescription } from './installCron.js';
 import {
   GENERATOR_VERSION,
   archiveExtension,
@@ -231,18 +232,50 @@ echo $?
 
 Muss \`0\` sein.
 
-### 6. Cronjob einrichten
+${
+  config.offload.enabled
+    ? `### 5b. Schlüssel für die StorageBox
+
+\`\`\`bash
+./06_offload_storagebox.sh --setup-key
+\`\`\`
+
+Zeigt den öffentlichen Schlüssel. Diesen auf der Box hinterlegen, dann:
+
+\`\`\`bash
+./06_offload_storagebox.sh --check
+\`\`\`
+
+Die Vorabprüfung aus Schritt 3 meldet einen fehlenden Schlüssel bewusst nur als
+Hinweis – sie läuft ja vor diesem Schritt.
+
+`
+    : ''
+}### 6. Cronjob einrichten
 
 \`\`\`bash
 ./05_install_cron.sh
 \`\`\`
 
-Das Skript sichert eine bestehende Crontab, entfernt einen früheren Eintrag zu
-diesem Export und setzt:
+Das Skript sichert eine bestehende Crontab, entfernt frühere Einträge zu diesem
+Export und setzt:
 
 \`\`\`
-${cronLine(config)}
-\`\`\`
+${cronLine(config)}${
+    config.offload.enabled ? `
+${offloadCronLine(config)}` : ''
+  }
+\`\`\`${
+    config.offload.enabled
+      ? `
+
+Der zweite Eintrag läuft ${offloadScheduleDescription(config)}.${
+          config.offload.runAfterExport
+            ? ' Die eigentliche Auslagerung erledigt schon das Exportskript;\ndieser Termin sammelt nur auf, was liegengeblieben ist.'
+            : ''
+        }`
+      : ''
+  }
 
 Kontrolle:
 

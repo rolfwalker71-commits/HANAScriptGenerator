@@ -154,6 +154,13 @@ export function validateConfig(config: ExportConfig): ValidationIssue[] {
       error('offload', 'Für den SSH-Schlüssel wird ein absoluter Pfad benötigt.');
     }
 
+    if (!Number.isInteger(box.hour) || box.hour < 0 || box.hour > 23) {
+      error('offload', 'Die Stunde der Auslagerung muss zwischen 0 und 23 liegen.');
+    }
+    if (!Number.isInteger(box.minute) || box.minute < 0 || box.minute > 59) {
+      error('offload', 'Die Minute der Auslagerung muss zwischen 0 und 59 liegen.');
+    }
+
     if (!Number.isInteger(box.remoteRetentionDays) || box.remoteRetentionDays < 0) {
       error('offload', 'Die Aufbewahrung auf der Box darf nicht negativ sein.');
     } else if (box.remoteRetentionDays > 0 && box.remoteRetentionDays <= config.retentionDays) {
