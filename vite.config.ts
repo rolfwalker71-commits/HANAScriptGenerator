@@ -61,7 +61,10 @@ function brandLogo(): Plugin {
 
       const type = LOGO_TYPES[extname(found).toLowerCase()] ?? 'application/octet-stream';
       const data = readFileSync(found).toString('base64');
-      return html.replace(LOGO_TOKEN, `data:${type};base64,${data}`);
+
+      // Ersetzungs-Funktion statt -Text: sonst deutet JavaScript $-Folgen
+      // im eingesetzten Wert als Muster. Siehe singleFile() unten.
+      return html.replace(LOGO_TOKEN, () => `data:${type};base64,${data}`);
     },
   };
 }
@@ -72,6 +75,12 @@ function brandLogo(): Plugin {
  * Ergebnis ist eine einzige Datei, die sich per Doppelklick über `file://`
  * öffnen lässt – ohne Node, ohne Webserver, ohne Internetzugang. Genau das
  * wird beim Kunden gebraucht, wo kein npm installiert ist.
+ *
+ * Eingesetzt wird ausschliesslich über Ersetzungs-Funktionen. Als Text
+ * gedeutet, hätte `$&`, `` $` `` oder `$'` im Code eine Sonderbedeutung:
+ * `$'` steht für alles nach dem Treffer. Der Generator erzeugt unter anderem
+ * `grep -E '...$'`, und dieses `$'` hätte sich beim Einbetten in `</html>`
+ * verwandelt – mitten in einem Shell-Skript, das dann unbrauchbar ist.
  */
 function singleFile(): Plugin {
   return {
@@ -90,7 +99,7 @@ function singleFile(): Plugin {
           const css = String(chunk.source);
           source = source.replace(
             new RegExp(`\\s*<link[^>]+href="[^"]*${escapeRegExp(fileName)}"[^>]*>`),
-            `\n    <style>\n${css}\n    </style>`,
+            () => `\n    <style>\n${css}\n    </style>`,
           );
           delete bundle[fileName];
         }
@@ -108,7 +117,7 @@ function singleFile(): Plugin {
               new RegExp(`\\s*<script[^>]+src="[^"]*${escapeRegExp(fileName)}"[^>]*></script>`),
               '',
             )
-            .replace('</body>', `  <script>\n${code}\n    </script>\n  </body>`);
+            .replace('</body>', () => `  <script>\n${code}\n    </script>\n  </body>`);
 
           delete bundle[fileName];
         }

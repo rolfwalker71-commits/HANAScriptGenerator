@@ -118,6 +118,19 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(html).toMatch(/body\{height:auto;display:block;overflow:auto\}/);
   });
 
+  it('hat beim Einbetten nichts aus der Seite in den Code gezogen', () => {
+    // `$'` bedeutet im Ersetzungstext von String.replace "alles nach dem
+    // Treffer". Der Generator erzeugt grep -E '...$', und als Ersetzungstext
+    // eingesetzt wurde daraus einmal `</html>` mitten im Shell-Skript.
+    const html = readFileSync(BUNDLE, 'utf8');
+
+    expect(html.match(/<\/html>/g) ?? []).toHaveLength(1);
+    expect(html.match(/<\/body>/g) ?? []).toHaveLength(1);
+
+    // Die betroffene Zeile muss vollständig im Bündel stehen.
+    expect(html).toContain(String.raw`grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`);
+  });
+
   it('zeigt den Stand des Builds in der Kopfzeile', () => {
     const shown = doc.getElementById('buildVersion')?.textContent ?? '';
     expect(shown).toMatch(/^Stand \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
@@ -301,5 +314,39 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(doc.getElementById('issues')?.hidden).toBe(false);
     expect(doc.getElementById('issues')?.textContent).toContain('Hostname');
     expect((doc.getElementById('btnNext') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('erzeugt aus dem Bündel heraus ein fehlerfreies Auslagerungsskript', () => {
+    // Der entscheidende Weg: nicht der Generator als Modul, sondern die
+    // ausgelieferte Datei. Genau dazwischen lag der Fehler.
+    const set = (id: string, value: string) => type(id, value);
+    const tick = (id: string) => {
+      const box = doc.getElementById(id) as HTMLInputElement;
+      if (!box.checked) {
+        box.checked = true;
+        box.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+      }
+    };
+
+    // Der Test davor leert den Hostnamen absichtlich.
+    set('host', 'p42prod');
+
+    tick('offloadEnabled');
+    set('offloadHost', 'u1.your-storagebox.de');
+    set('offloadUser', 'u1-sub1');
+    set('offloadRemotePath', '/home/hana');
+
+    const script = fileContentOf('6 · Auslagern');
+
+    expect(script).toContain(String.raw`grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`);
+    expect(script).not.toContain('</html>');
+    expect(script).not.toContain('<script');
+
+    // Jede einfache Anführung muss sich auf ihrer Zeile wieder schließen.
+    const offen = script
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .filter((line) => (line.match(/'/g) ?? []).length % 2 === 1);
+    expect(offen).toEqual([]);
   });
 });
