@@ -25,6 +25,7 @@ import { createZip } from './zip.js';
 
 const PROFILE_STORAGE_KEY = 'hana-script-generator.profiles.v1';
 const LAST_CONFIG_KEY = 'hana-script-generator.last.v1';
+const DENSITY_KEY = 'hana-script-generator.compact.v1';
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -86,6 +87,7 @@ const ui = {
   btnExportJson: el<HTMLButtonElement>('btnExportJson'),
   inputImportJson: el<HTMLInputElement>('inputImportJson'),
   btnReset: el<HTMLButtonElement>('btnReset'),
+  btnDensity: el<HTMLButtonElement>('btnDensity'),
   btnDerivePaths: el<HTMLButtonElement>('btnDerivePaths'),
   btnCopy: el<HTMLButtonElement>('btnCopy'),
   btnDownload: el<HTMLButtonElement>('btnDownload'),
@@ -731,6 +733,22 @@ ui.inputSchemaListing.addEventListener('change', async () => {
   render();
 });
 
+/**
+ * Schaltet die kompakte Darstellung um. Gedacht fuer enge Fenster, etwa
+ * Bild-in-Bild in einer RDP-Sitzung.
+ */
+function applyDensity(compact: boolean): void {
+  document.documentElement.dataset['compact'] = compact ? '1' : '';
+  ui.btnDensity.setAttribute('aria-pressed', String(compact));
+  ui.btnDensity.textContent = compact ? 'Normal' : 'Kompakt';
+}
+
+ui.btnDensity.addEventListener('click', () => {
+  const compact = document.documentElement.dataset['compact'] !== '1';
+  applyDensity(compact);
+  persist(DENSITY_KEY, compact);
+});
+
 ui.btnReset.addEventListener('click', () => {
   if (!window.confirm('Alle Eingaben verwerfen und neu beginnen?')) return;
   writeForm(defaultConfig());
@@ -744,6 +762,7 @@ ui.btnReset.addEventListener('click', () => {
 //  Start
 // -----------------------------------------------------------------------
 
+applyDensity(loadJson<boolean>(DENSITY_KEY) === true);
 writeForm({ ...defaultConfig(), ...(loadJson<ExportConfig>(LAST_CONFIG_KEY) ?? {}) });
 renderProfiles();
 render();

@@ -17,8 +17,8 @@
   --code-bg: #1c2128;
   --code-text: #d7dde5;
 
-  --radius: 8px;
-  --gap: 16px;
+  --radius: 7px;
+  --gap: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,11 +47,24 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+}
+
+/*
+ * Feste Flaeche statt scrollender Seite: Kopf, Schrittleiste und Inhalt
+ * teilen sich die Fensterhoehe, gescrollt wird nur innerhalb der Bereiche.
+ * In einer kleinen RDP-Sitzung muss dadurch nichts mehr gesucht werden.
+ */
 body {
+  height: 100%;
   margin: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .sr-only {
@@ -68,23 +81,34 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--gap);
-  padding: 14px 20px;
+  gap: 10px var(--gap);
+  padding: 7px 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
 
 .topbar h1 {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   letter-spacing: -0.01em;
 }
 
+.topbar__title {
+  margin-right: auto;
+}
+
 .topbar__title p {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 11.5px;
+}
+
+/* Logo, beim Build als data-URI eingebettet. Fehlt es, ist das Element weg. */
+.brand {
+  height: 26px;
+  width: auto;
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 .topbar__profiles {
@@ -98,10 +122,12 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: var(--gap);
   padding: var(--gap);
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 1000px) {
@@ -117,8 +143,9 @@ body {
 }
 
 .panel--output {
-  position: sticky;
-  top: var(--gap);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -128,7 +155,7 @@ body {
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  padding: 10px 20px 0;
+  padding: 5px 14px 0;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -136,15 +163,15 @@ body {
 .steps__item {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   flex: 0 0 auto;
-  padding: 8px 12px 10px;
+  padding: 5px 9px 7px;
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -188,24 +215,32 @@ body {
 .wizard {
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Nur die Eingaben scrollen, die Schaltflaechen unten bleiben sichtbar. */
+#configForm {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .step {
-  padding: 20px 22px 8px;
+  padding: 14px 16px 8px;
 }
 
 .step h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   letter-spacing: -0.01em;
 }
 
 .step__lead {
-  margin: 6px 0 18px;
-  max-width: 62ch;
+  margin: 4px 0 12px;
+  max-width: 68ch;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .step__lead code {
@@ -221,8 +256,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: auto;
-  padding: 14px 22px;
+  padding: 9px 16px;
   border-top: 1px solid var(--border);
   background: var(--panel-alt);
   border-radius: 0 0 var(--radius) var(--radius);
@@ -270,7 +304,7 @@ body {
 .group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 
 .field {
@@ -321,7 +355,7 @@ input[type='time'],
 select,
 textarea {
   width: 100%;
-  padding: 7px 9px;
+  padding: 5px 8px;
   background: var(--panel-alt);
   color: var(--text);
   border: 1px solid var(--border-strong);
@@ -354,7 +388,7 @@ textarea:focus-visible,
 /* ------------------------------------------------------- Schema-Abfrage */
 
 .discover {
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -414,7 +448,7 @@ textarea:focus-visible,
 }
 
 .picker__list {
-  max-height: 260px;
+  max-height: 190px;
   overflow-y: auto;
 }
 
@@ -468,13 +502,13 @@ textarea:focus-visible,
 /* ------------------------------------------------------------- Buttons */
 
 .btn {
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: var(--panel-alt);
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -502,8 +536,8 @@ textarea:focus-visible,
 .btn--ghost {
   background: transparent;
   border-color: var(--border);
-  font-size: 12.5px;
-  padding: 5px 10px;
+  font-size: 11.5px;
+  padding: 4px 8px;
 }
 
 .btn--link {
@@ -552,7 +586,7 @@ textarea:focus-visible,
 
 .tab {
   flex: 0 0 auto;
-  padding: 10px 14px;
+  padding: 7px 11px;
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -578,8 +612,8 @@ textarea:focus-visible,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 8px 12px;
 }
 
 .output__head h2 {
@@ -602,17 +636,127 @@ textarea:focus-visible,
 
 .code {
   margin: 0;
-  padding: 16px;
-  max-height: calc(100vh - 230px);
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background: var(--code-bg);
   color: var(--code-text);
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
   tab-size: 4;
 }
 
 .code code {
   white-space: pre;
+}
+
+/* ------------------------------------------------------------- Kompakt */
+
+/*
+ * Eine Stufe kleiner fuer enge Fenster, etwa Bild-in-Bild in einer
+ * RDP-Sitzung. Die Wahl haelt sich im Browser dieses Rechners.
+ */
+:root[data-compact='1'] body {
+  font-size: 12px;
+}
+
+:root[data-compact='1'] .topbar {
+  padding: 5px 10px;
+}
+
+:root[data-compact='1'] .topbar h1 {
+  font-size: 13px;
+}
+
+:root[data-compact='1'] .topbar__title p,
+:root[data-compact='1'] .step__lead,
+:root[data-compact='1'] .discover__lead {
+  display: none;
+}
+
+:root[data-compact='1'] .brand {
+  height: 20px;
+}
+
+:root[data-compact='1'] .steps {
+  padding: 3px 10px 0;
+}
+
+:root[data-compact='1'] .steps__item {
+  padding: 4px 7px 5px;
+  font-size: 11px;
+}
+
+:root[data-compact='1'] .layout {
+  gap: 7px;
+  padding: 7px;
+  grid-template-columns: minmax(280px, 370px) minmax(0, 1fr);
+}
+
+:root[data-compact='1'] .step {
+  padding: 10px 12px 6px;
+}
+
+:root[data-compact='1'] .step h2 {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+:root[data-compact='1'] .group {
+  gap: 7px;
+}
+
+:root[data-compact='1'] .field small {
+  display: none;
+}
+
+:root[data-compact='1'] .wizard__foot {
+  padding: 6px 12px;
+}
+
+:root[data-compact='1'] .code {
+  padding: 9px;
+  font-size: 11px;
+}
+
+:root[data-compact='1'] .output__head {
+  padding: 6px 10px;
+}
+
+:root[data-compact='1'] .picker__list {
+  max-height: 140px;
+}
+
+/* -------------------------------------------------------- Kleines Fenster */
+
+/*
+ * Unterhalb dieser Groesse wird die feste Flaeche zu eng. Dann doch lieber
+ * eine normal scrollende Seite als ein Inhalt, der nirgends mehr hinpasst.
+ */
+@media (max-width: 900px), (max-height: 480px) {
+  body {
+    height: auto;
+    display: block;
+    overflow: auto;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .wizard,
+  .panel--output {
+    overflow: visible;
+  }
+
+  #configForm {
+    overflow: visible;
+  }
+
+  .code {
+    max-height: 60vh;
+  }
 }

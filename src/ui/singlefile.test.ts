@@ -67,6 +67,54 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(html).toContain('<style>');
   });
 
+  it('lässt keinen Logo-Platzhalter in der ausgelieferten Datei zurück', () => {
+    const html = readFileSync(BUNDLE, 'utf8');
+
+    // Ohne assets/logo.* verschwindet das Element ganz; mit Logo steht dort
+    // ein data-URI. Der rohe Platzhalter wäre in beiden Fällen ein Fehler
+    // und zeigte im Browser ein kaputtes Bild.
+    expect(html).not.toContain('__BRAND_LOGO__');
+
+    const brand = doc.querySelector('img.brand');
+    if (brand !== null) {
+      expect(brand.getAttribute('src')).toMatch(/^data:image\//);
+    }
+  });
+
+  it('schaltet die kompakte Darstellung um und merkt sich die Wahl', () => {
+    const button = doc.getElementById('btnDensity') as HTMLButtonElement;
+    const root = doc.documentElement;
+
+    expect(root.dataset['compact']).not.toBe('1');
+    expect(button.textContent).toBe('Kompakt');
+
+    button.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    expect(root.dataset['compact']).toBe('1');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.textContent).toBe('Normal');
+
+    // Das Merken läuft über localStorage. jsdom verweigert den Zugriff bei
+    // einem file://-Dokument; die Oberfläche fängt das ab und arbeitet
+    // weiter. Genau dieses Weiterarbeiten wird hier geprüft.
+    button.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    expect(root.dataset['compact']).not.toBe('1');
+    expect(button.textContent).toBe('Kompakt');
+  });
+
+  it('scrollt in den Bereichen statt auf der Seite', () => {
+    // In einer engen RDP-Sitzung soll nichts ausserhalb des Fensters landen.
+    // Das CSS ist im Bündel minifiziert, daher ohne Leerzeichen gesucht.
+    const html = readFileSync(BUNDLE, 'utf8');
+
+    expect(html).toMatch(/body\{[^}]*overflow:hidden/);
+    expect(html).toMatch(/#configForm\{[^}]*overflow-y:auto/);
+
+    // Unterhalb einer Mindestgröße wieder eine normal scrollende Seite,
+    // sonst passt der Inhalt irgendwann nirgends mehr hin.
+    expect(html).toMatch(/@media\(max-width:900px\),\(max-height:480px\)/);
+    expect(html).toMatch(/body\{height:auto;display:block;overflow:auto\}/);
+  });
+
   it('startet und zeigt den ersten Schritt', () => {
     expect(doc.querySelectorAll('.steps__item')).toHaveLength(7);
     expect(doc.querySelector('.steps__item[aria-current="true"]')?.textContent).toContain('System');

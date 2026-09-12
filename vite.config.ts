@@ -1,8 +1,45 @@
-import { copyFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { extname, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 const OUTPUT_NAME = 'HANAScriptGenerator.html';
+
+/** Platzhalter im HTML, den das eingebettete Logo ersetzt. */
+const LOGO_TOKEN = '__BRAND_LOGO__';
+
+/** In dieser Reihenfolge wird nach einer Logodatei gesucht. */
+const LOGO_CANDIDATES = ['assets/logo.svg', 'assets/logo.png', 'assets/logo.webp', 'assets/logo.jpg'];
+
+const LOGO_TYPES: Record<string, string> = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+};
+
+/**
+ * Bettet ein Logo als data-URI ein, damit es Teil der einen HTML-Datei wird
+ * und nie getrennt mitkopiert werden muss. Fehlt die Datei, verschwindet das
+ * Bild-Element ersatzlos – die Oberflaeche funktioniert unveraendert.
+ */
+function brandLogo(): Plugin {
+  return {
+    name: 'hsg-brand-logo',
+    transformIndexHtml(html) {
+      const found = LOGO_CANDIDATES.map((rel) => resolve(rel)).find((path) => existsSync(path));
+
+      if (found === undefined) {
+        // Das ganze Element entfernen, sonst zeigt der Browser ein kaputtes Bild.
+        return html.replace(/\s*<img[^>]*__BRAND_LOGO__[^>]*>/g, '');
+      }
+
+      const type = LOGO_TYPES[extname(found).toLowerCase()] ?? 'application/octet-stream';
+      const data = readFileSync(found).toString('base64');
+      return html.replace(LOGO_TOKEN, `data:${type};base64,${data}`);
+    },
+  };
+}
 
 /**
  * Bündelt CSS und JavaScript in die HTML-Datei und wirft die Einzelassets weg.
@@ -71,7 +108,7 @@ function escapeRegExp(value: string): string {
 
 export default defineConfig({
   base: './',
-  plugins: [singleFile()],
+  plugins: [brandLogo(), singleFile()],
   server: {
     port: 5180,
   },

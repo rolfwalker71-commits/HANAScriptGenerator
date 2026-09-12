@@ -26,6 +26,22 @@ direkt laufen; die erzeugte Anleitung sagt, wie sich das notfalls prüfen lässt
 Kundenprofile lassen sich im Browser speichern oder als JSON sichern und beim
 nächsten Mal wieder laden.
 
+### Platzbedarf
+
+Die Seite ist eine feste Fläche: Kopf, Schrittleiste und Inhalt teilen sich die
+Fensterhöhe, gescrollt wird nur innerhalb der Bereiche. Damit landet auch in
+einer engen RDP-Sitzung nichts außerhalb des sichtbaren Bereichs. **Kompakt** in
+der Kopfzeile schaltet eine Stufe kleiner und blendet die Hilfetexte aus; die
+Wahl merkt sich der Browser. Unter 900 px Breite oder 480 px Höhe wird daraus
+wieder eine normal scrollende Seite, weil der Inhalt sonst nirgends mehr hinpasst.
+
+### Eigenes Logo
+
+Eine Datei unter `assets/logo.svg` (oder `.png`, `.webp`, `.jpg`) wird beim Build
+als data-URI in die HTML-Datei eingebettet und erscheint oben rechts. Sie ist
+damit Teil der einen Datei und muss nie getrennt mitkopiert werden. Fehlt die
+Datei, verschwindet das Bild-Element ersatzlos.
+
 ## Schemas aus der Datenbank holen
 
 Schemanamen müssen nicht abgetippt werden. Im Schritt *Schemas* führen zwei Wege
