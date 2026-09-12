@@ -24,8 +24,8 @@ export function generateOffloadScript(config: ExportConfig): GeneratedFile {
     '  ./' + OFFLOAD_SCRIPT_NAME + ' JJJJ-MM-TT      einen bestimmten Tag',
     '  ./' + OFFLOAD_SCRIPT_NAME + ' --pending       alles Nichtuebertragene',
     '  ./' + OFFLOAD_SCRIPT_NAME + ' --check         nur Verbindung pruefen',
-    '  ./' + OFFLOAD_SCRIPT_NAME + ' --setup-key     Schluesselpaar anlegen und zeigen',
-    '  ./' + OFFLOAD_SCRIPT_NAME + ' --install-key   Schluessel auf der Box ablegen',
+    '  ./' + OFFLOAD_SCRIPT_NAME + ' --setup         einmalige Einrichtung: Schluessel',
+    '                                         anlegen, auf der Box ablegen, pruefen',
     '',
     'Kopiert, nicht verschoben: lokal bleibt alles bis zum Ablauf der',
     'oertlichen Aufbewahrung liegen.',
@@ -177,11 +177,16 @@ if [ -z "\${BOX_HOST}" ] || [ -z "\${BOX_USER}" ] || [ -z "\${BOX_PATH}" ]; then
     exit 1
 fi
 
-if [ ! -r "\${SSH_KEY}" ] && [ "\${1:-}" != "--setup-key" ] && [ "\${1:-}" != "--install-key" ]; then
+case "\${1:-}" in
+    --setup|--setup-key|--install-key) KEY_OPTIONAL=yes ;;
+    *)                                 KEY_OPTIONAL=no ;;
+esac
+
+if [ ! -r "\${SSH_KEY}" ] && [ "\${KEY_OPTIONAL}" = "no" ]; then
     log "FEHLER: SSH-Schluessel nicht lesbar: \${SSH_KEY}"
     log
-    log "Einmalig anlegen mit:"
-    log "  $0 --setup-key"
+    log "Einmalig einrichten mit:"
+    log "  $0 --setup"
     exit 1
 fi
 
@@ -193,7 +198,7 @@ if [ -n "\${KEY_MODE}" ] && [ "\${KEY_MODE}" != "600" ] && [ "\${KEY_MODE}" != "
 fi
 
 ${RULE}
-#  Schluesselpaar anlegen
+#  Einrichtung: Schluessel anlegen, ablegen, pruefen
 #
 #  Je Kunde ein eigenes Paar, erzeugt auf diesem Server. Der private Teil
 #  verlaesst ihn nie. Derselbe Schluessel auf mehreren Kundensystemen waere
@@ -204,10 +209,17 @@ ${RULE}
 #  die Dateiberechtigung 600 und der Besitz durch ${config.osUser}.
 ${RULE}
 
-setup_key()
+# Fuer das Ablegen wird das Passwort gebraucht, also ohne BatchMode.
+box_sftp_password()
+{
+    sftp -P "\${BOX_PORT}" -o StrictHostKeyChecking=accept-new \\
+        "\${BOX_USER}@\${BOX_HOST}"
+}
+
+ensure_key()
 {
     if [ -f "\${SSH_KEY}" ]; then
-        log "Vorhandener Schluessel wird verwendet: \${SSH_KEY}"
+        log "Schluessel vorhanden: \${SSH_KEY}"
     else
         log "Erzeuge Schluesselpaar: \${SSH_KEY}"
 
@@ -227,81 +239,107 @@ setup_key()
     chmod 600 "\${SSH_KEY}" 2>/dev/null
     chmod 644 "\${SSH_KEY}.pub" 2>/dev/null
 
-    echo
-    echo "${'='.repeat(60)}"
-    echo "Oeffentlicher Schluessel dieses Servers:"
-    echo
-    cat "\${SSH_KEY}.pub"
-    echo
-    echo "${'='.repeat(60)}"
-    echo
-    echo "Diesen Schluessel auf der StorageBox hinterlegen. Zwei Wege:"
-    echo
-    echo "1. Im Hetzner Robot beim Unterkonto \${BOX_USER} einfuegen."
-    echo
-    echo "2. Von hier aus, mit dem Passwort der Box:"
-    echo "     ssh-copy-id -s -p \${BOX_PORT} -i \${SSH_KEY}.pub \${BOX_USER}@\${BOX_HOST}"
-    echo
-    echo "   Das -s ist noetig: eine Storage Box hat keine normale Shell,"
-    echo "   ssh-copy-id muss den Schluessel ueber SFTP ablegen."
-    echo
-    echo "Danach pruefen:"
-    echo "  $0 --check"
-    echo
+    log "Fingerabdruck:"
+    ssh-keygen -lf "\${SSH_KEY}.pub" 2>&1 | while read -r LINE
+    do
+        log "  \${LINE}"
+    done
 
     return 0
 }
 
-${RULE}
-#  Schluessel auf der Box ablegen
+#  Legt den oeffentlichen Schluessel auf der Box ab.
 #
-#  Schreibt den oeffentlichen Schluessel in /home/.ssh/authorized_keys der
-#  Box. Angemeldet wird dafuer einmal mit dem Passwort.
-#
-#  Das erledigt sonst ssh-copy-id -s, nur bricht das bei einer Storage Box
-#  gern ab, ohne es zu sagen: das Verzeichnis .ssh fehlt dort anfangs, und
-#  die Box legt es nicht von selbst an.
-${RULE}
-
+#  Vorhandene Schluessel werden zuerst geholt und der eigene angehaengt.
+#  Ein blosses Ueberschreiben wuerde bei einer Box, die mehrere Kunden
+#  bedient, den Zugang aller anderen loeschen. Das kostet eine zweite
+#  Passwortabfrage, weil eine Storage Box keine Shell hat und Holen und
+#  Schreiben deshalb nicht in einer Sitzung gehen.
 install_key()
 {
     if [ ! -r "\${SSH_KEY}.pub" ]; then
         log "FEHLER: Kein oeffentlicher Schluessel: \${SSH_KEY}.pub"
-        log "Zuerst anlegen mit: $0 --setup-key"
         return 1
     fi
 
-    log "Lege den Schluessel auf \${BOX_HOST} ab."
-    log "Das Passwort der Box wird einmal gebraucht."
-    log ""
+    REMOTE_AK="\${LOG_DIR}/.authorized_keys.remote.$$"
+    MERGED="\${LOG_DIR}/.authorized_keys.neu.$$"
+    KEY_BODY="$(awk '{print $2}' "\${SSH_KEY}.pub")"
 
-    # Ohne BatchMode, damit nach dem Passwort gefragt werden kann. Ein
-    # vorhandenes .ssh stoert nicht, mkdir meldet dann nur einen Fehler.
-    sftp -P "\${BOX_PORT}" -o StrictHostKeyChecking=accept-new \\
-        "\${BOX_USER}@\${BOX_HOST}" <<SFTP_BATCH
+    rm -f "\${REMOTE_AK}" "\${MERGED}"
+
+    log ""
+    log "Hole vorhandene Schluessel von der Box. Das Passwort wird gebraucht."
+
+    box_sftp_password <<SFTP_BATCH >> "\${LOG_FILE}" 2>&1
+get .ssh/authorized_keys \${REMOTE_AK}
+quit
+SFTP_BATCH
+
+    if [ -s "\${REMOTE_AK}" ]; then
+
+        if grep -qF "\${KEY_BODY}" "\${REMOTE_AK}"; then
+            log "Der Schluessel liegt bereits auf der Box, es bleibt alles wie es ist."
+            rm -f "\${REMOTE_AK}"
+            return 0
+        fi
+
+        log "Auf der Box liegen $(grep -c . "\${REMOTE_AK}") Schluessel. Unserer kommt dazu."
+
+        # Die Ersetzung stellt sicher, dass die letzte Zeile abgeschlossen
+        # ist – sonst klebte unser Schluessel an der vorigen.
+        printf '%s\\n' "$(cat "\${REMOTE_AK}")" > "\${MERGED}"
+        cat "\${SSH_KEY}.pub" >> "\${MERGED}"
+    else
+        log "Auf der Box liegt noch kein Schluessel."
+        cat "\${SSH_KEY}.pub" > "\${MERGED}"
+    fi
+
+    log ""
+    log "Lege den Schluessel ab. Das Passwort wird ein zweites Mal gebraucht."
+
+    box_sftp_password <<SFTP_BATCH >> "\${LOG_FILE}" 2>&1
 mkdir .ssh
 chmod 700 .ssh
-put \${SSH_KEY}.pub .ssh/authorized_keys
+put \${MERGED} .ssh/authorized_keys
 chmod 600 .ssh/authorized_keys
 quit
 SFTP_BATCH
+
+    rm -f "\${REMOTE_AK}" "\${MERGED}"
+    return 0
+}
+
+#  Der ganze Weg in einem Aufruf, und zwar wiederholbar: was schon steht,
+#  wird nicht noch einmal gemacht.
+setup()
+{
+    ensure_key || return 1
+
+    if box_pwd >> "\${LOG_FILE}" 2>&1; then
+        log ""
+        log "Die Anmeldung ohne Passwort funktioniert bereits. Nichts zu tun."
+        return 0
+    fi
+
+    install_key || return 1
 
     log ""
     log "Pruefe die Anmeldung ohne Passwort ..."
 
     if box_pwd >> "\${LOG_FILE}" 2>&1; then
-        log "Geschafft, der Schluessel wird angenommen."
+        log "Geschafft. Die Auslagerung ist einsatzbereit."
+        log ""
+        log "Naechster Schritt: ${config.scriptPath}"
         return 0
     fi
 
+    log ""
     log "FEHLER: Die Anmeldung ohne Passwort klappt weiterhin nicht."
     log ""
     log "Nachsehen, was auf der Box liegt:"
     log "  sftp -P \${BOX_PORT} \${BOX_USER}@\${BOX_HOST}"
     log "  sftp> ls -la .ssh"
-    log ""
-    log "Achtung: das Ablegen ueberschreibt eine vorhandene"
-    log "authorized_keys. Lagen dort schon Schluessel, sind sie jetzt weg."
     return 1
 }
 
@@ -467,15 +505,14 @@ log "${'='.repeat(60)}"
 
 MODE="\${1:-$(date +%Y-%m-%d)}"
 
-if [ "\${MODE}" = "--setup-key" ]; then
-    setup_key || exit 1
-    exit 0
-fi
-
-if [ "\${MODE}" = "--install-key" ]; then
-    install_key || exit 1
-    exit 0
-fi
+# Ein Aufruf fuer die ganze Einrichtung. Die alten Namen bleiben gueltig,
+# damit aeltere Anleitungen nicht ins Leere zeigen.
+case "\${MODE}" in
+    --setup|--setup-key|--install-key)
+        setup || exit 1
+        exit 0
+        ;;
+esac
 
 check_connection || exit 1
 
@@ -506,8 +543,7 @@ case "\${MODE}" in
 
     *)
         log "FEHLER: Unbekannter Aufruf: \${MODE}"
-        log "Erwartet: JJJJ-MM-TT, --pending, --check, --setup-key,"
-        log "          --install-key oder gar nichts."
+        log "Erwartet: JJJJ-MM-TT, --pending, --check, --setup oder gar nichts."
         exit 1
         ;;
 esac

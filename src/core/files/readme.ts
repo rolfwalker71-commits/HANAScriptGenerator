@@ -237,26 +237,22 @@ ${
     ? `### 5b. Schlüssel für die StorageBox
 
 \`\`\`bash
-./06_offload_storagebox.sh --setup-key
+./06_offload_storagebox.sh --setup
 \`\`\`
 
-Zeigt den öffentlichen Schlüssel. Ablegen lässt er sich von hier aus:
+Der eine Aufruf erledigt alles: Schlüsselpaar anlegen, auf der Box ablegen,
+Anmeldung prüfen. Das Passwort der Box wird dabei zweimal gebraucht — einmal
+zum Holen der vorhandenen Schlüssel, einmal zum Schreiben.
 
-\`\`\`bash
-./06_offload_storagebox.sh --install-key
-\`\`\`
+Vorhandene Schlüssel auf der Box bleiben erhalten, unserer kommt dazu. Bei einer
+Box, die mehrere Kunden bedient, hätte ein Überschreiben sonst den Zugang aller
+anderen gelöscht.
 
-Fragt einmal nach dem Passwort der Box und schreibt den Schlüssel nach
-\`/home/.ssh/authorized_keys\`. Dabei wird auch \`.ssh\` angelegt — das fehlt auf
-einer neuen Box, und weder der Robot noch \`ssh-copy-id\` legen es zuverlässig an.
+Angelegt wird dabei auch \`/home/.ssh\` — das fehlt auf einer neuen Box, und
+weder der Robot noch \`ssh-copy-id\` legen es zuverlässig an.
 
-**Achtung:** Lagen dort schon Schlüssel, werden sie überschrieben.
-
-Dann prüfen:
-
-\`\`\`bash
-./06_offload_storagebox.sh --check
-\`\`\`
+Der Aufruf lässt sich gefahrlos wiederholen: steht die Anmeldung schon, meldet
+er das und rührt nichts an.
 
 Die Vorabprüfung aus Schritt 3 meldet einen fehlenden Schlüssel bewusst nur als
 Hinweis – sie läuft ja vor diesem Schritt.
@@ -348,7 +344,7 @@ je Tag ein Ordner mit Dateien in einer Ebene.
 ### Einmalig: Schlüssel einrichten
 
 \`\`\`bash
-./06_offload_storagebox.sh --setup-key
+./06_offload_storagebox.sh --setup
 \`\`\`
 
 Legt ein Schlüsselpaar an und zeigt den **öffentlichen** Teil. Diesen im Hetzner

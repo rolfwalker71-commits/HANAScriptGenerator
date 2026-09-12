@@ -194,9 +194,11 @@ describe('generateAll', () => {
       .filter((line) => !line.trimStart().startsWith('#'))
       .join('\n');
 
-    expect(code).not.toContain('printf');
+    // Gemeint ist nur: keine sftp-Befehlsfolge aus maskierten Umbrüchen.
+    // printf an sich ist in Ordnung, solange es nicht in sftp mündet.
+    expect(code).not.toMatch(/printf[^\n]*\|[^\n]*sftp/);
     expect(code).toContain('<<SFTP_BATCH');
-    for (const helper of ['box_pwd', 'box_mkdir_path', 'box_list', 'box_remove_day']) {
+    for (const helper of ['box_pwd', 'box_mkdir_path', 'box_list', 'box_remove_day', 'setup', 'install_key']) {
       expect(code, helper).toContain(`${helper}()`);
     }
   });
@@ -283,7 +285,7 @@ describe('Vorabprüfung und Reihenfolge', () => {
     const zeile = script.split('\n').find((l) => l.includes('noch nicht angelegt')) ?? '';
     expect(zeile).toContain('note ');
     expect(zeile).not.toContain('fail ');
-    expect(script).toContain('--setup-key');
+    expect(script).toContain('--setup');
   });
 });
 

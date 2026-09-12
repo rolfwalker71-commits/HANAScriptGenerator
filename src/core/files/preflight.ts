@@ -243,14 +243,14 @@ if [ -r "${box.keyPath}" ]; then
     else
         fail "Anmeldung an der StorageBox fehlgeschlagen."
         note "Schluessel hinterlegt? Einrichten mit:"
-        note "  ./${'06_offload_storagebox.sh'} --setup-key"
+        note "  ./06_offload_storagebox.sh --setup"
     fi
 else
     # Kein Fehler: dieser Lauf kommt vor der Schluesseleinrichtung. Erst
     # wenn der Schluessel da ist, muss auch die Anmeldung klappen.
     note "SSH-Schluessel noch nicht angelegt: ${box.keyPath}"
     note "Das ist hier in Ordnung – er entsteht in einem spaeteren Schritt:"
-    note "  ./06_offload_storagebox.sh --setup-key"
+    note "  ./06_offload_storagebox.sh --setup"
 fi
 
 for TOOL in rsync sftp
@@ -282,7 +282,7 @@ echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."${
     ? `
 echo
 echo "Fuer die Auslagerung fehlt danach noch der Schluessel:"
-echo "  ./06_offload_storagebox.sh --setup-key"
+echo "  ./06_offload_storagebox.sh --setup"
 echo "  ./06_offload_storagebox.sh --check"`
     : ''
 }

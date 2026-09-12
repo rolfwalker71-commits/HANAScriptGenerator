@@ -181,8 +181,7 @@ liegengeblieben ist – etwa nach einer Nacht ohne Netz.
 
 | Aufruf | Wirkung |
 | --- | --- |
-| `--setup-key` | Schlüsselpaar anlegen und den öffentlichen Teil zeigen |
-| `--install-key` | Den Schlüssel auf der Box ablegen, mit Passwort |
+| `--setup` | Einmalige Einrichtung: Schlüssel anlegen, auf der Box ablegen, prüfen |
 | `--check` | Nur die Verbindung prüfen |
 | *(ohne)* | Den heutigen Tagesordner übertragen |
 | `JJJJ-MM-TT` | Einen bestimmten Tag übertragen |
@@ -201,7 +200,10 @@ damit die Backups aller anderen auf derselben Box. Eine Box nimmt beliebig viele
 Schlüssel an, einen pro Zeile in `authorized_keys`; für die Trennung sorgen am
 besten Unterkonten mit eigenem Verzeichnis.
 
-Abgelegt wird der Schlüssel mit `--install-key`. Das legt auch `/home/.ssh` an:
+`--setup` erledigt die Einrichtung in einem Aufruf und lässt sich gefahrlos
+wiederholen. Vorhandene Schlüssel auf der Box bleiben erhalten — bei einer Box
+für mehrere Kunden hätte ein Überschreiben den Zugang aller anderen gelöscht.
+Angelegt wird dabei auch `/home/.ssh`:
 auf einer neuen Storage Box existiert das Verzeichnis nicht, und `ssh-copy-id -s`
 bricht daran ab, ohne es zu melden — die Anmeldung scheitert dann weiter, obwohl
 scheinbar alles hinterlegt wurde.
