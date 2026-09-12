@@ -79,6 +79,9 @@ describe('ausgelieferte Einzeldatei', () => {
     if (brand !== null) {
       expect(brand.getAttribute('src')).toMatch(/^data:image\//);
     }
+
+    // Die Zeile darunter steht auch dann, wenn kein Logo hinterlegt ist.
+    expect(doc.querySelector('.brandbox__by')?.textContent).toBe('Created by AI / Rolf Walker');
   });
 
   it('schaltet die kompakte Darstellung um und merkt sich die Wahl', () => {
