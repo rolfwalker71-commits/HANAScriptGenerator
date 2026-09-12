@@ -90,6 +90,46 @@ box_sftp()
     sftp \${SFTP_OPTS} "\${BOX_USER}@\${BOX_HOST}"
 }
 
+# Die Befehlsfolgen stehen als Here-Dokument und nicht als printf mit \\n:
+# ein Here-Dokument kennt keine Maskierung, es kann unterwegs nichts
+# verlorengehen oder sich in einen echten Zeilenumbruch verwandeln.
+
+box_pwd()
+{
+    box_sftp <<SFTP_BATCH
+pwd
+quit
+SFTP_BATCH
+}
+
+box_mkdir()
+{
+    box_sftp <<SFTP_BATCH
+mkdir $1
+mkdir $2
+quit
+SFTP_BATCH
+}
+
+box_list()
+{
+    box_sftp <<SFTP_BATCH 2>/dev/null
+ls -1 $1
+quit
+SFTP_BATCH
+}
+
+box_remove_day()
+{
+    # sftp kennt kein rekursives rm. Die Tagesordner auf der Box enthalten
+    # nur Dateien, deshalb genuegen rm und rmdir.
+    box_sftp <<SFTP_BATCH
+rm $1/*
+rmdir $1
+quit
+SFTP_BATCH
+}
+
 mkdir -p "\${LOG_DIR}" "\${MARKER_DIR}" 2>/dev/null
 
 if ! : > "\${LOG_FILE}" 2>/dev/null; then
@@ -206,7 +246,7 @@ check_connection()
 
     # Eine Storage Box antwortet auf SSH, bietet aber keine Shell. Deshalb
     # wird mit sftp geprueft und nicht mit einem Kommando.
-    printf 'pwd\\nquit\\n' | box_sftp >> "\${LOG_FILE}" 2>&1
+    box_pwd >> "\${LOG_FILE}" 2>&1
     RC=$?
 
     if [ \${RC} -ne 0 ]; then
@@ -245,8 +285,7 @@ offload_day()
 
     # Das Zielverzeichnis muss vorhanden sein, rsync legt auf der Box keine
     # tieferen Pfade an.
-    printf 'mkdir %s\\nmkdir %s/%s\\nquit\\n' "\${BOX_PATH}" "\${BOX_PATH}" "\${DAY}" \\
-        | box_sftp >> "\${LOG_FILE}" 2>&1
+    box_mkdir "\${BOX_PATH}" "\${BOX_PATH}/\${DAY}" >> "\${LOG_FILE}" 2>&1
 
     log "\${DAY}: uebertrage ..."
 
@@ -265,9 +304,7 @@ offload_day()
     fi
 
     # Gegenzaehlen statt dem Rueckgabewert allein zu vertrauen.
-    REMOTE_COUNT="$(printf 'ls -1 %s/%s\\nquit\\n' "\${BOX_PATH}" "\${DAY}" \\
-        | box_sftp 2>/dev/null \\
-        | grep -c "\\.\${ARCHIVE_EXT}\$")"
+    REMOTE_COUNT="$(box_list "\${BOX_PATH}/\${DAY}" | grep -c "\\.\${ARCHIVE_EXT}\$")"
 
     if [ "\${REMOTE_COUNT}" -lt "\${COUNT}" ]; then
         log "FEHLER: Auf der Box liegen \${REMOTE_COUNT} von \${COUNT} Archiven."
@@ -297,8 +334,7 @@ prune_remote()
     log "${RULE.slice(2)}"
     log "Entferne auf der Box Tagesordner aelter als \${CUTOFF} ..."
 
-    REMOTE_DAYS="$(printf 'ls -1 %s\\nquit\\n' "\${BOX_PATH}" \\
-        | box_sftp 2>/dev/null \\
+    REMOTE_DAYS="$(box_list "\${BOX_PATH}" \\
         | tr -d '\\r' | sed 's#.*/##' \\
         | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}\$')"
 
@@ -309,11 +345,7 @@ prune_remote()
 
         log "  entferne \${DAY}"
 
-        # sftp kennt kein rekursives rm. Die Tagesordner auf der Box
-        # enthalten nur Dateien, deshalb genuegen rm und rmdir.
-        printf 'rm %s/%s/*\\nrmdir %s/%s\\nquit\\n' \\
-            "\${BOX_PATH}" "\${DAY}" "\${BOX_PATH}" "\${DAY}" \\
-            | box_sftp >> "\${LOG_FILE}" 2>&1 || \\
+        box_remove_day "\${BOX_PATH}/\${DAY}" >> "\${LOG_FILE}" 2>&1 || \\
             log "  WARNUNG: \${DAY} liess sich nicht vollstaendig entfernen."
     done
 

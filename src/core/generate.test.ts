@@ -180,6 +180,26 @@ describe('generateAll', () => {
     }
   });
 
+  it('baut sftp-Befehle als Here-Dokument, nicht über maskierte Zeilenumbrüche', () => {
+    // printf 'ls %s\\nquit\\n' hängt davon ab, dass das \\n mehrere
+    // Maskierungsebenen übersteht. Wird daraus unterwegs ein echter
+    // Zeilenumbruch, bleibt der Anführungsstrich offen und das ganze
+    // Skript ist unbrauchbar – bash meldet dann nur "Dateiende erreicht".
+    const script =
+      generateAll(offloadConfig()).find((f) => f.name === '06_offload_storagebox.sh')?.content ?? '';
+
+    const code = script
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n');
+
+    expect(code).not.toContain('printf');
+    expect(code).toContain('<<SFTP_BATCH');
+    for (const helper of ['box_pwd', 'box_mkdir', 'box_list', 'box_remove_day']) {
+      expect(code, helper).toContain(`${helper}()`);
+    }
+  });
+
   it('erzeugt das Windows-Helferskript mit CRLF und den Verbindungsdaten', () => {
     const config = exampleConfig();
     const helper = generateAll(config).find((f) => f.name === '00_schemas_auslesen.cmd');
