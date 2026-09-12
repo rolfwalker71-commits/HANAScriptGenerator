@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="2024" viewBox="0 0 1180 2024" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1180" height="2024" fill="#eef2f4"/>
+<text x="40" y="52" font-size="30" font-weight="700" fill="#1b2b33">SAP HANA Schema-Export — Ausrollen beim Kunden</text>
+<text x="40" y="80" font-size="16" fill="#5d6b73">Reihenfolge der Schritte vom Wizard bis zum laufenden Cronjob</text>
+<text x="40" y="102" font-size="13" fill="#5d6b73">Erzeugt durch HANAScriptGenerator</text>
+<rect x="40" y="116" width="1100" height="504" rx="14" fill="#ffffff" stroke="#d5dde1"/>
+<path d="M 40 130 a 14 14 0 0 1 14 -14 h 1072 a 14 14 0 0 1 14 14 v 52 h -1100 z" fill="#006887"/>
+<circle cx="74" cy="149.0" r="17" fill="#ffffff" opacity="0.9"/>
+<text x="74" y="156.0" font-size="19" font-weight="700" fill="#006887" text-anchor="middle">1</text>
+<text x="106" y="146" font-size="20" font-weight="700" fill="#ffffff">Auf dem Windows-Rechner</text>
+<text x="106" y="166" font-size="13.5" fill="#ffffff" opacity="0.85">Kein npm, keine Installation</text>
+<rect x="54" y="194" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="194" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="220" r="13" fill="#006887"/>
+<text x="86" y="225" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="110" y="218" font-size="16.5" font-weight="600" fill="#1b2b33">Wizard ausfüllen</text>
+<text x="110" y="244" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">HANAScriptGenerator.html doppelklicken</text>
+<text x="110" y="268" font-size="13" fill="#5d6b73">Sieben Schritte. Pfade und Benutzer werden aus SID und Instanznummer vorgeschlagen.</text>
+<rect x="54" y="300" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="300" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="326" r="13" fill="#006887"/>
+<text x="86" y="331" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="110" y="324" font-size="16.5" font-weight="600" fill="#1b2b33">Schemas holen  ·  optional</text>
+<text x="110" y="350" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">Befehl kopieren  →  cmd-Fenster  →  Ausgabe einfügen</text>
+<text x="110" y="374" font-size="13" fill="#5d6b73">Statt Namen abzutippen: alle Schemas mit Größe zum Anklicken.</text>
+<rect x="54" y="406" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="406" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="432" r="13" fill="#006887"/>
+<text x="86" y="437" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="110" y="430" font-size="16.5" font-weight="600" fill="#1b2b33">Skripte erzeugen</text>
+<text x="110" y="456" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">Alle als ZIP  →  vollständig entpacken</text>
+<text x="110" y="480" font-size="13" fill="#5d6b73">Die Skripte müssen zusammen in einem Ordner liegen.</text>
+<rect x="54" y="512" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="512" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="538" r="13" fill="#006887"/>
+<text x="86" y="543" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="110" y="536" font-size="16.5" font-weight="600" fill="#1b2b33">Auf den Server übertragen</text>
+<text x="110" y="562" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">00_dateien_uebertragen.cmd</text>
+<text x="110" y="586" font-size="13" fill="#5d6b73">Setzt Zeilenenden, chmod 750 und die Gruppe sapsys.  --key = nie wieder Passwort.</text>
+<rect x="40" y="644" width="1100" height="928" rx="14" fill="#ffffff" stroke="#d5dde1"/>
+<path d="M 40 658 a 14 14 0 0 1 14 -14 h 1072 a 14 14 0 0 1 14 14 v 52 h -1100 z" fill="#f5a61a"/>
+<circle cx="74" cy="677.0" r="17" fill="#ffffff" opacity="0.9"/>
+<text x="74" y="684.0" font-size="19" font-weight="700" fill="#f5a61a" text-anchor="middle">2</text>
+<text x="106" y="674" font-size="20" font-weight="700" fill="#ffffff">Auf dem HANA-Server</text>
+<text x="106" y="694" font-size="13.5" fill="#ffffff" opacity="0.85">Alles als &lt;sid&gt;adm — der hdbuserstore ist benutzerspezifisch</text>
+<rect x="54" y="722" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="722" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="748" r="13" fill="#f5a61a"/>
+<text x="86" y="753" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="110" y="746" font-size="16.5" font-weight="600" fill="#1b2b33">Anmelden</text>
+<text x="110" y="772" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">su - &lt;sid&gt;adm   →   cd &lt;SKRIPTPFAD&gt;</text>
+<text x="110" y="796" font-size="13" fill="#5d6b73">Kontrolle:  whoami  &amp;&amp;  ls -l *.sh</text>
+<rect x="54" y="828" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="828" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="854" r="13" fill="#f5a61a"/>
+<text x="86" y="859" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="110" y="852" font-size="16.5" font-weight="600" fill="#1b2b33">Userstore-Key anlegen</text>
+<text x="110" y="878" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./01_setup_userstore.sh</text>
+<text x="110" y="902" font-size="13" fill="#5d6b73">Passwort wird verdeckt abgefragt und landet nie in einer Datei.</text>
+<rect x="54" y="934" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="934" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="960" r="13" fill="#f5a61a"/>
+<text x="86" y="965" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+<text x="110" y="958" font-size="16.5" font-weight="600" fill="#1b2b33">Verzeichnisse anlegen</text>
+<text x="110" y="984" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./02_prepare_dirs.sh</text>
+<text x="110" y="1008" font-size="13" fill="#5d6b73">Prüft jedes Verzeichnis einzeln auf Schreibrecht.</text>
+<rect x="54" y="1040" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1040" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="1066" r="13" fill="#f5a61a"/>
+<text x="86" y="1071" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">8</text>
+<text x="110" y="1064" font-size="16.5" font-weight="600" fill="#1b2b33">Vorabprüfung</text>
+<text x="110" y="1090" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./03_preflight.sh</text>
+<text x="110" y="1114" font-size="13" fill="#5d6b73">ERST WEITER, WENN FEHLERFREI.  Ändert nichts, beliebig wiederholbar.</text>
+<rect x="54" y="1146" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1146" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="1172" r="13" fill="#f5a61a"/>
+<text x="86" y="1177" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">9</text>
+<text x="110" y="1170" font-size="16.5" font-weight="600" fill="#1b2b33">Testexport</text>
+<text x="110" y="1196" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./04_test_export.sh &lt;SCHEMA&gt;</text>
+<text x="110" y="1220" font-size="13" fill="#5d6b73">Beweist Export und tar-Lauf, bevor Cron übernimmt. Zeigt auch die Laufzeit.</text>
+<rect x="54" y="1252" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1252" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="1278" r="13" fill="#f5a61a"/>
+<text x="86" y="1283" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">10</text>
+<text x="110" y="1276" font-size="16.5" font-weight="600" fill="#1b2b33">StorageBox einrichten  ·  falls Auslagerung</text>
+<text x="110" y="1302" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./06_offload_storagebox.sh --setup</text>
+<text x="110" y="1326" font-size="13" fill="#5d6b73">Schlüssel anlegen, ablegen, prüfen — in einem Aufruf. Wiederholen schadet nicht.</text>
+<rect x="54" y="1358" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1358" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="1384" r="13" fill="#f5a61a"/>
+<text x="86" y="1389" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">11</text>
+<text x="110" y="1382" font-size="16.5" font-weight="600" fill="#1b2b33">Erster echter Lauf</text>
+<text x="110" y="1408" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">&lt;SKRIPTPFAD&gt;/schema_export.sh   →   echo $?</text>
+<text x="110" y="1432" font-size="13" fill="#5d6b73">Muss 0 ergeben. Exportiert und archiviert jedes Schema einzeln.</text>
+<rect x="54" y="1464" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1464" width="4" height="96" fill="#f5a61a"/>
+<circle cx="86" cy="1490" r="13" fill="#f5a61a"/>
+<text x="86" y="1495" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">12</text>
+<text x="110" y="1488" font-size="16.5" font-weight="600" fill="#1b2b33">Einplanen</text>
+<text x="110" y="1514" font-size="15" fill="#f5a61a" font-family="DejaVu Sans Mono, Consolas, monospace">./05_install_cron.sh</text>
+<text x="110" y="1538" font-size="13" fill="#5d6b73">Setzt zwei Zeilen: Export und Auslagerung. Kontrolle:  crontab -l</text>
+<rect x="40" y="1596" width="1100" height="398" rx="14" fill="#ffffff" stroke="#d5dde1"/>
+<path d="M 40 1610 a 14 14 0 0 1 14 -14 h 1072 a 14 14 0 0 1 14 14 v 52 h -1100 z" fill="#006887"/>
+<circle cx="74" cy="1629.0" r="17" fill="#ffffff" opacity="0.9"/>
+<text x="74" y="1636.0" font-size="19" font-weight="700" fill="#006887" text-anchor="middle">3</text>
+<text x="106" y="1626" font-size="20" font-weight="700" fill="#ffffff">Betrieb</text>
+<text x="106" y="1646" font-size="13.5" fill="#ffffff" opacity="0.85">Läuft von selbst</text>
+<rect x="54" y="1674" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1674" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="1700" r="13" fill="#006887"/>
+<text x="86" y="1705" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">13</text>
+<text x="110" y="1698" font-size="16.5" font-weight="600" fill="#1b2b33">Täglich</text>
+<text x="110" y="1724" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">Export  →  Archivierung  →  Auslagerung  →  Aufräumen</text>
+<text x="110" y="1748" font-size="13" fill="#5d6b73">Alles eines Tages in einem Tagesordner. Nach Ablauf der Frist fällt er als Ganzes weg.</text>
+<rect x="54" y="1780" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1780" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="1806" r="13" fill="#006887"/>
+<text x="86" y="1811" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">14</text>
+<text x="110" y="1804" font-size="16.5" font-weight="600" fill="#1b2b33">Log ansehen</text>
+<text x="110" y="1830" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">tail -50 &quot;$(ls -1t &lt;EXPORTPFAD&gt;/logs/schema_export_*.log | head -1)&quot;</text>
+<text x="110" y="1854" font-size="13" fill="#5d6b73">Jede Zeile mit Zeitstempel. Alte Logs verschwinden mit derselben Frist.</text>
+<rect x="54" y="1886" width="1072" height="96" rx="9" fill="#f2f5f7"/>
+<rect x="54" y="1886" width="4" height="96" fill="#006887"/>
+<circle cx="86" cy="1912" r="13" fill="#006887"/>
+<text x="86" y="1917" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">15</text>
+<text x="110" y="1910" font-size="16.5" font-weight="600" fill="#1b2b33">Wiederherstellen</text>
+<text x="110" y="1936" font-size="15" fill="#006887" font-family="DejaVu Sans Mono, Consolas, monospace">./90_restore_schema.sh --list</text>
+<text x="110" y="1960" font-size="13" fill="#5d6b73">Ohne --import wird nur entpackt. Der IMPORT verlangt eine Bestätigung.</text>
+</svg>

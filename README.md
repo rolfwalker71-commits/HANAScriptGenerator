@@ -55,6 +55,11 @@ als data-URI in die HTML-Datei eingebettet und erscheint oben rechts. Sie ist
 damit Teil der einen Datei und muss nie getrennt mitkopiert werden. Fehlt die
 Datei, verschwindet das Bild-Element ersatzlos.
 
+## Ausrollen beim Kunden
+
+Die Reihenfolge aller Schritte mit Befehlen steht in [ABLAUF.md](ABLAUF.md),
+als Übersicht auf einer Seite in [ablauf.svg](ablauf.svg).
+
 ## Schemas aus der Datenbank holen
 
 Schemanamen müssen nicht abgetippt werden. Im Schritt *Schemas* führen zwei Wege
@@ -272,3 +277,12 @@ vite.config.ts     Bündelt CSS und JS in die eine HTML-Datei
 Neue Ausgabedatei: ein Modul unter `src/core/files/` anlegen, das ein
 `GeneratedFile` zurückgibt, und in `src/core/generate.ts` eintragen. Die
 Bash-Syntaxprüfung im Test erfasst sie danach automatisch.
+
+### Infografik neu erzeugen
+
+```bash
+python3 tools/ablauf_grafik.py && python3 -c "import cairosvg; cairosvg.svg2png(url='ablauf.svg', write_to='ablauf.png', scale=2)"
+```
+
+Das Layout wird im Skript gerechnet, nicht von Hand gesetzt — Schritte lassen
+sich also ergänzen, ohne Koordinaten nachzuziehen.
