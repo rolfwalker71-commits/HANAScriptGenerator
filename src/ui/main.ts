@@ -6,7 +6,6 @@ import {
   cronLine,
   customerSlug,
   defaultConfig,
-  defaultKeyPath,
   derivedDefaults,
   describeSchema,
   generateAll,
@@ -257,7 +256,7 @@ function syncDerivedFields(): void {
   }
 
   adopt(fields.osUser, lastDerived.osUser, next.osUser);
-  adopt(fields.offloadKeyPath, defaultKeyPath(lastDerived.osUser.replace(/adm$/, '')), defaultKeyPath(fields.sid.value));
+  adopt(fields.offloadKeyPath, lastDerived.keyPath, next.keyPath);
   adopt(fields.hdbsqlPath, lastDerived.hdbsqlPath, next.hdbsqlPath);
   adopt(fields.exportBase, lastDerived.exportBase, next.exportBase);
   adopt(fields.scriptPath, lastDerived.scriptPath, next.scriptPath);

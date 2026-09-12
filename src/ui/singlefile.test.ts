@@ -135,6 +135,9 @@ describe('ausgelieferte Einzeldatei', () => {
 
     type('sid', 'NDB');
     expect(exportBase.value).toBe('/usr/sap/NDB/HDB00/work/schema_exports');
+    expect((doc.getElementById('offloadKeyPath') as HTMLInputElement).value).toBe(
+      '/usr/sap/NDB/HDB00/work/.ssh/id_ed25519',
+    );
     expect((doc.getElementById('osUser') as HTMLInputElement).value).toBe('ndbadm');
     expect((doc.getElementById('hdbsqlPath') as HTMLInputElement).value).toBe(
       '/usr/sap/NDB/HDB00/exe/hdbsql',

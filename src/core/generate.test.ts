@@ -20,6 +20,7 @@ import type { ExportConfig } from './types.js';
 function exampleConfig(): ExportConfig {
   const sid = 'HDB';
   const instance = '00';
+  const { keyPath, ...top } = derivedDefaults(sid, instance);
   return {
     ...defaultConfig(),
     customer: 'Beispiel GmbH',
@@ -27,7 +28,8 @@ function exampleConfig(): ExportConfig {
     instance,
     host: 'hdbprod',
     schemas: ['SALES', 'FINANCE'],
-    ...derivedDefaults(sid, instance),
+    ...top,
+    offload: { ...defaultConfig().offload, keyPath },
   };
 }
 
@@ -43,7 +45,7 @@ function offloadConfig(): ExportConfig {
       user: 'u123456-sub1',
       port: 23,
       remotePath: '/home/hana-export',
-      keyPath: '/usr/sap/HDB/home/.ssh/id_ed25519',
+      keyPath: '/usr/sap/HDB/HDB00/work/.ssh/id_ed25519',
       runAfterExport: true,
       remoteRetentionDays: 60,
     },
@@ -364,11 +366,13 @@ describe('defaults', () => {
   it('schlägt Benutzer und Pfade erst vor, wenn die SID bekannt ist', () => {
     expect(derivedDefaults('', '00').osUser).toBe('');
     expect(derivedDefaults('', '00').exportBase).toBe('');
+    expect(derivedDefaults('', '00').keyPath).toBe('');
 
     const derived = derivedDefaults('P42', '05');
     expect(derived.osUser).toBe('p42adm');
     expect(derived.port).toBe(30515);
     expect(derived.exportBase).toBe('/usr/sap/P42/HDB05/work/schema_exports');
+    expect(derived.keyPath).toBe('/usr/sap/P42/HDB05/work/.ssh/id_ed25519');
   });
 });
 

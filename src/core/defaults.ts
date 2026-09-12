@@ -24,9 +24,20 @@ export function defaultScriptPath(sid: string, instance: string): string {
   return `${instanceDir(sid, instance)}/work/schema_export.sh`;
 }
 
-/** Voreinstellung für den SSH-Schlüssel des Instanzbenutzers. */
-export function defaultKeyPath(sid: string): string {
-  return sid.trim().length === 0 ? '' : `/usr/sap/${sid.trim().toUpperCase()}/home/.ssh/id_ed25519`;
+/** Voreinstellung für den SSH-Schlüssel der Auslagerung. */
+export function defaultKeyPath(sid: string, instance: string): string {
+  return sid.trim().length === 0 ? '' : `${instanceDir(sid, instance)}/work/.ssh/id_ed25519`;
+}
+
+/** Alles, was sich aus SID und Instanznummer ableiten lässt. */
+export interface DerivedDefaults {
+  port: number;
+  hdbsqlPath: string;
+  exportBase: string;
+  scriptPath: string;
+  osUser: string;
+  /** Gehört in der Konfiguration unter `offload`, leitet sich aber genauso ab. */
+  keyPath: string;
 }
 
 /** SAP-Konvention für den Instanzbenutzer: `<sid>adm`. */
@@ -41,10 +52,7 @@ export function defaultOsUser(sid: string): string {
  * Tippens kurz `/usr/sap/N/HDB00/...` in den Pfadfeldern, was aussieht wie
  * ein fester Platzhalter statt wie ein Zwischenstand.
  */
-export function derivedDefaults(
-  sid: string,
-  instance: string,
-): Pick<ExportConfig, 'port' | 'hdbsqlPath' | 'exportBase' | 'scriptPath' | 'osUser'> {
+export function derivedDefaults(sid: string, instance: string): DerivedDefaults {
   const trimmed = sid.trim();
   if (!SID_PATTERN.test(trimmed)) {
     return {
@@ -53,6 +61,7 @@ export function derivedDefaults(
       exportBase: '',
       scriptPath: '',
       osUser: '',
+      keyPath: '',
     };
   }
   return {
@@ -61,6 +70,7 @@ export function derivedDefaults(
     exportBase: defaultExportBase(trimmed, instance),
     scriptPath: defaultScriptPath(trimmed, instance),
     osUser: defaultOsUser(trimmed),
+    keyPath: defaultKeyPath(trimmed, instance),
   };
 }
 
