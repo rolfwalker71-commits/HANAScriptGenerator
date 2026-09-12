@@ -240,7 +240,19 @@ ${
 ./06_offload_storagebox.sh --setup-key
 \`\`\`
 
-Zeigt den öffentlichen Schlüssel. Diesen auf der Box hinterlegen, dann:
+Zeigt den öffentlichen Schlüssel. Ablegen lässt er sich von hier aus:
+
+\`\`\`bash
+./06_offload_storagebox.sh --install-key
+\`\`\`
+
+Fragt einmal nach dem Passwort der Box und schreibt den Schlüssel nach
+\`/home/.ssh/authorized_keys\`. Dabei wird auch \`.ssh\` angelegt — das fehlt auf
+einer neuen Box, und weder der Robot noch \`ssh-copy-id\` legen es zuverlässig an.
+
+**Achtung:** Lagen dort schon Schlüssel, werden sie überschrieben.
+
+Dann prüfen:
 
 \`\`\`bash
 ./06_offload_storagebox.sh --check

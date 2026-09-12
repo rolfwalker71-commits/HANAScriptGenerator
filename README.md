@@ -182,6 +182,7 @@ liegengeblieben ist – etwa nach einer Nacht ohne Netz.
 | Aufruf | Wirkung |
 | --- | --- |
 | `--setup-key` | Schlüsselpaar anlegen und den öffentlichen Teil zeigen |
+| `--install-key` | Den Schlüssel auf der Box ablegen, mit Passwort |
 | `--check` | Nur die Verbindung prüfen |
 | *(ohne)* | Den heutigen Tagesordner übertragen |
 | `JJJJ-MM-TT` | Einen bestimmten Tag übertragen |
@@ -200,8 +201,10 @@ damit die Backups aller anderen auf derselben Box. Eine Box nimmt beliebig viele
 Schlüssel an, einen pro Zeile in `authorized_keys`; für die Trennung sorgen am
 besten Unterkonten mit eigenem Verzeichnis.
 
-Beim Hinterlegen braucht `ssh-copy-id` das Flag `-s`, weil der Schlüssel mangels
-Shell über SFTP abgelegt werden muss.
+Abgelegt wird der Schlüssel mit `--install-key`. Das legt auch `/home/.ssh` an:
+auf einer neuen Storage Box existiert das Verzeichnis nicht, und `ssh-copy-id -s`
+bricht daran ab, ohne es zu melden — die Anmeldung scheitert dann weiter, obwohl
+scheinbar alles hinterlegt wurde.
 
 Die Vorabprüfung (`03_preflight.sh`) läuft **vor** der Schlüsseleinrichtung und
 meldet einen fehlenden Schlüssel deshalb nur als Hinweis. Erst ein vorhandener

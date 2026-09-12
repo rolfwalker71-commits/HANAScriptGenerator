@@ -25,6 +25,7 @@ export function generateOffloadScript(config: ExportConfig): GeneratedFile {
     '  ./' + OFFLOAD_SCRIPT_NAME + ' --pending       alles Nichtuebertragene',
     '  ./' + OFFLOAD_SCRIPT_NAME + ' --check         nur Verbindung pruefen',
     '  ./' + OFFLOAD_SCRIPT_NAME + ' --setup-key     Schluesselpaar anlegen und zeigen',
+    '  ./' + OFFLOAD_SCRIPT_NAME + ' --install-key   Schluessel auf der Box ablegen',
     '',
     'Kopiert, nicht verschoben: lokal bleibt alles bis zum Ablauf der',
     'oertlichen Aufbewahrung liegen.',
@@ -167,7 +168,7 @@ if [ -z "\${BOX_HOST}" ] || [ -z "\${BOX_USER}" ] || [ -z "\${BOX_PATH}" ]; then
     exit 1
 fi
 
-if [ ! -r "\${SSH_KEY}" ] && [ "\${1:-}" != "--setup-key" ]; then
+if [ ! -r "\${SSH_KEY}" ] && [ "\${1:-}" != "--setup-key" ] && [ "\${1:-}" != "--install-key" ]; then
     log "FEHLER: SSH-Schluessel nicht lesbar: \${SSH_KEY}"
     log
     log "Einmalig anlegen mit:"
@@ -240,6 +241,59 @@ setup_key()
     echo
 
     return 0
+}
+
+${RULE}
+#  Schluessel auf der Box ablegen
+#
+#  Schreibt den oeffentlichen Schluessel in /home/.ssh/authorized_keys der
+#  Box. Angemeldet wird dafuer einmal mit dem Passwort.
+#
+#  Das erledigt sonst ssh-copy-id -s, nur bricht das bei einer Storage Box
+#  gern ab, ohne es zu sagen: das Verzeichnis .ssh fehlt dort anfangs, und
+#  die Box legt es nicht von selbst an.
+${RULE}
+
+install_key()
+{
+    if [ ! -r "\${SSH_KEY}.pub" ]; then
+        log "FEHLER: Kein oeffentlicher Schluessel: \${SSH_KEY}.pub"
+        log "Zuerst anlegen mit: $0 --setup-key"
+        return 1
+    fi
+
+    log "Lege den Schluessel auf \${BOX_HOST} ab."
+    log "Das Passwort der Box wird einmal gebraucht."
+    log ""
+
+    # Ohne BatchMode, damit nach dem Passwort gefragt werden kann. Ein
+    # vorhandenes .ssh stoert nicht, mkdir meldet dann nur einen Fehler.
+    sftp -P "\${BOX_PORT}" -o StrictHostKeyChecking=accept-new \\
+        "\${BOX_USER}@\${BOX_HOST}" <<SFTP_BATCH
+mkdir .ssh
+chmod 700 .ssh
+put \${SSH_KEY}.pub .ssh/authorized_keys
+chmod 600 .ssh/authorized_keys
+quit
+SFTP_BATCH
+
+    log ""
+    log "Pruefe die Anmeldung ohne Passwort ..."
+
+    if box_pwd >> "\${LOG_FILE}" 2>&1; then
+        log "Geschafft, der Schluessel wird angenommen."
+        return 0
+    fi
+
+    log "FEHLER: Die Anmeldung ohne Passwort klappt weiterhin nicht."
+    log ""
+    log "Nachsehen, was auf der Box liegt:"
+    log "  sftp -P \${BOX_PORT} \${BOX_USER}@\${BOX_HOST}"
+    log "  sftp> ls -la .ssh"
+    log ""
+    log "Achtung: das Ablegen ueberschreibt eine vorhandene"
+    log "authorized_keys. Lagen dort schon Schluessel, sind sie jetzt weg."
+    return 1
 }
 
 ${RULE}
@@ -409,6 +463,11 @@ if [ "\${MODE}" = "--setup-key" ]; then
     exit 0
 fi
 
+if [ "\${MODE}" = "--install-key" ]; then
+    install_key || exit 1
+    exit 0
+fi
+
 check_connection || exit 1
 
 case "\${MODE}" in
@@ -438,7 +497,8 @@ case "\${MODE}" in
 
     *)
         log "FEHLER: Unbekannter Aufruf: \${MODE}"
-        log "Erwartet: JJJJ-MM-TT, --pending, --check, --setup-key oder gar nichts."
+        log "Erwartet: JJJJ-MM-TT, --pending, --check, --setup-key,"
+        log "          --install-key oder gar nichts."
         exit 1
         ;;
 esac
