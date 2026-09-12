@@ -103,12 +103,22 @@ body {
   font-size: 11.5px;
 }
 
-/* Logo, beim Build als data-URI eingebettet. Fehlt es, ist das Element weg. */
+/*
+ * Logo, beim Build als data-URI eingebettet. Fehlt es, ist das Element weg.
+ *
+ * Die Vorlage hat einen deckend weissen Hintergrund. Im dunklen Modus waere
+ * das sonst ein harter weisser Block; die Platte mit Rundung laesst es
+ * gesetzt aussehen. Im hellen Modus faellt sie nicht auf.
+ */
 .brand {
-  height: 26px;
+  height: 24px;
   width: auto;
   flex: 0 0 auto;
   align-self: center;
+  box-sizing: content-box;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #fff;
 }
 
 .topbar__profiles {
@@ -677,7 +687,8 @@ textarea:focus-visible,
 }
 
 :root[data-compact='1'] .brand {
-  height: 20px;
+  height: 18px;
+  padding: 2px 4px;
 }
 
 :root[data-compact='1'] .steps {
