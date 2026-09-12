@@ -119,6 +119,53 @@ export function validateConfig(config: ExportConfig): ValidationIssue[] {
     }
   }
 
+  if (config.offload.enabled) {
+    const box = config.offload;
+
+    if (box.host.length === 0) {
+      error('offload', 'Ohne Adresse der StorageBox kann nicht ausgelagert werden.');
+    } else if (!/^[A-Za-z0-9._-]+$/.test(box.host)) {
+      error('offload', 'Die Adresse der StorageBox enthält unzulässige Zeichen.');
+    }
+
+    if (!/^[A-Za-z0-9._-]+$/.test(box.user)) {
+      error('offload', 'Der Benutzer der StorageBox fehlt oder enthält unzulässige Zeichen.');
+    }
+
+    if (!Number.isInteger(box.port) || box.port < 1 || box.port > 65535) {
+      error('offload', 'Der SSH-Port der StorageBox muss zwischen 1 und 65535 liegen.');
+    } else if (box.port === 22) {
+      warn(
+        'offload',
+        'Hetzner betreibt SSH auf einer Storage Box üblicherweise auf Port 23, nicht 22.',
+      );
+    }
+
+    if (!box.remotePath.startsWith('/')) {
+      error('offload', 'Das Zielverzeichnis auf der Box muss mit / beginnen, z. B. /home/hana.');
+    } else if (box.remotePath === '/' || box.remotePath === '/home') {
+      error(
+        'offload',
+        'Ein eigenes Unterverzeichnis wählen – das Aufräumen im Heimatverzeichnis wäre gefährlich.',
+      );
+    }
+
+    if (!box.keyPath.startsWith('/')) {
+      error('offload', 'Für den SSH-Schlüssel wird ein absoluter Pfad benötigt.');
+    }
+
+    if (!Number.isInteger(box.remoteRetentionDays) || box.remoteRetentionDays < 0) {
+      error('offload', 'Die Aufbewahrung auf der Box darf nicht negativ sein.');
+    } else if (box.remoteRetentionDays > 0 && box.remoteRetentionDays <= config.retentionDays) {
+      warn(
+        'offload',
+        `Auf der Box wird nach ${box.remoteRetentionDays} Tagen gelöscht, lokal erst nach ` +
+          `${config.retentionDays}. Dann ist die Auslagerung nie älter als der lokale Bestand ` +
+          'und bringt keinen zusätzlichen Zeitraum.',
+      );
+    }
+  }
+
   if (config.keepRawExport) {
     warn(
       'keepRawExport',

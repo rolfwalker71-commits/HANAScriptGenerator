@@ -1,5 +1,5 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, archiveExtension, schemaArray, scriptHeader, userGuard } from './common.js';
+import { RULE, archiveExtension, scriptHeader, userGuard } from './common.js';
 
 /**
  * Gegenstück zum Export: entpackt ein Archiv und spielt es auf Wunsch per
@@ -31,8 +31,6 @@ COMPRESSION="${config.compression}"
 
 RESTORE_BASE="\${EXPORT_BASE}/_restore"
 
-${schemaArray(config)}
-
 case "\${COMPRESSION}" in
     gz)   TAR_EXTRACT=(-xzf) ;;
     zst)  TAR_EXTRACT=(--zstd -xf) ;;
@@ -51,11 +49,13 @@ if [ "\${1:-}" = "--list" ] || [ -z "\${1:-}" ]; then
     echo "Vorhandene Archive unter \${EXPORT_BASE}:"
     echo
 
-    for SCHEMA in "\${SCHEMAS[@]}"
+    for DAY_DIR in "\${EXPORT_BASE}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
     do
-        echo "  \${SCHEMA}"
-        find "\${EXPORT_BASE}/\${SCHEMA}" -maxdepth 1 -type f \\
-            -name "\${SCHEMA}_*.\${ARCHIVE_EXT}" 2>/dev/null \\
+        [ -d "\${DAY_DIR}" ] || continue
+
+        echo "  $(basename "\${DAY_DIR}")"
+
+        find "\${DAY_DIR}" -maxdepth 1 -type f -name "*.\${ARCHIVE_EXT}" 2>/dev/null \\
             | sort \\
             | while read -r FILE
               do
@@ -79,7 +79,7 @@ if [ -z "\${RESTORE_DATE}" ]; then
     exit 1
 fi
 
-ARCHIVE="\${EXPORT_BASE}/\${SCHEMA}/\${SCHEMA}_\${RESTORE_DATE}.\${ARCHIVE_EXT}"
+ARCHIVE="\${EXPORT_BASE}/\${RESTORE_DATE}/\${SCHEMA}_\${RESTORE_DATE}.\${ARCHIVE_EXT}"
 TARGET_DIR="\${RESTORE_BASE}/\${SCHEMA}_\${RESTORE_DATE}"
 
 if [ ! -f "\${ARCHIVE}" ]; then
@@ -110,8 +110,8 @@ if [ \${RC} -ne 0 ]; then
     exit 1
 fi
 
-# Im Archiv liegt das Tagesverzeichnis, der Export selbst eine Ebene tiefer.
-IMPORT_DIR="\${TARGET_DIR}/\${RESTORE_DATE}"
+# Im Archiv liegt der Schemaordner, der Export selbst eine Ebene tiefer.
+IMPORT_DIR="\${TARGET_DIR}/\${SCHEMA}"
 
 if [ ! -d "\${IMPORT_DIR}" ]; then
     IMPORT_DIR="\${TARGET_DIR}"

@@ -24,6 +24,11 @@ export function defaultScriptPath(sid: string, instance: string): string {
   return `${instanceDir(sid, instance)}/work/schema_export.sh`;
 }
 
+/** Voreinstellung für den SSH-Schlüssel des Instanzbenutzers. */
+export function defaultKeyPath(sid: string): string {
+  return sid.trim().length === 0 ? '' : `/usr/sap/${sid.trim().toUpperCase()}/home/.ssh/id_ed25519`;
+}
+
 /** SAP-Konvention für den Instanzbenutzer: `<sid>adm`. */
 export function defaultOsUser(sid: string): string {
   return sid.trim().length === 0 ? '' : `${sid.trim().toLowerCase()}adm`;
@@ -84,6 +89,19 @@ export function defaultConfig(): ExportConfig {
     minFreeGb: 0,
     schedule: { hour: 2, minute: 0, dayOfWeek: '*' },
     mail: { enabled: false, recipient: '', onlyOnError: true, command: 'mailx' },
+    offload: {
+      enabled: false,
+      host: '',
+      user: '',
+      // Hetzner betreibt SSH auf einer Storage Box auf Port 23.
+      port: 23,
+      remotePath: '',
+      keyPath: '',
+      runAfterExport: true,
+      // Aufraeumen auf der Box loescht Daten, die lokal schon weg sein
+      // koennen. Deshalb aus, bis es jemand bewusst einschaltet.
+      remoteRetentionDays: 0,
+    },
   };
 }
 
@@ -104,5 +122,12 @@ export function normalizeConfig(config: ExportConfig): ExportConfig {
     schemas: config.schemas.map((s) => s.trim()).filter((s) => s.length > 0),
     mail: { ...config.mail, recipient: config.mail.recipient.trim() },
     schedule: { ...config.schedule },
+    offload: {
+      ...config.offload,
+      host: config.offload.host.trim(),
+      user: config.offload.user.trim(),
+      remotePath: normalizePath(config.offload.remotePath),
+      keyPath: normalizePath(config.offload.keyPath),
+    },
   };
 }

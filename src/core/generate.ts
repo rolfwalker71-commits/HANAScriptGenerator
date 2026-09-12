@@ -8,6 +8,7 @@ import { generatePreflight } from './files/preflight.js';
 import { generateTestExport } from './files/testExport.js';
 import { generateExportScript } from './files/exportScript.js';
 import { generateInstallCron } from './files/installCron.js';
+import { generateOffloadScript } from './files/offload.js';
 import { generateRestore } from './files/restore.js';
 import { generateReadme } from './files/readme.js';
 
@@ -27,6 +28,7 @@ export function generateAll(rawConfig: ExportConfig): GeneratedFile[] {
     generateTestExport(config),
     generateExportScript(config),
     generateInstallCron(config),
+    ...(config.offload.enabled ? [generateOffloadScript(config)] : []),
     generateRestore(config),
   ];
 

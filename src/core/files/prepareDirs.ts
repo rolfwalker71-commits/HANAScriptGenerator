@@ -26,18 +26,15 @@ ${RULE}
 
 echo "Lege Exportverzeichnisse an..."
 
-mkdir -p "\${EXPORT_BASE}/logs" || {
-    echo "FEHLER: \${EXPORT_BASE}/logs konnte nicht angelegt werden." >&2
-    exit 1
-}
-
-for SCHEMA in "\${SCHEMAS[@]}"
+# Je Lauf entsteht ein Tagesordner; der wird zur Laufzeit angelegt. Fest
+# gebraucht werden nur die Basis, das Log- und das Vermerkverzeichnis.
+for DIR in "\${EXPORT_BASE}" "\${EXPORT_BASE}/logs" "\${EXPORT_BASE}/.offloaded"
 do
-    mkdir -p "\${EXPORT_BASE}/\${SCHEMA}" || {
-        echo "FEHLER: \${EXPORT_BASE}/\${SCHEMA} konnte nicht angelegt werden." >&2
+    mkdir -p "\${DIR}" || {
+        echo "FEHLER: \${DIR} konnte nicht angelegt werden." >&2
         exit 1
     }
-    echo "  \${EXPORT_BASE}/\${SCHEMA}"
+    echo "  \${DIR}"
 done
 
 mkdir -p "\${SCRIPT_DIR}" || {
@@ -82,11 +79,7 @@ FAILED=0
 
 write_test "\${EXPORT_BASE}" || FAILED=1
 write_test "\${EXPORT_BASE}/logs" || FAILED=1
-
-for SCHEMA in "\${SCHEMAS[@]}"
-do
-    write_test "\${EXPORT_BASE}/\${SCHEMA}" || FAILED=1
-done
+write_test "\${EXPORT_BASE}/.offloaded" || FAILED=1
 
 if [ \${FAILED} -ne 0 ]; then
     echo >&2

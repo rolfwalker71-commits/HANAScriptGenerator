@@ -3,6 +3,9 @@ import { shCommentSafe } from '../sh.js';
 
 export const GENERATOR_NAME = 'HANAScriptGenerator';
 
+/** Dateiname des Auslagerungsskripts, an mehreren Stellen gebraucht. */
+export const OFFLOAD_SCRIPT_NAME = '06_offload_storagebox.sh';
+
 /** Trennlinie in Skriptkommentaren. */
 export const RULE = '# ------------------------------------------------------------';
 export const HEAVY_RULE = '# ============================================================';

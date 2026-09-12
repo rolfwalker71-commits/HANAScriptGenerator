@@ -31,6 +31,25 @@ function exampleConfig(): ExportConfig {
   };
 }
 
+/** Wie exampleConfig, aber mit eingeschalteter Auslagerung. */
+function offloadConfig(): ExportConfig {
+  const base = exampleConfig();
+  return {
+    ...base,
+    offload: {
+      ...base.offload,
+      enabled: true,
+      host: 'u123456.your-storagebox.de',
+      user: 'u123456-sub1',
+      port: 23,
+      remotePath: '/home/hana-export',
+      keyPath: '/usr/sap/HDB/home/.ssh/id_ed25519',
+      runAfterExport: true,
+      remoteRetentionDays: 60,
+    },
+  };
+}
+
 const workDir = mkdtempSync(join(tmpdir(), 'hana-script-generator-'));
 
 afterAll(() => {
@@ -84,6 +103,12 @@ describe('generateAll', () => {
     checkBashSyntax({ ...exampleConfig(), compression: 'none' });
   });
 
+  it('liefert syntaktisch gültiges Bash mit Auslagerung', () => {
+    // Ohne diesen Fall bliebe das Auslagerungsskript ungeprüft: es entsteht
+    // nur, wenn die Auslagerung eingeschaltet ist.
+    checkBashSyntax(offloadConfig());
+  });
+
   it('exportiert und archiviert jedes Schema einzeln', () => {
     const config = exampleConfig();
     const script = generateAll(config).find((f) => f.name === 'schema_export.sh');
@@ -93,8 +118,10 @@ describe('generateAll', () => {
     expect(content.match(/EXPORT \\"\$\{SCHEMA\}\\"/g)).toHaveLength(1);
     expect(content).toContain('for SCHEMA in "${SCHEMAS[@]}"');
 
-    // Das Archiv trägt Schemaname und Datum, liegt also je Schema getrennt.
-    expect(content).toContain('ARCHIVE="${SCHEMA_DIR}/${SCHEMA}_${DATE}.${ARCHIVE_EXT}"');
+    // Alles eines Tages liegt in einem Ordner, je Schema ein eigenes Archiv.
+    expect(content).toContain('DAY_DIR="${EXPORT_BASE}/${DATE}"');
+    expect(content).toContain('ARCHIVE="${DAY_DIR}/${SCHEMA}_${DATE}.${ARCHIVE_EXT}"');
+    expect(content).toContain('WORK_DIR="${DAY_DIR}/${SCHEMA}"');
 
     for (const schema of config.schemas) {
       expect(content).toContain(`    "${schema}"`);
@@ -114,11 +141,23 @@ describe('generateAll', () => {
     expect(script?.content).toContain('WITH REPLACE THREADS ${THREADS}');
   });
 
-  it('räumt nach RETENTION_DAYS - 1 auf, damit genau N Tage erhalten bleiben', () => {
-    const script = generateAll({ ...exampleConfig(), retentionDays: 14 }).find(
-      (f) => f.name === 'schema_export.sh',
-    );
-    expect(script?.content).toContain('PRUNE_MTIME=$((RETENTION_DAYS - 1))');
+  it('räumt ganze Tagesordner nach Namen auf, nicht nach Änderungszeit', () => {
+    const content =
+      generateAll({ ...exampleConfig(), retentionDays: 14 }).find(
+        (f) => f.name === 'schema_export.sh',
+      )?.content ?? '';
+
+    // Ein Zugriff beim Auslagern würde die Änderungszeit verschieben und die
+    // Frist stillschweigend verlängern. Der Ordnername tut das nie.
+    expect(content).toContain('CUTOFF="$(date -d "${RETENTION_DAYS} days ago" +%Y-%m-%d');
+    // [[ ]], weil < in [ ] eine Umleitung wäre und nicht verglichen würde.
+    expect(content).toContain('[[ "${ENTRY_DATE}" < "${CUTOFF}" ]]');
+    // Lookbehind, weil "[[ \"" die Zeichenfolge "[ \"" enthält.
+    expect(content).not.toMatch(/(?<!\[)\[ "\$\{ENTRY_DATE\}"/);
+    expect(content).toContain('rm -rf "${ENTRY}"');
+
+    // Nur Tagesordner, damit logs und .offloaded unangetastet bleiben.
+    expect(content).toContain('/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]');
   });
 
   it('übernimmt abweichende Pfade in alle Skripte', () => {
@@ -203,7 +242,7 @@ describe('Protokollierung', () => {
   it('räumt alte Logs nach derselben Frist weg wie die Archive', () => {
     const content = mainScript();
     expect(content).toContain(`-type f -name 'schema_export_*.log'`);
-    expect(content).toContain('-mtime +${PRUNE_MTIME}');
+    expect(content).toContain('-mtime +$((RETENTION_DAYS - 1))');
   });
 });
 

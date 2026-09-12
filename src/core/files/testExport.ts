@@ -49,8 +49,10 @@ done
 
 SCHEMA="\${SCHEMA:-${firstSchema}}"
 
-TEST_DIR="\${EXPORT_BASE}/\${SCHEMA}/manual_test"
-TEST_ARCHIVE="\${EXPORT_BASE}/\${SCHEMA}/manual_test.tar"
+# Bewusst ausserhalb der Tagesordner: was dort liegt, wird ausgelagert und
+# nach Frist entfernt. Ein Testlauf hat darin nichts verloren.
+TEST_DIR="\${EXPORT_BASE}/manual_test/\${SCHEMA}"
+TEST_ARCHIVE="\${EXPORT_BASE}/manual_test/\${SCHEMA}_test.tar"
 
 case "\${COMPRESSION}" in
     gz)   TAR_CREATE=(-czf); TEST_ARCHIVE="\${TEST_ARCHIVE}.gz" ;;
@@ -75,7 +77,7 @@ echo "Zielverzeichnis: \${TEST_DIR}"
 echo
 
 rm -rf "\${TEST_DIR}"
-mkdir -p "\${TEST_DIR}" || {
+mkdir -p "\${TEST_DIR}" 2>/dev/null || {
     echo "FEHLER: \${TEST_DIR} konnte nicht angelegt werden." >&2
     exit 1
 }
@@ -115,7 +117,7 @@ echo "Archiviere Testexport nach \${TEST_ARCHIVE} ..."
 
 START="$(date +%s)"
 
-tar -C "\${EXPORT_BASE}/\${SCHEMA}" "\${TAR_CREATE[@]}" "\${TEST_ARCHIVE}" "manual_test"
+tar -C "\${EXPORT_BASE}/manual_test" "\${TAR_CREATE[@]}" "\${TEST_ARCHIVE}" "\${SCHEMA}"
 RC=$?
 
 END="$(date +%s)"

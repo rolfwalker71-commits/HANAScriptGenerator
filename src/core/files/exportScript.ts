@@ -1,10 +1,12 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import {
   HEAVY_RULE,
+  OFFLOAD_SCRIPT_NAME,
   RULE,
   archiveExtension,
   baseName,
   compressionLabel,
+  dirName,
   schemaArray,
   scriptHeader,
   userGuard,
@@ -17,6 +19,7 @@ import {
 export function generateExportScript(config: ExportConfig): GeneratedFile {
   const name = baseName(config.scriptPath);
   const ext = archiveExtension(config.compression);
+  const offloadScript = `${dirName(config.scriptPath)}/${OFFLOAD_SCRIPT_NAME}`;
 
   const content = `${scriptHeader(config, 'SAP HANA Schema-Export', [
     'Jedes Schema wird einzeln exportiert und einzeln archiviert.',
@@ -52,6 +55,11 @@ MAIL_ENABLED="${config.mail.enabled ? 'yes' : 'no'}"
 MAIL_RECIPIENT="${config.mail.recipient}"
 MAIL_ONLY_ON_ERROR="${config.mail.onlyOnError ? 'yes' : 'no'}"
 MAIL_COMMAND="${config.mail.command}"
+
+# Auslagerung auf die StorageBox nach dem Lauf
+OFFLOAD_ENABLED="${config.offload.enabled ? 'yes' : 'no'}"
+OFFLOAD_AFTER_EXPORT="${config.offload.runAfterExport ? 'yes' : 'no'}"
+OFFLOAD_SCRIPT="${offloadScript}"
 
 # Jedes Schema wird getrennt exportiert. Weitere Schemas hier ergaenzen.
 ${schemaArray(config)}
@@ -104,6 +112,11 @@ ${RULE}
 
 DATE="$(date +%Y-%m-%d)"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+
+# Alles eines Tages liegt beisammen. Dadurch ist ein Lauf eine Einheit:
+# genau dieser Ordner wird ausgelagert und genau dieser faellt beim
+# Aufraeumen als Ganzes weg.
+DAY_DIR="\${EXPORT_BASE}/\${DATE}"
 
 LOG_DIR="\${EXPORT_BASE}/logs"
 LOG_FILE="\${LOG_DIR}/schema_export_\${TIMESTAMP}.log"
@@ -242,9 +255,8 @@ ${RULE}
 export_schema()
 {
     SCHEMA="$1"
-    SCHEMA_DIR="\${EXPORT_BASE}/\${SCHEMA}"
-    WORK_DIR="\${SCHEMA_DIR}/\${DATE}"
-    ARCHIVE="\${SCHEMA_DIR}/\${SCHEMA}_\${DATE}.\${ARCHIVE_EXT}"
+    WORK_DIR="\${DAY_DIR}/\${SCHEMA}"
+    ARCHIVE="\${DAY_DIR}/\${SCHEMA}_\${DATE}.\${ARCHIVE_EXT}"
 
     log "${RULE.slice(2)}"
     log "Schema \${SCHEMA}: Export nach \${WORK_DIR}"
@@ -275,7 +287,7 @@ export_schema()
 
     rm -f "\${ARCHIVE}.tmp"
 
-    tar -C "\${SCHEMA_DIR}" "\${TAR_CREATE[@]}" "\${ARCHIVE}.tmp" "\${DATE}" >> "\${LOG_FILE}" 2>&1
+    tar -C "\${DAY_DIR}" "\${TAR_CREATE[@]}" "\${ARCHIVE}.tmp" "\${SCHEMA}" >> "\${LOG_FILE}" 2>&1
     RC=$?
 
     if [ \${RC} -ne 0 ]; then
@@ -323,41 +335,73 @@ do
 done
 
 ${RULE}
-#  Aufbewahrung
+#  Auslagern auf die StorageBox
 #
-#  -mtime +N liefert Dateien, die aelter als N+1 Tage sind. Fuer
-#  RETENTION_DAYS Tage Aufbewahrung ist deshalb N = RETENTION_DAYS - 1.
+#  Ausgelagert wird auch dann, wenn einzelne Schemas gescheitert sind: acht
+#  von neun Archiven extern zu haben ist besser als keines. Was fehlt, steht
+#  im Log und im Ordner selbst.
 ${RULE}
 
-PRUNE_MTIME=$((RETENTION_DAYS - 1))
+if [ "\${OFFLOAD_ENABLED}" = "yes" ] && [ "\${OFFLOAD_AFTER_EXPORT}" = "yes" ]; then
+
+    log "${RULE.slice(2)}"
+
+    if [ ! -x "\${OFFLOAD_SCRIPT}" ]; then
+        log "FEHLER: Auslagerungsskript fehlt oder ist nicht ausfuehrbar:"
+        log "  \${OFFLOAD_SCRIPT}"
+        EXITCODE=1
+    else
+        log "Lagere \${DATE} auf die StorageBox aus..."
+
+        "\${OFFLOAD_SCRIPT}" "\${DATE}" >> "\${LOG_FILE}" 2>&1
+        RC=$?
+
+        if [ \${RC} -eq 0 ]; then
+            log "Auslagerung abgeschlossen."
+        else
+            log "FEHLER: Auslagerung fehlgeschlagen (RC \${RC}). Einzelheiten im Log oben."
+            EXITCODE=1
+        fi
+    fi
+fi
+
+${RULE}
+#  Aufbewahrung
+#
+#  Verglichen wird der Ordnername, nicht die Aenderungszeit. Ein Zugriff
+#  auf einen Ordner – etwa beim Auslagern oder bei einem zweiten Lauf –
+#  wuerde dessen Zeitstempel verschieben und die Frist stillschweigend
+#  verlaengern. Der Name aendert sich nie.
+${RULE}
+
+CUTOFF="$(date -d "\${RETENTION_DAYS} days ago" +%Y-%m-%d 2>/dev/null)"
 
 log "${RULE.slice(2)}"
-log "Entferne Archive aelter als \${RETENTION_DAYS} Tage..."
 
-for SCHEMA in "\${SCHEMAS[@]}"
-do
-    SCHEMA_DIR="\${EXPORT_BASE}/\${SCHEMA}"
+if [ -z "\${CUTOFF}" ]; then
+    log "WARNUNG: Stichtag konnte nicht berechnet werden, es wird nichts entfernt."
+else
+    log "Entferne Tagesordner aelter als \${CUTOFF} (\${RETENTION_DAYS} Tage)..."
 
-    [ -d "\${SCHEMA_DIR}" ] || continue
+    for ENTRY in "\${EXPORT_BASE}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
+    do
+        [ -d "\${ENTRY}" ] || continue
 
-    find "\${SCHEMA_DIR}" \\
-        -mindepth 1 -maxdepth 1 \\
-        -type f -name "\${SCHEMA}_*.\${ARCHIVE_EXT}" \\
-        -mtime +\${PRUNE_MTIME} \\
-        -print -delete >> "\${LOG_FILE}" 2>&1
+        ENTRY_DATE="$(basename "\${ENTRY}")"
 
-    # Rohexport-Verzeichnisse aus frueheren Laeufen ebenfalls bereinigen.
-    find "\${SCHEMA_DIR}" \\
-        -mindepth 1 -maxdepth 1 \\
-        -type d \\
-        -mtime +\${PRUNE_MTIME} \\
-        -print -exec rm -rf {} + >> "\${LOG_FILE}" 2>&1
-done
+        # Zeichenweiser Vergleich genuegt, weil JJJJ-MM-TT sortierbar ist.
+        # [[ ]] statt [ ]: dort ist < ein Textvergleich, in [ ] eine Umleitung.
+        if [[ "\${ENTRY_DATE}" < "\${CUTOFF}" ]]; then
+            log "  entferne \${ENTRY_DATE}"
+            rm -rf "\${ENTRY}"
+        fi
+    done
 
-find "\${LOG_DIR}" \\
-    -type f -name 'schema_export_*.log' \\
-    -mtime +\${PRUNE_MTIME} \\
-    -delete >> "\${LOG_FILE}" 2>&1
+    find "\${LOG_DIR}" \\
+        -type f -name 'schema_export_*.log' \\
+        -mtime +$((RETENTION_DAYS - 1)) \\
+        -delete >> "\${LOG_FILE}" 2>&1
+fi
 
 ${RULE}
 #  Abschluss

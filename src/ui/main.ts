@@ -6,6 +6,7 @@ import {
   cronLine,
   customerSlug,
   defaultConfig,
+  defaultKeyPath,
   derivedDefaults,
   describeSchema,
   generateAll,
@@ -58,6 +59,14 @@ const fields = {
   mailRecipient: el<HTMLInputElement>('mailRecipient'),
   mailCommand: el<HTMLInputElement>('mailCommand'),
   mailOnlyOnError: el<HTMLInputElement>('mailOnlyOnError'),
+  offloadEnabled: el<HTMLInputElement>('offloadEnabled'),
+  offloadHost: el<HTMLInputElement>('offloadHost'),
+  offloadUser: el<HTMLInputElement>('offloadUser'),
+  offloadPort: el<HTMLInputElement>('offloadPort'),
+  offloadRemotePath: el<HTMLInputElement>('offloadRemotePath'),
+  offloadKeyPath: el<HTMLInputElement>('offloadKeyPath'),
+  offloadRunAfter: el<HTMLInputElement>('offloadRunAfter'),
+  offloadRetention: el<HTMLInputElement>('offloadRetention'),
 };
 
 const ui = {
@@ -81,6 +90,7 @@ const ui = {
   schemaPaste: el<HTMLTextAreaElement>('schemaPaste'),
   inputSchemaListing: el<HTMLInputElement>('inputSchemaListing'),
   mailFields: el<HTMLDivElement>('mailFields'),
+  offloadFields: el<HTMLDivElement>('offloadFields'),
   profileSelect: el<HTMLSelectElement>('profileSelect'),
   btnSaveProfile: el<HTMLButtonElement>('btnSaveProfile'),
   btnDeleteProfile: el<HTMLButtonElement>('btnDeleteProfile'),
@@ -104,6 +114,7 @@ const stepFields: ReadonlyArray<ReadonlyArray<ValidationIssue['field']>> = [
   ['threads', 'compression', 'keepRawExport', 'minFreeGb'],
   ['retentionDays', 'schedule'],
   ['mail'],
+  ['offload'],
   [],
 ];
 
@@ -153,6 +164,16 @@ function readForm(): ExportConfig {
       command: fields.mailCommand.value,
       onlyOnError: fields.mailOnlyOnError.checked,
     },
+    offload: {
+      enabled: fields.offloadEnabled.checked,
+      host: fields.offloadHost.value,
+      user: fields.offloadUser.value,
+      port: Number.parseInt(fields.offloadPort.value, 10),
+      remotePath: fields.offloadRemotePath.value,
+      keyPath: fields.offloadKeyPath.value,
+      runAfterExport: fields.offloadRunAfter.checked,
+      remoteRetentionDays: Number.parseInt(fields.offloadRetention.value, 10),
+    },
   };
 }
 
@@ -192,6 +213,15 @@ function writeForm(config: ExportConfig): void {
   fields.mailCommand.value = config.mail.command;
   fields.mailOnlyOnError.checked = config.mail.onlyOnError;
 
+  fields.offloadEnabled.checked = config.offload.enabled;
+  fields.offloadHost.value = config.offload.host;
+  fields.offloadUser.value = config.offload.user;
+  fields.offloadPort.value = String(config.offload.port);
+  fields.offloadRemotePath.value = config.offload.remotePath;
+  fields.offloadKeyPath.value = config.offload.keyPath;
+  fields.offloadRunAfter.checked = config.offload.runAfterExport;
+  fields.offloadRetention.value = String(config.offload.remoteRetentionDays);
+
   lastDerived = derivedDefaults(config.sid, config.instance);
   syncConditionalFields();
 }
@@ -200,6 +230,7 @@ function writeForm(config: ExportConfig): void {
 function syncConditionalFields(): void {
   fields.scheduleDowCustom.hidden = fields.scheduleDow.value !== '__custom';
   ui.mailFields.hidden = !fields.mailEnabled.checked;
+  ui.offloadFields.hidden = !fields.offloadEnabled.checked;
 }
 
 /**
@@ -226,6 +257,7 @@ function syncDerivedFields(): void {
   }
 
   adopt(fields.osUser, lastDerived.osUser, next.osUser);
+  adopt(fields.offloadKeyPath, defaultKeyPath(lastDerived.osUser.replace(/adm$/, '')), defaultKeyPath(fields.sid.value));
   adopt(fields.hdbsqlPath, lastDerived.hdbsqlPath, next.hdbsqlPath);
   adopt(fields.exportBase, lastDerived.exportBase, next.exportBase);
   adopt(fields.scriptPath, lastDerived.scriptPath, next.scriptPath);
@@ -413,6 +445,13 @@ function renderSummary(config: ExportConfig): void {
     ['Archiv', `${compressionLabel(config.compression)} als SCHEMA_JJJJ-MM-TT.${ext}`],
     ['Aufbewahrung', `${config.retentionDays} Tage`],
     ['Zeitplan', `${scheduleDescription(config)} – ${cronLine(config)}`],
+    [
+      'StorageBox',
+      config.offload.enabled
+        ? `${config.offload.user}@${config.offload.host}:${config.offload.remotePath}` +
+          ` (${config.offload.remoteRetentionDays > 0 ? `${config.offload.remoteRetentionDays} Tage dort` : 'dort ohne Aufräumen'})`
+        : 'keine Auslagerung',
+    ],
     [
       'Mail',
       config.mail.enabled

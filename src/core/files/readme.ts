@@ -11,10 +11,11 @@ export function generateReadme(config: ExportConfig): GeneratedFile {
   const first = config.schemas[0] ?? 'SCHEMA';
   const time = `${String(config.schedule.hour).padStart(2, '0')}:${String(config.schedule.minute).padStart(2, '0')}`;
 
-  const schemaTree = config.schemas
-    .map(
-      (schema) =>
-        `├── ${schema}/\n│   ├── ${schema}_2026-01-14.${ext}\n│   ├── ${schema}_2026-01-15.${ext}\n│   └── ...`,
+  const dayTree = config.schemas
+    .map((schema, index) =>
+      index === config.schemas.length - 1
+        ? `│   └── ${schema}_2026-01-15.${ext}`
+        : `│   ├── ${schema}_2026-01-15.${ext}`,
     )
     .join('\n');
 
@@ -46,6 +47,12 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | Aufbewahrung | ${config.retentionDays} Tage |
 | Zeitplan | ${scheduleDescription(config)} |
 | Mindestens frei | ${config.minFreeGb > 0 ? `${config.minFreeGb} GB` : 'keine Prüfung'} |
+| Auslagerung | ${
+    config.offload.enabled
+      ? `${config.offload.user}@${config.offload.host}:${config.offload.remotePath}` +
+        ` (${config.offload.remoteRetentionDays > 0 ? `${config.offload.remoteRetentionDays} Tage dort` : 'dort ohne Aufräumen'})`
+      : 'nein'
+  } |
 | Mailbenachrichtigung | ${
     config.mail.enabled
       ? `${config.mail.recipient} (${config.mail.onlyOnError ? 'nur bei Fehlern' : 'nach jedem Lauf'})`
@@ -63,7 +70,11 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |
 | \`04_test_export.sh\` | Einmaliger Testexport inklusive tar-Lauf. |
 | \`${script}\` | Das eigentliche Exportskript für den Cronlauf. |
-| \`05_install_cron.sh\` | Trägt den Cronjob ein, aktualisiert oder entfernt ihn. |
+| \`05_install_cron.sh\` | Trägt den Cronjob ein, aktualisiert oder entfernt ihn. |${
+    config.offload.enabled
+      ? '\n| `06_offload_storagebox.sh` | Kopiert den Tagesordner auf die StorageBox. |'
+      : ''
+  }
 | \`90_restore_schema.sh\` | Entpackt ein Archiv und spielt es per IMPORT zurück. |
 
 ## Einrichtung
@@ -239,12 +250,17 @@ Entfernen lässt sich der Eintrag jederzeit mit \`./05_install_cron.sh --remove\
 Um ${time} Uhr (${scheduleDescription(config)}) läuft der Export. Pro Schema
 nacheinander:
 
-1. \`EXPORT "SCHEMA"."*" AS BINARY INTO '.../SCHEMA/JJJJ-MM-TT' WITH REPLACE THREADS ${config.threads}\`
-2. \`tar\` über das Tagesverzeichnis nach \`SCHEMA_JJJJ-MM-TT.${ext}\`
+1. \`EXPORT "SCHEMA"."*" AS BINARY INTO '.../JJJJ-MM-TT/SCHEMA' WITH REPLACE THREADS ${config.threads}\`
+2. \`tar\` über den Schemaordner nach \`JJJJ-MM-TT/SCHEMA_JJJJ-MM-TT.${ext}\`
 3. Prüfen, ob sich das Archiv lesen lässt
 4. ${config.keepRawExport ? 'Rohexport bleibt zusätzlich liegen' : 'Rohexport löschen, es bleibt nur das Archiv'}
 
-Erst danach werden Archive und Logs älter als ${config.retentionDays} Tage entfernt.
+Alles eines Laufs liegt damit in **einem Tagesordner**. Erst danach fallen
+Tagesordner und Logs älter als ${config.retentionDays} Tage weg – der Ordner als Ganzes.
+
+Verglichen wird dabei der **Ordnername**, nicht die Änderungszeit: ein Zugriff
+beim Auslagern würde den Zeitstempel verschieben und die Frist stillschweigend
+verlängern.
 
 Das Archiv wird zuerst als \`.tmp\` geschrieben und erst nach erfolgreicher
 Prüfung umbenannt. Ein abgebrochener Lauf hinterlässt dadurch kein
@@ -252,7 +268,11 @@ unvollständiges Archiv im Aufbewahrungsbestand.
 
 \`\`\`
 ${config.exportBase}/
-${schemaTree}
+├── 2026-01-14/
+│   └── ...
+├── 2026-01-15/
+${dayTree}
+├── .offloaded/          Vermerk, welcher Tag übertragen ist
 └── logs/
     ├── schema_export_2026-01-15_${String(config.schedule.hour).padStart(2, '0')}-${String(config.schedule.minute).padStart(2, '0')}-01.log
     └── ...
@@ -262,7 +282,60 @@ Durch \`WITH REPLACE\` kann das Skript am selben Tag mehrfach laufen; der Export
 des Tages wird dann ersetzt. Ein \`flock\` verhindert, dass sich zwei Läufe
 überschneiden.
 
-## Betrieb
+${
+  config.offload.enabled
+    ? `## Auslagerung auf die StorageBox
+
+Nach dem Export kopiert \`06_offload_storagebox.sh\` den Tagesordner per \`rsync\`
+auf \`${config.offload.user}@${config.offload.host}:${config.offload.remotePath}\`.
+**Kopiert, nicht verschoben** – lokal bleibt alles bis zum Ablauf der ${config.retentionDays} Tage.
+
+Übertragen werden nur die Archive, keine Rohexporte. Auf der Box liegt dadurch
+je Tag ein Ordner mit Dateien in einer Ebene.
+
+### Einmalig: Schlüssel einrichten
+
+\`\`\`bash
+./06_offload_storagebox.sh --setup-key
+\`\`\`
+
+Legt ein Schlüsselpaar an und zeigt den **öffentlichen** Teil. Diesen im Hetzner
+Robot beim Unterkonto \`${config.offload.user}\` hinterlegen, oder von hier aus:
+
+\`\`\`bash
+ssh-copy-id -s -p ${config.offload.port} -i ${config.offload.keyPath}.pub ${config.offload.user}@${config.offload.host}
+\`\`\`
+
+Das \`-s\` ist nötig: eine Storage Box hat keine normale Shell, der Schlüssel muss
+über SFTP abgelegt werden. Danach prüfen:
+
+\`\`\`bash
+./06_offload_storagebox.sh --check
+\`\`\`
+
+**Pro Kunde ein eigener Schlüssel.** Der private Teil verlässt diesen Server nie.
+Derselbe Schlüssel auf mehreren Kundensystemen wäre ein geteiltes Geheimnis: ein
+kompromittiertes System öffnete damit die Backups aller anderen auf derselben Box.
+Eine Box nimmt beliebig viele Schlüssel an, einen pro Zeile in \`authorized_keys\`.
+
+### Weitere Aufrufe
+
+\`\`\`bash
+./06_offload_storagebox.sh --pending
+\`\`\`
+
+Holt nach, was liegengeblieben ist – etwa nach einer Nacht ohne Netz. Welche Tage
+übertragen sind, steht in \`${config.exportBase}/.offloaded\`.
+
+\`\`\`bash
+./06_offload_storagebox.sh 2026-01-15
+\`\`\`
+
+Überträgt genau einen Tag noch einmal.
+
+`
+    : ''
+}## Betrieb
 
 Letztes Log ansehen:
 
@@ -311,8 +384,8 @@ HANAScriptGenerator ergänzen und die Skripte neu erzeugen.
 ./90_restore_schema.sh ${first} 2026-01-15
 \`\`\`
 
-Entpackt das Archiv nach \`${config.exportBase}/_restore\`, ohne die Datenbank zu
-berühren. Erst mit \`--import\` wird tatsächlich zurückgespielt:
+Sucht das Archiv unter \`${config.exportBase}/2026-01-15/\` und entpackt es nach
+\`${config.exportBase}/_restore\`, ohne die Datenbank zu berühren. Erst mit \`--import\` wird tatsächlich zurückgespielt:
 
 \`\`\`bash
 ./90_restore_schema.sh ${first} 2026-01-15 --import
@@ -327,6 +400,7 @@ Bestätigung durch Eintippen des Schemanamens.
 | --- | --- | --- |
 | Cronjob läuft nie, manuell klappt es | Skript gehört \`root\`, nicht \`${config.osUser}\` | \`ls -l ${config.scriptPath}\`, dann \`chown ${config.osUser}:sapsys\` |
 | \`Permission denied\` beim Aufruf | Ausführungsrecht fehlt | \`chmod 750 ${config.scriptPath}\` |
+| Alte Schemaordner unter dem Exportpfad | Ablage vor der Umstellung auf Tagesordner | \`03_preflight.sh\` listet sie; nach Sichtung entfernen |
 | \`bad interpreter: ^M\` oder \`: not found\` | Datei kam mit Windows-Zeilenenden an | \`sed -i 's/\\r$//' *.sh\` |
 | \`hdbsql nicht gefunden\` | Anderer Clientpfad | \`which hdbsql\`, Wert für \`HDBSQL\` anpassen |
 | Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${config.osUser}\` ausführen |

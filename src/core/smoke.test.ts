@@ -177,28 +177,33 @@ describe('generiertes Exportskript im Trockenlauf', () => {
     expect(output).toContain('Alle Schema-Exporte erfolgreich abgeschlossen');
 
     const today = new Date().toISOString().slice(0, 10);
+    const dayDir = join(config.exportBase, today);
+
+    // Alles eines Laufs liegt in genau einem Tagesordner.
+    expect(existsSync(dayDir), dayDir).toBe(true);
 
     for (const schema of config.schemas) {
-      const dir = join(config.exportBase, schema);
-      const archive = join(dir, `${schema}_${today}.tar.gz`);
+      const archive = join(dayDir, `${schema}_${today}.tar.gz`);
 
-      // Pro Schema genau ein eigenes Archiv.
+      // Pro Schema ein eigenes Archiv, kein Sammelarchiv.
       expect(existsSync(archive), archive).toBe(true);
 
       // Der Rohexport ist nach der Archivierung verschwunden.
-      expect(existsSync(join(dir, today))).toBe(false);
-
-      // Es bleibt kein halb geschriebenes .tmp zurück.
-      expect(readdirSync(dir).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+      expect(existsSync(join(dayDir, schema))).toBe(false);
 
       // Und das Archiv enthält den Export des jeweiligen Schemas.
       const listing = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8' });
-      expect(listing).toContain(`${today}/index/${schema}.bin`);
+      expect(listing).toContain(`${schema}/index/${schema}.bin`);
     }
 
-    // Kein gemeinsames Archiv über alle Schemas (.lock ausgenommen).
+    // Im Tagesordner nur die Archive, nichts Halbfertiges.
+    expect(readdirSync(dayDir).sort()).toEqual(
+      config.schemas.map((s) => `${s}_${today}.tar.gz`).sort(),
+    );
+
+    // Unter der Basis der Tagesordner und die Verwaltungsordner.
     const entries = readdirSync(config.exportBase).filter((name) => !name.startsWith('.'));
-    expect(entries.sort()).toEqual(['ALPHA', 'BETA', 'logs']);
+    expect(entries.sort()).toEqual([today, 'logs'].sort());
   });
 
   it('lässt sich am selben Tag erneut ausführen', () => {
@@ -209,8 +214,8 @@ describe('generiertes Exportskript im Trockenlauf', () => {
     expect(output).toContain('Alle Schema-Exporte erfolgreich abgeschlossen');
 
     const today = new Date().toISOString().slice(0, 10);
-    const archives = readdirSync(join(config.exportBase, 'ALPHA'));
-    expect(archives).toEqual([`ALPHA_${today}.tar.gz`]);
+    const archives = readdirSync(join(config.exportBase, today));
+    expect(archives.sort()).toEqual([`ALPHA_${today}.tar.gz`, `BETA_${today}.tar.gz`]);
   });
 
   it('überlebt ein SAP-Profil, das selbst ein exit enthält', () => {

@@ -7,6 +7,7 @@ import { RULE, schemaArray, schemaSqlList, scriptHeader, userGuard } from './com
  */
 export function generatePreflight(config: ExportConfig): GeneratedFile {
   const needsZstd = config.compression === 'zst';
+  const box = config.offload;
 
   const content = `${scriptHeader(config, 'Schritt 3 – Vorabpruefung', [
     'Prueft alle Voraussetzungen des spaeteren Exports.',
@@ -185,6 +186,77 @@ if [ -d "\${EXPORT_BASE}" ]; then
     fi
 fi
 
+${RULE}
+#  9. Reste der alten Ablage
+#
+#  Frueher lag unter der Basis je Schema ein Ordner. Die Aufbewahrung sieht
+#  heute nur noch Tagesordner an; alte Schemaordner blieben sonst fuer immer
+#  liegen und belegten Platz, ohne dass es jemandem auffiele.
+${RULE}
+
+OLD_LAYOUT=""
+
+for SCHEMA in "\${SCHEMAS[@]}"
+do
+    [ -d "\${EXPORT_BASE}/\${SCHEMA}" ] && OLD_LAYOUT="\${OLD_LAYOUT} \${SCHEMA}"
+done
+
+if [ -n "\${OLD_LAYOUT}" ]; then
+    note "Aus der alten Ablage liegen noch Schemaordner unter \${EXPORT_BASE}:"
+    for SCHEMA in \${OLD_LAYOUT}
+    do
+        echo "           \${SCHEMA}  $(du -sh "\${EXPORT_BASE}/\${SCHEMA}" 2>/dev/null | awk '{print $1}')"
+    done
+    note "Die Aufbewahrung fasst sie nicht mehr an. Nach einer Sichtung:"
+    note "  rm -rf \${EXPORT_BASE}/{$(echo "\${OLD_LAYOUT}" | tr ' ' ',' | sed 's/^,//')}"
+else
+    ok "Keine Reste einer frueheren Ablage gefunden."
+fi
+${
+  box.enabled
+    ? `
+${RULE}
+#  10. StorageBox
+${RULE}
+
+if [ -r "${box.keyPath}" ]; then
+    ok "SSH-Schluessel vorhanden: ${box.keyPath}"
+
+    KEY_MODE="$(stat -c '%a' "${box.keyPath}" 2>/dev/null)"
+    if [ "\${KEY_MODE}" = "600" ] || [ "\${KEY_MODE}" = "400" ]; then
+        ok "Rechte des Schluessels: \${KEY_MODE}"
+    else
+        fail "Schluessel hat Rechte \${KEY_MODE}, ssh verlangt 600."
+    fi
+
+    note "Teste Anmeldung an ${box.host}:${box.port} ..."
+
+    # Eine Storage Box bietet keine Shell, deshalb sftp statt ssh.
+    if printf 'pwd\\nquit\\n' | sftp -P ${box.port} -i "${box.keyPath}" \\
+         -o BatchMode=yes -o ConnectTimeout=20 \\
+         "${box.user}@${box.host}" >/dev/null 2>&1; then
+        ok "Anmeldung an der StorageBox erfolgreich."
+    else
+        fail "Anmeldung an der StorageBox fehlgeschlagen."
+        note "Schluessel hinterlegt? Einrichten mit:"
+        note "  ./${'06_offload_storagebox.sh'} --setup-key"
+    fi
+else
+    fail "SSH-Schluessel fehlt: ${box.keyPath}"
+    note "Anlegen mit: ./06_offload_storagebox.sh --setup-key"
+fi
+
+for TOOL in rsync sftp
+do
+    if command -v "\${TOOL}" >/dev/null 2>&1; then
+        ok "\${TOOL} verfuegbar."
+    else
+        fail "\${TOOL} fehlt, wird fuer die Auslagerung gebraucht."
+    fi
+done
+`
+    : ''
+}
 ${RULE}
 #  Ergebnis
 ${RULE}

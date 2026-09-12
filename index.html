@@ -282,7 +282,71 @@
             </div>
           </section>
 
+
           <!-- ------------------------------------------------ Schritt 7 -->
+          <section class="step" data-title="StorageBox">
+            <h2>Sollen die Archive extern ausgelagert werden?</h2>
+            <p class="step__lead">
+              Nach dem Export wird der Tagesordner per <code>rsync</code> auf eine Hetzner
+              StorageBox kopiert. <strong>Kopiert, nicht verschoben</strong> – lokal bleibt
+              alles bis zum Ablauf der eingestellten Aufbewahrung liegen.
+            </p>
+
+            <div class="group">
+              <label class="field field--check field--wide">
+                <input type="checkbox" id="offloadEnabled" />
+                <span>Auf eine Hetzner StorageBox auslagern</span>
+              </label>
+
+              <div id="offloadFields" class="subgroup">
+                <label class="field">
+                  <span>Adresse der Box</span>
+                  <input type="text" id="offloadHost" placeholder="u123456.your-storagebox.de" />
+                </label>
+
+                <label class="field">
+                  <span>Benutzer</span>
+                  <input type="text" id="offloadUser" placeholder="u123456-sub1" />
+                  <small>Pro Kunde ein eigenes Unterkonto.</small>
+                </label>
+
+                <label class="field">
+                  <span>SSH-Port</span>
+                  <input type="number" id="offloadPort" min="1" max="65535" />
+                  <small>Hetzner verwendet 23, nicht 22.</small>
+                </label>
+
+                <label class="field">
+                  <span>Aufbewahrung auf der Box (Tage)</span>
+                  <input type="number" id="offloadRetention" min="0" />
+                  <small>0 löscht dort nichts.</small>
+                </label>
+
+                <label class="field field--wide">
+                  <span>Zielverzeichnis auf der Box</span>
+                  <input type="text" id="offloadRemotePath" placeholder="/home/hana-export" />
+                  <small>Darunter entsteht je Tag ein Ordner.</small>
+                </label>
+
+                <label class="field field--wide">
+                  <span>SSH-Schlüssel auf dem HANA-Server</span>
+                  <input type="text" id="offloadKeyPath" placeholder="/usr/sap/&lt;SID&gt;/home/.ssh/id_ed25519" />
+                  <small>
+                    Pro Kunde ein eigener Schlüssel, erzeugt mit
+                    <code>./06_offload_storagebox.sh --setup-key</code>. Der private Teil
+                    verlässt den Server nie.
+                  </small>
+                </label>
+
+                <label class="field field--check field--wide">
+                  <input type="checkbox" id="offloadRunAfter" />
+                  <span>Direkt nach dem Export auslagern</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ Schritt 8 -->
           <section class="step step--result" data-title="Ergebnis">
             <h2>Fertig – das sind die Dateien</h2>
             <p class="step__lead">

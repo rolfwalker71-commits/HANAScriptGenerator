@@ -119,7 +119,7 @@ describe('ausgelieferte Einzeldatei', () => {
   });
 
   it('startet und zeigt den ersten Schritt', () => {
-    expect(doc.querySelectorAll('.steps__item')).toHaveLength(7);
+    expect(doc.querySelectorAll('.steps__item')).toHaveLength(8);
     expect(doc.querySelector('.steps__item[aria-current="true"]')?.textContent).toContain('System');
     expect((doc.getElementById('btnDownloadAll') as HTMLButtonElement).disabled).toBe(true);
   });

@@ -20,6 +20,39 @@ export interface MailConfig {
   command: string;
 }
 
+/**
+ * Auslagerung der Tagesarchive auf eine Hetzner StorageBox.
+ *
+ * Uebertragen wird per rsync ueber SSH. Ein Cronlauf kann kein Passwort
+ * eingeben, deshalb ist ein SSH-Schluessel Voraussetzung.
+ */
+export interface OffloadConfig {
+  enabled: boolean;
+  /** z. B. `u123456.your-storagebox.de`. */
+  host: string;
+  /** Benutzer der Box oder eines Unterkontos, z. B. `u123456` oder `u123456-sub1`. */
+  user: string;
+  /** SSH-Port der Box. Hetzner verwendet 23, nicht 22. */
+  port: number;
+  /** Zielverzeichnis auf der Box, relativ zu deren Heimatverzeichnis. */
+  remotePath: string;
+  /**
+   * Privater Schluessel auf dem HANA-Server, den der Cronlauf benutzt.
+   *
+   * Schluessel und nicht Passwort, weil ein Cronlauf keines eintippen kann:
+   * unbeaufsichtigte Passwortanmeldung hiesse, es im Klartext auf dem Server
+   * abzulegen und zusaetzlich sshpass zu installieren.
+   */
+  keyPath: string;
+  /** true = das Exportskript laegert direkt nach dem Lauf aus. */
+  runAfterExport: boolean;
+  /**
+   * Aufbewahrung auf der Box in Tagen. 0 schaltet das Aufraeumen ab und
+   * laesst alles liegen – der sichere Ausgangspunkt.
+   */
+  remoteRetentionDays: number;
+}
+
 export interface ExportConfig {
   /** Erscheint im Skriptkopf und in den Dateinamen der Ausgabe. */
   customer: string;
@@ -46,12 +79,13 @@ export interface ExportConfig {
   minFreeGb: number;
   schedule: ScheduleConfig;
   mail: MailConfig;
+  offload: OffloadConfig;
 }
 
 export type IssueSeverity = 'error' | 'warning';
 
 export interface ValidationIssue {
-  field: keyof ExportConfig | 'schedule' | 'mail';
+  field: keyof ExportConfig | 'schedule' | 'mail' | 'offload';
   severity: IssueSeverity;
   message: string;
 }

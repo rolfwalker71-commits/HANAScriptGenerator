@@ -96,6 +96,7 @@ hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
 | `04_test_export.sh` | Einmaliger Testexport inklusive tar-Lauf |
 | `schema_export.sh` | Das eigentliche Exportskript für Cron |
 | `05_install_cron.sh` | Trägt den Cronjob idempotent ein, `--show` / `--remove` |
+| `06_offload_storagebox.sh` | Kopiert den Tagesordner auf eine Hetzner StorageBox (nur bei eingeschalteter Auslagerung) |
 | `90_restore_schema.sh` | Entpackt ein Archiv, `--import` spielt es zurück |
 
 ## Übertragung auf den Server
@@ -126,14 +127,63 @@ einem Passwort. `--scp` erzwingt die Einzelschritte, wenn etwas zu untersuchen i
 
 ## Was das Exportskript tut
 
+Alles eines Laufs liegt in **einem Tagesordner**:
+
+```
+schema_exports/
+├── 2026-01-15/
+│   ├── SALES_2026-01-15.tar.gz
+│   └── FINANCE_2026-01-15.tar.gz
+├── .offloaded/      Vermerk, welcher Tag übertragen ist
+└── logs/
+```
+
 Pro Schema nacheinander:
 
-1. `EXPORT "SCHEMA"."*" AS BINARY INTO '.../SCHEMA/JJJJ-MM-TT' WITH REPLACE THREADS n`
-2. `tar` über das Tagesverzeichnis nach `SCHEMA_JJJJ-MM-TT.tar.gz`
+1. `EXPORT "SCHEMA"."*" AS BINARY INTO '.../JJJJ-MM-TT/SCHEMA' WITH REPLACE THREADS n`
+2. `tar` über den Schemaordner nach `JJJJ-MM-TT/SCHEMA_JJJJ-MM-TT.tar.gz`
 3. Archiv gegenlesen, erst dann von `.tmp` auf den endgültigen Namen umbenennen
 4. Rohexport entfernen, sofern nicht ausdrücklich behalten
 
-Erst danach werden Archive und Logs älter als die Aufbewahrungsfrist entfernt.
+Danach fällt je ein ganzer Tagesordner weg, sobald er älter ist als die
+Aufbewahrungsfrist. Verglichen wird der **Ordnername**, nicht die Änderungszeit:
+ein Zugriff beim Auslagern würde den Zeitstempel verschieben und die Frist
+stillschweigend verlängern.
+
+## Auslagerung auf eine Hetzner StorageBox
+
+Ist sie eingeschaltet, kopiert `06_offload_storagebox.sh` den Tagesordner nach
+dem Export per `rsync` über SSH auf die Box. **Kopiert, nicht verschoben** –
+lokal bleibt der Bestand bis zum Ablauf der örtlichen Aufbewahrung. Eine
+unbemerkt fehlgeschlagene Übertragung kostet dadurch nicht den Tag.
+
+Übertragen werden nur die Archive, keine Rohexporte. Auf der Box liegt je Tag
+ein Ordner mit Dateien in einer Ebene – und genau das macht das Aufräumen dort
+über `sftp` möglich, denn eine Storage Box hat keine vollwertige Shell.
+
+| Aufruf | Wirkung |
+| --- | --- |
+| `--setup-key` | Schlüsselpaar anlegen und den öffentlichen Teil zeigen |
+| `--check` | Nur die Verbindung prüfen |
+| *(ohne)* | Den heutigen Tagesordner übertragen |
+| `JJJJ-MM-TT` | Einen bestimmten Tag übertragen |
+| `--pending` | Nachholen, was liegengeblieben ist |
+
+### Schlüssel je Kunde
+
+Hetzner betreibt SSH auf einer Storage Box auf **Port 23**, nicht 22. Ein
+Cronlauf kann kein Passwort eintippen, deshalb ist Schlüsselanmeldung
+Voraussetzung.
+
+**Pro Kunde ein eigenes Schlüsselpaar**, erzeugt auf dessen HANA-Server. Der
+private Teil verlässt diesen Server nie. Derselbe Schlüssel auf mehreren
+Kundensystemen wäre ein geteiltes Geheimnis: ein kompromittiertes System öffnete
+damit die Backups aller anderen auf derselben Box. Eine Box nimmt beliebig viele
+Schlüssel an, einen pro Zeile in `authorized_keys`; für die Trennung sorgen am
+besten Unterkonten mit eigenem Verzeichnis.
+
+Beim Hinterlegen braucht `ssh-copy-id` das Flag `-s`, weil der Schlüssel mangels
+Shell über SFTP abgelegt werden muss.
 
 Betrieblich abgesichert ist der Lauf durch `flock` gegen Überschneidungen, eine
 Prüfung des ausführenden Linux-Benutzers (der hdbuserstore ist benutzerspezifisch),
@@ -170,6 +220,9 @@ Baut die Datei und prüft drei Ebenen:
 - **Generator** – erzeugt alle Skripte und prüft jedes mit `bash -n`
 - **Trockenlauf** – führt `schema_export.sh` gegen ein `hdbsql`-Attrappe wirklich aus,
   inklusive tar-Lauf, Archivprüfung, Aufräumen und Exitcode
+- **Auslagerung** – führt `06_offload_storagebox.sh` gegen Attrappen von `rsync`
+  und `sftp` aus: Zielpfade, Gegenzählung, Vermerke, `--pending` und das
+  Aufräumen auf der Box
 - **Auslieferung** – lädt `HANAScriptGenerator.html` in ein DOM, bedient den Wizard
   und prüft, ob am Ende die erwarteten Skripte herauskommen
 
