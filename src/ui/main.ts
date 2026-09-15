@@ -233,7 +233,27 @@ function writeForm(config: ExportConfig): void {
     `${String(config.offload.minute).padStart(2, '0')}`;
 
   lastDerived = derivedDefaults(config.sid, config.instance);
+  // Ein gespeicherter Stand kann ein abgeleitetes Feld leer mitbringen, etwa
+  // den SSH-Schlüssel aus einem Profil von vor dessen Ableitung. Die SID steht
+  // dann schon da, eine Eingabe, die das Nachziehen auslöst, kommt nie.
+  syncDerivedFields();
   syncConditionalFields();
+}
+
+/**
+ * Ergänzt einen gespeicherten oder importierten Stand um die Voreinstellungen.
+ * Die verschachtelten Blöcke einzeln, sonst fehlen einem älteren Profil die
+ * seither hinzugekommenen Felder darin ganz.
+ */
+function withDefaults(partial: Partial<ExportConfig>): ExportConfig {
+  const base = defaultConfig();
+  return {
+    ...base,
+    ...partial,
+    schedule: { ...base.schedule, ...partial.schedule },
+    mail: { ...base.mail, ...partial.mail },
+    offload: { ...base.offload, ...partial.offload },
+  };
 }
 
 /** Blendet Felder ein und aus, die von einer anderen Auswahl abhängen. */
@@ -661,6 +681,7 @@ ui.btnDerivePaths.addEventListener('click', () => {
   fields.hdbsqlPath.value = next.hdbsqlPath;
   fields.exportBase.value = next.exportBase;
   fields.scriptPath.value = next.scriptPath;
+  fields.offloadKeyPath.value = next.keyPath;
   lastDerived = next;
   render();
 });
@@ -710,7 +731,7 @@ ui.btnSaveProfile.addEventListener('click', () => {
 ui.profileSelect.addEventListener('change', () => {
   const profile = loadProfiles()[ui.profileSelect.value];
   if (profile === undefined) return;
-  writeForm({ ...defaultConfig(), ...profile });
+  writeForm(withDefaults(profile));
   goToStep(RESULT_STEP);
 });
 
@@ -736,7 +757,7 @@ ui.inputImportJson.addEventListener('change', async () => {
   if (file === undefined) return;
   try {
     const parsed = JSON.parse(await file.text()) as Partial<ExportConfig>;
-    writeForm({ ...defaultConfig(), ...parsed });
+    writeForm(withDefaults(parsed));
     goToStep(RESULT_STEP);
   } catch {
     window.alert('Die Datei konnte nicht als Konfiguration gelesen werden.');
@@ -822,6 +843,6 @@ ui.buildVersion.textContent = `Stand ${GENERATOR_VERSION}`;
 ui.buildVersion.title = 'Dieser Stand steht auch im Kopf jedes erzeugten Skripts';
 
 applyDensity(loadJson<boolean>(DENSITY_KEY) === true);
-writeForm({ ...defaultConfig(), ...(loadJson<ExportConfig>(LAST_CONFIG_KEY) ?? {}) });
+writeForm(withDefaults(loadJson<Partial<ExportConfig>>(LAST_CONFIG_KEY) ?? {}));
 renderProfiles();
 render();

@@ -349,4 +349,32 @@ describe('ausgelieferte Einzeldatei', () => {
       .filter((line) => (line.match(/'/g) ?? []).length % 2 === 1);
     expect(offen).toEqual([]);
   });
+
+  it('ergänzt beim Laden eines älteren Profils den leeren SSH-Schlüssel', async () => {
+    // Ein Profil von vor der Ableitung: SID steht, der Schlüssel fehlt oder
+    // ist leer. Eine SID-Eingabe, die das Nachziehen auslöst, kommt nie.
+    const profile = {
+      customer: 'Altkunde AG',
+      sid: 'Q01',
+      instance: '02',
+      host: 'q01prod',
+      schemas: ['ALPHA'],
+      offload: { enabled: true, host: 'box.example.invalid', keyPath: '' },
+    };
+    const input = doc.getElementById('inputImportJson') as HTMLInputElement;
+    const file = new dom.window.File([JSON.stringify(profile)], 'alt.json', {
+      type: 'application/json',
+    });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const keyPath = doc.getElementById('offloadKeyPath') as HTMLInputElement;
+    expect(keyPath.value).toBe('/usr/sap/Q01/HDB02/work/.ssh/id_ed25519');
+    // Fehlende Felder im Auslagerungsblock kommen aus der Voreinstellung.
+    expect((doc.getElementById('offloadPort') as HTMLInputElement).value).toBe('23');
+    expect((doc.getElementById('offloadHost') as HTMLInputElement).value).toBe(
+      'box.example.invalid',
+    );
+  });
 });
