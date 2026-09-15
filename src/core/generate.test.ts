@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -80,6 +88,7 @@ describe('generateAll', () => {
       '02_prepare_dirs.sh',
       '03_preflight.sh',
       '04_test_export.sh',
+      'export_schemas.txt',
       'schema_export.sh',
       '05_install_cron.sh',
       '90_restore_schema.sh',
@@ -126,8 +135,10 @@ describe('generateAll', () => {
     expect(content).toContain('ARCHIVE="${DAY_DIR}/${SCHEMA}_${DATE}.${ARCHIVE_EXT}"');
     expect(content).toContain('WORK_DIR="${DAY_DIR}/${SCHEMA}"');
 
+    // Die Namen kommen zur Laufzeit aus der Schemaliste.
+    expect(content).toContain('read_schema_file');
     for (const schema of config.schemas) {
-      expect(content).toContain(`    "${schema}"`);
+      expect(content).not.toContain(`"${schema}"`);
     }
   });
 
@@ -354,16 +365,118 @@ describe('Protokollierung', () => {
   });
 });
 
+describe('Schemaliste', () => {
+  const named = (name: string) => generateAll(exampleConfig()).find((f) => f.name === name);
+
+  it('steht in einer eigenen Datei, ein Schema pro Zeile', () => {
+    const file = named('export_schemas.txt');
+    expect(file?.executable).toBe(false);
+    expect(file?.language).toBe('text');
+
+    const entries = (file?.content ?? '')
+      .split('\n')
+      .filter((line) => line.trim().length > 0 && !line.startsWith('#'));
+    expect(entries).toEqual(['SALES', 'FINANCE']);
+  });
+
+  it('trägt in keinem Skript Schemanamen fest ein', () => {
+    // Sonst prüfte etwa die Vorabprüfung nach einer Änderung an der Liste
+    // weiter gegen den alten Stand.
+    for (const file of generateAll(exampleConfig())) {
+      if (file.language !== 'bash') continue;
+      expect(file.content, file.name).not.toContain('SALES');
+      expect(file.content, file.name).not.toContain('FINANCE');
+    }
+  });
+
+  it('wird von Export, Vorabprüfung und Testexport gelesen', () => {
+    for (const name of ['schema_export.sh', '03_preflight.sh', '04_test_export.sh']) {
+      expect(named(name)?.content, name).toContain('read_schema_file');
+    }
+  });
+});
+
 describe('Übertragungsskript', () => {
   const deploy = (config = exampleConfig()) =>
     generateAll(config).find((f) => f.name === '00_dateien_uebertragen.cmd');
+
+  /** Führt einen Befehl so aus, wie ihn das Übertragungsskript auf dem Server absetzt. */
+  function remote(command: string, dir: string, input?: Buffer): void {
+    const resolved = command
+      .replaceAll('%TARGET_DIR%', dir)
+      .replaceAll('%TARGET_GROUP%', 'hsg_gruppe_gibtsnicht');
+    execFileSync('sh', ['-c', resolved], { input, stdio: ['pipe', 'pipe', 'pipe'] });
+  }
+
+  /** Ein Windows-Ordner mit neuem Skript und neuer Liste, dazu ein leeres Serverziel. */
+  function staged(): { source: string; target: string } {
+    const base = mkdtempSync(join(workDir, 'deploy-'));
+    const source = join(base, 'windows');
+    mkdirSync(source);
+    writeFileSync(join(source, 'schema_export.sh'), '#!/bin/bash\r\necho neu\r\n');
+    writeFileSync(join(source, 'export_schemas.txt'), 'NEU\r\n');
+    return { source, target: join(base, 'server') };
+  }
+
+  it('lässt eine auf dem Server gepflegte Schemaliste stehen', () => {
+    const content = deploy()?.content ?? '';
+    const command = content.match(/^tar -cf - %FILES% \| ssh \S+ \S+ \S+ "(.*)"$/m)?.[1] ?? '';
+    expect(command).not.toBe('');
+
+    const { source, target } = staged();
+    const stream = execFileSync('tar', ['-cf', '-', 'schema_export.sh', 'export_schemas.txt'], {
+      cwd: source,
+    });
+
+    // Erste Übertragung: die Liste kommt mit.
+    remote(command, target, stream);
+    expect(readFileSync(join(target, 'export_schemas.txt'), 'utf8')).toBe('NEU\n');
+
+    // Auf dem Server gepflegt, dann erneut übertragen.
+    writeFileSync(join(target, 'export_schemas.txt'), 'GEPFLEGT\n');
+    writeFileSync(join(target, 'schema_export.sh'), 'alt\n');
+    remote(command, target, stream);
+
+    expect(readFileSync(join(target, 'export_schemas.txt'), 'utf8')).toBe('GEPFLEGT\n');
+    // Die Skripte dagegen werden ersetzt.
+    expect(readFileSync(join(target, 'schema_export.sh'), 'utf8')).toBe('#!/bin/bash\necho neu\n');
+  });
+
+  it('lässt die Schemaliste auch auf dem Einzelschritt-Weg über scp stehen', () => {
+    const content = deploy()?.content ?? '';
+    const commands = [...content.matchAll(/^ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "(.*)"$/gm)].map(
+      (match) => match[1] ?? '',
+    );
+    const before = commands.find((command) => command.startsWith('mkdir -p')) ?? '';
+    const after = commands.find((command) => command.startsWith("cd '%TARGET_DIR%'")) ?? '';
+    expect(before).not.toBe('');
+    expect(after).not.toBe('');
+
+    const { source, target } = staged();
+    mkdirSync(target);
+    writeFileSync(join(target, 'export_schemas.txt'), 'GEPFLEGT\n');
+
+    remote(before, target);
+    // Was scp täte: ohne Rückfrage überschreiben.
+    for (const name of ['schema_export.sh', 'export_schemas.txt']) {
+      copyFileSync(join(source, name), join(target, name));
+    }
+    remote(after, target);
+
+    expect(readFileSync(join(target, 'export_schemas.txt'), 'utf8')).toBe('GEPFLEGT\n');
+    expect(existsSync(join(target, '.export_schemas.txt.keep'))).toBe(false);
+  });
 
   it('überträgt genau die Dateien, die auf den Server gehören', () => {
     const files = generateAll(exampleConfig());
     const content = deploy()?.content ?? '';
 
     for (const file of files) {
-      if (file.name.endsWith('.sh') || file.name.endsWith('.md')) {
+      if (
+        file.name.endsWith('.sh') ||
+        file.name.endsWith('.md') ||
+        file.name === 'export_schemas.txt'
+      ) {
         expect(content, file.name).toContain(file.name);
       }
     }
@@ -404,7 +517,9 @@ describe('Übertragungsskript', () => {
     // übertragen, entpacken und einrichten in einem Aufruf.
     const content = deploy()?.content ?? '';
     expect(content).toContain('tar -cf - %FILES% | ssh ');
-    expect(content).toContain("tar -xf - &&");
+    expect(content).toContain(
+      'tar -xf - `test -f export_schemas.txt && echo --exclude=export_schemas.txt` &&',
+    );
 
     // Genau ein ssh-Aufruf auf dem Hauptweg, vor dem Rückfallweg.
     // Bis zur Marke selbst, nicht bis zum goto weiter oben.

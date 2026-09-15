@@ -6,6 +6,7 @@ import { generateSetupUserstore } from './files/setupUserstore.js';
 import { generatePrepareDirs } from './files/prepareDirs.js';
 import { generatePreflight } from './files/preflight.js';
 import { generateTestExport } from './files/testExport.js';
+import { generateSchemaFile } from './files/schemaFile.js';
 import { generateExportScript } from './files/exportScript.js';
 import { generateInstallCron } from './files/installCron.js';
 import { generateOffloadScript } from './files/offload.js';
@@ -26,6 +27,7 @@ export function generateAll(rawConfig: ExportConfig): GeneratedFile[] {
     generatePrepareDirs(config),
     generatePreflight(config),
     generateTestExport(config),
+    generateSchemaFile(config),
     generateExportScript(config),
     generateInstallCron(config),
     ...(config.offload.enabled ? [generateOffloadScript(config)] : []),

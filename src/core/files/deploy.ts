@@ -1,6 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { shCommentSafe } from '../sh.js';
-import { GENERATOR_VERSION, dirName } from './common.js';
+import { GENERATOR_VERSION, SCHEMA_FILE_NAME, dirName } from './common.js';
 
 /**
  * Windows-Batchdatei, die den erzeugten Satz auf den Server bringt und dort
@@ -20,18 +20,28 @@ export function generateDeployScript(
 ): GeneratedFile {
   const targetDir = dirName(config.scriptPath);
 
-  // Nur was auf den Server gehoert: die Skripte und die Anleitung. Die
-  // Windows-Helfer bleiben hier.
+  // Nur was auf den Server gehoert: die Skripte, die Schemaliste und die
+  // Anleitung. Die Windows-Helfer bleiben hier.
   const transfer = files
-    .filter((file) => file.name.endsWith('.sh') || file.name.endsWith('.md'))
+    .filter(
+      (file) =>
+        file.name.endsWith('.sh') || file.name.endsWith('.md') || file.name === SCHEMA_FILE_NAME,
+    )
     .map((file) => file.name);
 
   // Wird auf der Gegenseite in einer Zeile ausgefuehrt.
   const remoteSetup = [
-    `sed -i 's/\\r$//' *.sh`,
+    `sed -i 's/\\r$//' *.sh ${SCHEMA_FILE_NAME}`,
     'chmod 750 *.sh',
-    'chgrp %TARGET_GROUP% *.sh 2>/dev/null',
+    `chmod 640 ${SCHEMA_FILE_NAME}`,
+    `chgrp %TARGET_GROUP% *.sh ${SCHEMA_FILE_NAME} 2>/dev/null`,
   ].join(' && ');
+
+  // Die Schemaliste wird auf dem Server gepflegt. Liegt dort schon eine,
+  // bleibt sie stehen; nur beim ersten Uebertragen kommt sie mit. Nur
+  // Backticks und test, damit es in jeder Login-Shell gleich funktioniert.
+  const keepSchemaFile = `\`test -f ${SCHEMA_FILE_NAME} && echo --exclude=${SCHEMA_FILE_NAME}\``;
+  const schemaBackup = `.${SCHEMA_FILE_NAME}.keep`;
 
   const lines = [
     '@echo off',
@@ -93,6 +103,8 @@ export function generateDeployScript(
     'echo Uebertragen werden:',
     'for %%F in (%FILES%) do echo   %%F',
     'echo.',
+    `echo Eine auf dem Server schon gepflegte ${SCHEMA_FILE_NAME} bleibt unveraendert.`,
+    'echo.',
     '',
     'rem Ist ein Schluessel hinterlegt, entfaellt die Abfrage ganz.',
     'ssh -o BatchMode=yes -o ConnectTimeout=10 -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "exit" >nul 2>&1',
@@ -124,7 +136,7 @@ export function generateDeployScript(
     ')',
     '',
     'echo Uebertrage in einem Durchgang ...',
-    `tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - && ${remoteSetup}; ls -l *.sh"`,
+    `tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - ${keepSchemaFile} && ${remoteSetup}; ls -l *.sh ${SCHEMA_FILE_NAME}"`,
     'if errorlevel 1 goto :transfer_failed',
     'goto :done',
     '',
@@ -134,7 +146,10 @@ export function generateDeployScript(
     '',
     ':use_scp',
     'echo [1/3] Lege %TARGET_DIR% an ...',
-    'ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p \'%TARGET_DIR%\'"',
+    // scp ueberschreibt ohne Rueckfrage. Eine vorhandene Schemaliste wird
+    // deshalb vorher beiseitegelegt und in Schritt 3 zurueckgeholt. Liegt
+    // schon eine Sicherung aus einem abgebrochenen Lauf, bleibt die stehen.
+    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && (test -f ${schemaBackup} || test ! -f ${SCHEMA_FILE_NAME} || cp -p ${SCHEMA_FILE_NAME} ${schemaBackup})"`,
     'if errorlevel 1 goto :transfer_failed',
     '',
     'echo [2/3] Uebertrage Dateien ...',
@@ -142,7 +157,7 @@ export function generateDeployScript(
     'if errorlevel 1 goto :transfer_failed',
     '',
     'echo [3/3] Setze Zeilenenden, Rechte und Gruppe ...',
-    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && ${remoteSetup}; ls -l *.sh"`,
+    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && (test ! -f ${schemaBackup} || mv -f ${schemaBackup} ${SCHEMA_FILE_NAME}) && ${remoteSetup}; ls -l *.sh ${SCHEMA_FILE_NAME}"`,
     'if errorlevel 1 goto :transfer_failed',
     '',
     'rem --- Fertig -------------------------------------------------',

@@ -1,5 +1,5 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, schemaArray, schemaSqlList, scriptHeader, userGuard } from './common.js';
+import { RULE, schemaFileReader, scriptHeader, userGuard } from './common.js';
 
 /**
  * Prüft alles, was der spätere Cronlauf voraussetzt: Client, Verbindung,
@@ -21,7 +21,7 @@ HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
 MIN_FREE_GB=${config.minFreeGb}
 
-${schemaArray(config)}
+${schemaFileReader()}
 
 CHECKS_OK=0
 CHECKS_FAILED=0
@@ -101,7 +101,26 @@ else
 fi
 
 ${RULE}
-#  5. Verbindung und Zieldatenbank
+#  5. Schemaliste
+${RULE}
+
+if read_schema_file; then
+    if [ \${#SCHEMAS[@]} -gt 0 ]; then
+        ok "Schemaliste gelesen: \${SCHEMA_FILE} (\${#SCHEMAS[@]} Schemas)"
+    else
+        fail "In \${SCHEMA_FILE} steht kein Schema."
+    fi
+
+    for ISSUE in \${SCHEMA_FILE_ISSUES[@]+"\${SCHEMA_FILE_ISSUES[@]}"}
+    do
+        fail "\${ISSUE}. Der Export uebergeht diese Zeile."
+    done
+else
+    fail "Schemaliste fehlt oder ist nicht lesbar: \${SCHEMA_FILE}"
+fi
+
+${RULE}
+#  6. Verbindung und Zieldatenbank
 ${RULE}
 
 if [ -x "\${HDBSQL}" ]; then
@@ -119,12 +138,12 @@ if [ -x "\${HDBSQL}" ]; then
     echo
 
 ${RULE}
-#  6. Schemas
+#  7. Schemas in der Datenbank
 ${RULE}
 
-    note "Erwartet werden: \${SCHEMAS[*]}"
+    note "Erwartet werden: \${SCHEMAS[*]:-keine}"
 
-    for SCHEMA in "\${SCHEMAS[@]}"
+    for SCHEMA in \${SCHEMAS[@]+"\${SCHEMAS[@]}"}
     do
         COUNT="$("\${HDBSQL}" -U "\${HANA_KEY}" -a -x \\
             "SELECT COUNT(*) FROM SYS.SCHEMAS WHERE SCHEMA_NAME = '\${SCHEMA}';" 2>/dev/null | tr -dc '0-9')"
@@ -132,18 +151,24 @@ ${RULE}
         if [ "\${COUNT:-0}" -ge 1 ]; then
             ok "Schema \${SCHEMA} existiert."
         else
-            fail "Schema \${SCHEMA} wurde nicht gefunden – Schreibweise pruefen."
+            fail "Schema \${SCHEMA} wurde nicht gefunden. Schreibweise in \${SCHEMA_FILE} pruefen; der Export wuerde es ueberspringen."
         fi
     done
 
-    echo
-    note "Ungefaehre Groesse der Schemas im Hauptspeicher:"
-    "\${HDBSQL}" -U "\${HANA_KEY}" \\
-        "SELECT SCHEMA_NAME, ROUND(SUM(MEMORY_SIZE_IN_TOTAL)/1024/1024/1024,2) AS MEMORY_GB
-         FROM SYS.M_CS_TABLES
-         WHERE SCHEMA_NAME IN (${schemaSqlList(config)})
-         GROUP BY SCHEMA_NAME ORDER BY SCHEMA_NAME;" 2>&1 | sed 's/^/           /'
-    note "Das ist nicht die spaetere Exportgroesse, aber eine Groessenordnung."
+    if [ \${#SCHEMAS[@]} -gt 0 ]; then
+        # Die Namen sind beim Lesen geprueft und enthalten kein Anfuehrungszeichen.
+        SQL_LIST="$(printf "'%s'," "\${SCHEMAS[@]}")"
+        SQL_LIST="\${SQL_LIST%,}"
+
+        echo
+        note "Ungefaehre Groesse der Schemas im Hauptspeicher:"
+        "\${HDBSQL}" -U "\${HANA_KEY}" \\
+            "SELECT SCHEMA_NAME, ROUND(SUM(MEMORY_SIZE_IN_TOTAL)/1024/1024/1024,2) AS MEMORY_GB
+             FROM SYS.M_CS_TABLES
+             WHERE SCHEMA_NAME IN (\${SQL_LIST})
+             GROUP BY SCHEMA_NAME ORDER BY SCHEMA_NAME;" 2>&1 | sed 's/^/           /'
+        note "Das ist nicht die spaetere Exportgroesse, aber eine Groessenordnung."
+    fi
     echo
 
 else
@@ -151,7 +176,7 @@ else
 fi
 
 ${RULE}
-#  7. Exportverzeichnis
+#  8. Exportverzeichnis
 ${RULE}
 
 if [ -d "\${EXPORT_BASE}" ]; then
@@ -166,7 +191,7 @@ else
 fi
 
 ${RULE}
-#  8. Speicherplatz
+#  9. Speicherplatz
 ${RULE}
 
 if [ -d "\${EXPORT_BASE}" ]; then
@@ -187,7 +212,7 @@ if [ -d "\${EXPORT_BASE}" ]; then
 fi
 
 ${RULE}
-#  9. Reste der alten Ablage
+#  10. Reste der alten Ablage
 #
 #  Frueher lag unter der Basis je Schema ein Ordner. Die Aufbewahrung sieht
 #  heute nur noch Tagesordner an; alte Schemaordner blieben sonst fuer immer
@@ -196,7 +221,7 @@ ${RULE}
 
 OLD_LAYOUT=""
 
-for SCHEMA in "\${SCHEMAS[@]}"
+for SCHEMA in \${SCHEMAS[@]+"\${SCHEMAS[@]}"}
 do
     [ -d "\${EXPORT_BASE}/\${SCHEMA}" ] && OLD_LAYOUT="\${OLD_LAYOUT} \${SCHEMA}"
 done
@@ -216,7 +241,7 @@ ${
   box.enabled
     ? `
 ${RULE}
-#  10. StorageBox
+#  11. StorageBox
 #
 #  Diese Pruefung laeuft vor der Schluesseleinrichtung. Ein fehlender
 #  Schluessel ist deshalb ein Hinweis und kein Fehler; erst ein vorhandener

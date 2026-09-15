@@ -1,5 +1,5 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, scriptHeader, userGuard } from './common.js';
+import { RULE, SCHEMA_FILE_NAME, schemaFileReader, scriptHeader, userGuard } from './common.js';
 
 /**
  * Einmaliger Testexport eines einzelnen Schemas in ein Wegwerfverzeichnis –
@@ -17,6 +17,8 @@ export function generateTestExport(config: ExportConfig): GeneratedFile {
     '  ./04_test_export.sh [SCHEMA]         Testdaten danach entfernen',
     '  ./04_test_export.sh [SCHEMA] --keep  Testdaten liegen lassen',
     '',
+    `Ohne SCHEMA wird das erste aus ${SCHEMA_FILE_NAME} genommen.`,
+    '',
     'Laeuft ohne Rueckfrage durch und endet von selbst.',
   ])}
 
@@ -27,6 +29,8 @@ HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
 THREADS=${config.threads}
 COMPRESSION="${config.compression}"
+
+${schemaFileReader()}
 
 ${RULE}
 #  Aufrufparameter
@@ -47,7 +51,16 @@ do
     esac
 done
 
-SCHEMA="\${SCHEMA:-${firstSchema}}"
+if [ -z "\${SCHEMA}" ]; then
+    if read_schema_file && [ \${#SCHEMAS[@]} -gt 0 ]; then
+        SCHEMA="\${SCHEMAS[0]}"
+        echo "Kein Schema angegeben, nehme das erste aus \${SCHEMA_FILE}: \${SCHEMA}"
+    else
+        echo "FEHLER: Kein Schema angegeben, und \${SCHEMA_FILE} nennt keins." >&2
+        echo "Aufruf: $0 SCHEMA" >&2
+        exit 1
+    fi
+fi
 
 # Bewusst ausserhalb der Tagesordner: was dort liegt, wird ausgelagert und
 # nach Frist entfernt. Ein Testlauf hat darin nichts verloren.
@@ -160,7 +173,7 @@ exit 0
   return {
     name: '04_test_export.sh',
     title: '4 · Testexport',
-    purpose: `Exportiert einmalig ${firstSchema} in ein Testverzeichnis und archiviert es, bevor Cron übernimmt.`,
+    purpose: `Exportiert einmalig ein Schema – ohne Angabe das erste der Liste, ${firstSchema} – in ein Testverzeichnis und archiviert es, bevor Cron übernimmt.`,
     language: 'bash',
     executable: true,
     content,

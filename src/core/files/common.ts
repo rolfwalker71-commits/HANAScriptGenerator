@@ -106,13 +106,77 @@ export function userGuard(config: ExportConfig, indent = ''): string {
     .join('\n');
 }
 
-/** Bash-Array-Literal der Schemaliste. */
-export function schemaArray(config: ExportConfig, variable = 'SCHEMAS'): string {
-  const entries = config.schemas.map((schema) => `    "${schema}"`).join('\n');
-  return `${variable}=(\n${entries}\n)`;
-}
+/** Die Liste der zu sichernden Schemas, auf dem Server neben den Skripten. */
+export const SCHEMA_FILE_NAME = 'export_schemas.txt';
 
-/** Kommaseparierte, SQL-taugliche Liste der Schemanamen. */
-export function schemaSqlList(config: ExportConfig): string {
-  return config.schemas.map((schema) => `'${schema}'`).join(',');
+/**
+ * Bash-Block, der die Schemaliste neben dem Skript liest. Er definiert nur;
+ * gelesen wird mit `read_schema_file`, damit jedes Skript selbst entscheidet,
+ * wie es auf eine fehlende Datei reagiert.
+ *
+ * Gesucht wird neben dem laufenden Skript und nicht unter einem fest
+ * eingetragenen Pfad: Skripte und Liste werden immer gemeinsam abgelegt.
+ */
+export function schemaFileReader(): string {
+  return `${RULE}
+#  Schemaliste
+#
+#  Die Schemas stehen nicht im Skript, sondern in ${SCHEMA_FILE_NAME} im
+#  selben Verzeichnis. Ein Schema pro Zeile; Leerzeilen und Kommentare mit
+#  # werden uebergangen. Aenderungen dort gelten ab dem naechsten Lauf.
+${RULE}
+
+SCHEMA_FILE="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)/${SCHEMA_FILE_NAME}"
+SCHEMAS=()
+SCHEMA_FILE_ISSUES=()
+
+# Liest SCHEMA_FILE nach SCHEMAS. Unbrauchbare Zeilen landen mit ihrer
+# Nummer in SCHEMA_FILE_ISSUES, doppelte werden still uebergangen.
+# Endet mit 1, wenn die Datei fehlt oder nicht lesbar ist.
+read_schema_file()
+{
+    local LINE NAME KNOWN DUPLICATE
+    local NUMBER=0
+    local PATTERN='^[A-Za-z_][A-Za-z0-9_#$]*$'
+
+    SCHEMAS=()
+    SCHEMA_FILE_ISSUES=()
+
+    [ -r "\${SCHEMA_FILE}" ] || return 1
+
+    while IFS= read -r LINE || [ -n "\${LINE}" ]
+    do
+        NUMBER=$((NUMBER + 1))
+
+        # Windows-Zeilenende, falls die Datei dort bearbeitet wurde.
+        LINE="\${LINE%$'\\r'}"
+
+        # Fuehrenden Leerraum entfernen, dann Leer- und Kommentarzeilen
+        # uebergehen.
+        NAME="\${LINE#"\${LINE%%[![:space:]]*}"}"
+        case "\${NAME}" in
+            ''|'#'*) continue ;;
+        esac
+
+        # Kommentar hinter dem Namen abschneiden. Ein # darf Teil eines
+        # Schemanamens sein, deshalb zaehlt es nur mit Leerraum davor.
+        NAME="\${NAME%%[[:space:]]#*}"
+        NAME="\${NAME%"\${NAME##*[![:space:]]}"}"
+
+        # Der Name landet spaeter in SQL. Was nicht passt, wird nie benutzt.
+        if ! [[ "\${NAME}" =~ \${PATTERN} ]]; then
+            SCHEMA_FILE_ISSUES+=("Zeile \${NUMBER}: '\${NAME}' ist kein gueltiger Schemaname")
+            continue
+        fi
+
+        DUPLICATE="no"
+        for KNOWN in \${SCHEMAS[@]+"\${SCHEMAS[@]}"}
+        do
+            [ "\${KNOWN}" = "\${NAME}" ] && DUPLICATE="yes"
+        done
+        [ "\${DUPLICATE}" = "yes" ] || SCHEMAS+=("\${NAME}")
+    done < "\${SCHEMA_FILE}"
+
+    return 0
+}`;
 }

@@ -3,11 +3,12 @@ import {
   HEAVY_RULE,
   OFFLOAD_SCRIPT_NAME,
   RULE,
+  SCHEMA_FILE_NAME,
   archiveExtension,
   baseName,
   compressionLabel,
   dirName,
-  schemaArray,
+  schemaFileReader,
   scriptHeader,
   userGuard,
 } from './common.js';
@@ -25,6 +26,7 @@ export function generateExportScript(config: ExportConfig): GeneratedFile {
     'Jedes Schema wird einzeln exportiert und einzeln archiviert.',
     `Archivformat: ${compressionLabel(config.compression)} (*.${ext})`,
     `Aufbewahrung: ${config.retentionDays} Tage`,
+    `Schemaliste: ${dirName(config.scriptPath)}/${SCHEMA_FILE_NAME}`,
     `Aufruf: ${config.scriptPath}`,
   ])}
 
@@ -61,8 +63,7 @@ OFFLOAD_ENABLED="${config.offload.enabled ? 'yes' : 'no'}"
 OFFLOAD_AFTER_EXPORT="${config.offload.runAfterExport ? 'yes' : 'no'}"
 OFFLOAD_SCRIPT="${offloadScript}"
 
-# Jedes Schema wird getrennt exportiert. Weitere Schemas hier ergaenzen.
-${schemaArray(config)}
+${schemaFileReader()}
 
 ${RULE}
 #  SAP-Umgebung laden
@@ -125,6 +126,7 @@ LOCK_FILE="\${EXPORT_BASE}/.schema_export.lock"
 EXITCODE=0
 OK_SCHEMAS=()
 FAILED_SCHEMAS=()
+SKIPPED_SCHEMAS=()
 
 case "\${COMPRESSION}" in
     gz)
@@ -193,8 +195,26 @@ log "SAP HANA Schema-Export gestartet"
 log "Host: $(hostname)"
 log "Linux-Benutzer: $(whoami)"
 log "Datum: \${DATE}"
-log "Schemas: \${SCHEMAS[*]}"
+log "Schemaliste: \${SCHEMA_FILE}"
 log "${HEAVY_RULE.slice(2)}"
+
+if ! read_schema_file; then
+    log "FEHLER: Schemaliste fehlt oder ist nicht lesbar: \${SCHEMA_FILE}"
+    log "Sie gehoert neben dieses Skript, ein Schema pro Zeile."
+    exit 1
+fi
+
+for ISSUE in \${SCHEMA_FILE_ISSUES[@]+"\${SCHEMA_FILE_ISSUES[@]}"}
+do
+    log "HINWEIS: \${ISSUE}. Die Zeile wird uebergangen."
+done
+
+if [ \${#SCHEMAS[@]} -eq 0 ]; then
+    log "FEHLER: In \${SCHEMA_FILE} steht kein Schema."
+    exit 1
+fi
+
+log "Schemas: \${SCHEMAS[*]}"
 
 if [ ! -x "\${HDBSQL}" ]; then
     log "FEHLER: hdbsql nicht gefunden oder nicht ausfuehrbar: \${HDBSQL}"
@@ -326,6 +346,20 @@ ${RULE}
 
 for SCHEMA in "\${SCHEMAS[@]}"
 do
+    # Ein Schema, das es nicht mehr gibt, ist kein Fehler des Laufs: es wird
+    # uebersprungen und vermerkt. Scheitert schon die Abfrage selbst, wird
+    # der Export trotzdem versucht; dann entscheidet dessen Ergebnis.
+    FOUND="$("\${HDBSQL}" -U "\${HANA_KEY}" -a -x \\
+        "SELECT COUNT(*) FROM SYS.SCHEMAS WHERE SCHEMA_NAME = '\${SCHEMA}';" 2>> "\${LOG_FILE}")"
+    RC=$?
+    FOUND="$(printf '%s' "\${FOUND}" | tr -dc '0-9')"
+
+    if [ \${RC} -eq 0 ] && [ "\${FOUND}" = "0" ]; then
+        log "HINWEIS: Schema \${SCHEMA} steht in der Schemaliste, existiert in der Datenbank aber nicht. Uebersprungen."
+        SKIPPED_SCHEMAS+=("\${SCHEMA}")
+        continue
+    fi
+
     if export_schema "\${SCHEMA}"; then
         OK_SCHEMAS+=("\${SCHEMA}")
     else
@@ -333,6 +367,11 @@ do
         EXITCODE=1
     fi
 done
+
+if [ \${#OK_SCHEMAS[@]} -eq 0 ] && [ \${#FAILED_SCHEMAS[@]} -eq 0 ]; then
+    log "FEHLER: Keines der Schemas aus \${SCHEMA_FILE} existiert in der Datenbank."
+    EXITCODE=1
+fi
 
 ${RULE}
 #  Auslagern auf die StorageBox
@@ -413,9 +452,22 @@ if [ \${#OK_SCHEMAS[@]} -gt 0 ]; then
     log "Erfolgreich: \${OK_SCHEMAS[*]}"
 fi
 
+if [ \${#SKIPPED_SCHEMAS[@]} -gt 0 ]; then
+    log "Uebersprungen, nicht in der Datenbank: \${SKIPPED_SCHEMAS[*]}"
+    log "Eintraege in \${SCHEMA_FILE} pruefen."
+fi
+
 if [ \${#FAILED_SCHEMAS[@]} -gt 0 ]; then
     log "Fehlgeschlagen: \${FAILED_SCHEMAS[*]}"
+fi
+
+# Hinweise machen den Lauf nicht fehlerhaft, sollen aber auffallen.
+HINTS=$((\${#SKIPPED_SCHEMAS[@]} + \${#SCHEMA_FILE_ISSUES[@]}))
+
+if [ \${#FAILED_SCHEMAS[@]} -gt 0 ] || [ \${#OK_SCHEMAS[@]} -eq 0 ]; then
     log "Schema-Export mit Fehlern abgeschlossen."
+elif [ \${HINTS} -gt 0 ]; then
+    log "Schema-Export erfolgreich abgeschlossen, mit Hinweisen."
 else
     log "Alle Schema-Exporte erfolgreich abgeschlossen."
 fi
@@ -424,11 +476,15 @@ log "Logdatei: \${LOG_FILE}"
 log "${HEAVY_RULE.slice(2)}"
 
 if [ "\${MAIL_ENABLED}" = "yes" ]; then
-    if [ "\${MAIL_ONLY_ON_ERROR}" = "no" ] || [ \${EXITCODE} -ne 0 ]; then
-        if [ \${EXITCODE} -eq 0 ]; then
-            SUBJECT="[HANA ${config.sid}] Schema-Export erfolgreich auf $(hostname)"
-        else
+    # Hinweise gehen auch bei "nur bei Fehlern" raus. Sonst faellt eine
+    # veraltete Schemaliste niemandem auf.
+    if [ "\${MAIL_ONLY_ON_ERROR}" = "no" ] || [ \${EXITCODE} -ne 0 ] || [ \${HINTS} -gt 0 ]; then
+        if [ \${EXITCODE} -ne 0 ]; then
             SUBJECT="[HANA ${config.sid}] Schema-Export FEHLGESCHLAGEN auf $(hostname)"
+        elif [ \${HINTS} -gt 0 ]; then
+            SUBJECT="[HANA ${config.sid}] Schema-Export erfolgreich mit Hinweisen auf $(hostname)"
+        else
+            SUBJECT="[HANA ${config.sid}] Schema-Export erfolgreich auf $(hostname)"
         fi
         "\${MAIL_COMMAND}" -s "\${SUBJECT}" "\${MAIL_RECIPIENT}" < "\${LOG_FILE}"
     fi

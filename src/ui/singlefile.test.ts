@@ -211,6 +211,7 @@ describe('ausgelieferte Einzeldatei', () => {
       '2 · Verzeichnisse',
       '3 · Vorabprüfung',
       '4 · Testexport',
+      'Schemas',
       'Hauptskript',
       '5 · Cronjob',
       '90 · Restore',
@@ -232,11 +233,17 @@ describe('ausgelieferte Einzeldatei', () => {
     const script = doc.getElementById('fileContent')?.textContent ?? '';
     expect(doc.getElementById('fileName')?.textContent).toBe('schema_export.sh');
     expect(script).toContain('HDBSQL="/usr/sap/P42/HDB00/exe/hdbsql"');
-    expect(script).toContain('"ALPHA"');
-    expect(script).toContain('"BETA"');
+    // Die Schemas stehen nicht im Skript, sondern in der eigenen Liste.
+    expect(script).toContain('read_schema_file');
+    expect(script).not.toContain('"ALPHA"');
     expect(script).toContain('WITH REPLACE THREADS ${THREADS}');
     // Zeilenenden bleiben LF, auch wenn die Datei unter Windows entsteht.
     expect(script).not.toContain('\r');
+
+    const list = fileContentOf('Schemas').split('\n');
+    expect(list).toContain('ALPHA');
+    expect(list).toContain('BETA');
+    fileContentOf('Hauptskript');
   });
 
   it('lädt eine schemas.txt und macht daraus eine Auswahlliste', async () => {
@@ -275,14 +282,14 @@ describe('ausgelieferte Einzeldatei', () => {
     expect(textarea.value.split('\n')).toContain('SALES');
 
     check(boxOf('FINANCE'));
-    const script = fileContentOf('Hauptskript');
-    expect(script).toContain('"SALES"');
-    expect(script).toContain('"FINANCE"');
+    const list = fileContentOf('Schemas').split('\n');
+    expect(list).toContain('SALES');
+    expect(list).toContain('FINANCE');
 
-    // Abwählen entfernt das Schema wieder aus Eingabe und Skript.
+    // Abwählen entfernt das Schema wieder aus Eingabe und Schemaliste.
     check(boxOf('SALES'));
     expect(textarea.value.split('\n')).not.toContain('SALES');
-    expect(fileContentOf('Hauptskript')).not.toContain('"SALES"');
+    expect(fileContentOf('Schemas').split('\n')).not.toContain('SALES');
   });
 
   it('wertet auch eine eingefügte hdbsql-Ausgabe aus, ganz ohne Datei', () => {

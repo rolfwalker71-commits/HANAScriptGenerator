@@ -2,6 +2,7 @@ import type { ExportConfig, GeneratedFile } from '../types.js';
 import { offloadCronLine, offloadScheduleDescription } from './installCron.js';
 import {
   GENERATOR_VERSION,
+  SCHEMA_FILE_NAME,
   archiveExtension,
   baseName,
   compressionLabel,
@@ -48,7 +49,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | hdbsql | ${config.hdbsqlPath} |
 | Exportpfad | ${config.exportBase} |
 | Skriptpfad | ${config.scriptPath} |
-| Schemas | ${config.schemas.join(', ')} |
+| Schemas | ${config.schemas.join(', ')} (gepflegt in \`${SCHEMA_FILE_NAME}\`) |
 | Threads | ${config.threads} |
 | Archivformat | ${compressionLabel(config.compression)} (\`*.${ext}\`) |
 | Rohexport behalten | ${config.keepRawExport ? 'ja' : 'nein, nur das Archiv bleibt'} |
@@ -63,7 +64,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
   } |
 | Mailbenachrichtigung | ${
     config.mail.enabled
-      ? `${config.mail.recipient} (${config.mail.onlyOnError ? 'nur bei Fehlern' : 'nach jedem Lauf'})`
+      ? `${config.mail.recipient} (${config.mail.onlyOnError ? 'nur bei Fehlern oder Hinweisen' : 'nach jedem Lauf'})`
       : 'nein'
   } |
 
@@ -73,6 +74,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | --- | --- |
 | \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
 | \`00_dateien_uebertragen.cmd\` | Läuft auf **Windows**: kopiert alles hierher per scp und setzt Rechte. |
+| \`${SCHEMA_FILE_NAME}\` | Die zu sichernden Schemas, eins pro Zeile. Wird bei jedem Lauf gelesen – Schemas hier ergänzen oder entfernen. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${config.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
 | \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |
@@ -97,6 +99,9 @@ kopiert alle Skripte per \`scp\` nach \`${scriptDir}\`, räumt Windows-Zeilenend
 und setzt \`chmod 750\` sowie die Gruppe \`sapsys\`. Dafür genügt der OpenSSH-Client,
 den Windows seit Version 1809 mitbringt. Danach weiter bei Schritt 1.
 
+Eine auf dem Server schon vorhandene \`${SCHEMA_FILE_NAME}\` bleibt dabei unverändert:
+die Liste wird dort gepflegt und soll beim erneuten Übertragen nicht verloren gehen.
+
 \`chown\` ist dabei weder enthalten noch nötig: per \`scp\` als \`${config.osUser}\`
 übertragene Dateien gehören bereits \`${config.osUser}\`.
 
@@ -106,8 +111,9 @@ den Windows seit Version 1809 mitbringt. Danach weiter bei Schritt 1.
 su - ${config.osUser}
 \`\`\`
 
-Skripte in ein Arbeitsverzeichnis kopieren, zum Beispiel \`${scriptDir}\`, und
-ausführbar machen:
+Skripte und \`${SCHEMA_FILE_NAME}\` gemeinsam in ein Arbeitsverzeichnis kopieren, zum
+Beispiel \`${scriptDir}\`, und die Skripte ausführbar machen. Die Liste muss neben
+den Skripten liegen, dort wird sie gesucht.
 
 \`\`\`bash
 chmod 750 *.sh
@@ -122,7 +128,7 @@ file *.sh
 Steht dort \`with CRLF line terminators\`, einmal umstellen:
 
 \`\`\`bash
-sed -i 's/\\r$//' *.sh
+sed -i 's/\\r$//' *.sh ${SCHEMA_FILE_NAME}
 \`\`\`
 
 Prüfen, ob der hdbsql-Pfad stimmt:
@@ -295,8 +301,8 @@ Entfernen lässt sich der Eintrag jederzeit mit \`./05_install_cron.sh --remove\
 
 ## Was täglich passiert
 
-Um ${time} Uhr (${scheduleDescription(config)}) läuft der Export. Pro Schema
-nacheinander:
+Um ${time} Uhr (${scheduleDescription(config)}) läuft der Export. Die Schemas liest
+er dabei jedes Mal frisch aus \`${SCHEMA_FILE_NAME}\`. Pro Schema nacheinander:
 
 1. \`EXPORT "SCHEMA"."*" AS BINARY INTO '.../JJJJ-MM-TT/SCHEMA' WITH REPLACE THREADS ${config.threads}\`
 2. \`tar\` über den Schemaordner nach \`JJJJ-MM-TT/SCHEMA_JJJJ-MM-TT.${ext}\`
@@ -409,22 +415,36 @@ Vorhandene Archive auflisten:
 ./90_restore_schema.sh --list
 \`\`\`
 
-## Weiteres Schema aufnehmen
+## Schemas aufnehmen oder entfernen
 
-Im Exportskript den Block \`SCHEMAS=(...)\` ergänzen:
-
-\`\`\`bash
-vi ${config.scriptPath}
-\`\`\`
-
-Danach die Syntax prüfen:
+Welche Schemas gesichert werden, steht allein in \`${scriptDir}/${SCHEMA_FILE_NAME}\`,
+ein Schema pro Zeile. Export, Vorabprüfung und Testexport lesen die Datei bei
+jedem Lauf.
 
 \`\`\`bash
-bash -n ${config.scriptPath}
+vi ${scriptDir}/${SCHEMA_FILE_NAME}
 \`\`\`
 
-An der Crontab ändert sich nichts. Alternativ das Schema im
-HANAScriptGenerator ergänzen und die Skripte neu erzeugen.
+Leerzeilen und Zeilen mit \`#\` am Anfang werden übergangen. Ein Schema lässt sich
+damit auch vorübergehend auskommentieren. Danach prüfen:
+
+\`\`\`bash
+./03_preflight.sh
+\`\`\`
+
+Die Änderung gilt ab dem nächsten Lauf. Skripte und Crontab bleiben unverändert.
+
+Steht ein Schema in der Liste, das es in der Datenbank nicht mehr gibt, bricht der
+Export **nicht** ab: es wird übersprungen, im Log als \`HINWEIS\` vermerkt, und der
+Lauf endet trotzdem mit \`0\`.${
+    config.mail.enabled
+      ? ' Eine Mail mit dem Betreff „erfolgreich mit Hinweisen“ geht auch dann raus, wenn sonst nur bei Fehlern gemailt wird.'
+      : ''
+  } Erst wenn kein einziges Schema der Liste mehr existiert, gilt der Lauf als
+fehlgeschlagen.
+
+\`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene Liste nicht. Soll sie
+doch aus dem Generator übernommen werden, die Datei auf dem Server vorher löschen.
 
 ## Wiederherstellung
 
@@ -450,6 +470,8 @@ Bestätigung durch Eintippen des Schemanamens.
 | \`Permission denied\` beim Aufruf | Ausführungsrecht fehlt | \`chmod 750 ${config.scriptPath}\` |
 | Alte Schemaordner unter dem Exportpfad | Ablage vor der Umstellung auf Tagesordner | \`03_preflight.sh\` listet sie; nach Sichtung entfernen |
 | \`bad interpreter: ^M\` oder \`: not found\` | Datei kam mit Windows-Zeilenenden an | \`sed -i 's/\\r$//' *.sh\` |
+| \`HINWEIS: Schema ... existiert in der Datenbank aber nicht\` | Schema gelöscht oder umbenannt | Zeile in \`${SCHEMA_FILE_NAME}\` entfernen oder mit \`#\` auskommentieren |
+| \`Schemaliste fehlt oder ist nicht lesbar\` | \`${SCHEMA_FILE_NAME}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${script}\` legen |
 | \`hdbsql nicht gefunden\` | Anderer Clientpfad | \`which hdbsql\`, Wert für \`HDBSQL\` anpassen |
 | Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${config.osUser}\` ausführen |
 | Lauf funktioniert interaktiv, per Cron nicht | Cron startet ohne Anmeldeprofil | Das Skript lädt \`~/.sapenv.sh\`; prüfen, ob die Datei existiert |

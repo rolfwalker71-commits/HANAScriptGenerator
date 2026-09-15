@@ -57,7 +57,8 @@ entpacken — die Skripte müssen zusammen in einem Ordner liegen.
 ```
 
 Überträgt alles per `scp`, setzt Zeilenenden, `chmod 750` und die Gruppe
-`sapsys`. Das Passwort von `<sid>adm` wird einmal abgefragt.
+`sapsys`. Das Passwort von `<sid>adm` wird einmal abgefragt. Eine auf dem Server
+schon gepflegte `export_schemas.txt` bleibt dabei unverändert.
 
 Wer das nicht jedes Mal tippen will, richtet einmalig einen Schlüssel ein:
 
@@ -220,6 +221,22 @@ Nach Fehlern suchen:
 grep -i "fehler\|error" "$(ls -1t <EXPORTPFAD>/logs/schema_export_*.log | head -1)"
 ```
 
+### Schemas aufnehmen oder entfernen
+
+```bash
+vi <SKRIPTPFAD>/export_schemas.txt
+```
+
+Ein Schema pro Zeile, `#` kommentiert aus. Gilt ab dem nächsten Lauf, Skripte und
+Crontab bleiben unverändert. Danach prüfen:
+
+```bash
+./03_preflight.sh
+```
+
+Ein Schema, das es in der Datenbank nicht mehr gibt, bricht den Export nicht ab.
+Es wird übersprungen und im Log als `HINWEIS` vermerkt.
+
 ### Wiederherstellen
 
 ```bash
@@ -253,6 +270,7 @@ Netz. Der Cronjob macht das ohnehin täglich.
 | `bad interpreter: ^M` | Windows-Zeilenenden | `sed -i 's/\r$//' *.sh` |
 | `tee: ... Keine Berechtigung` | Verzeichnisse gehören `root` | `chown -R <sid>adm:sapsys <EXPORTPFAD>` |
 | Anmeldung an der Box scheitert | `/home/.ssh` fehlt auf der Box | `./06_offload_storagebox.sh --setup` |
+| `HINWEIS: Schema ... existiert ... nicht` | Schema gelöscht oder umbenannt | Zeile in `export_schemas.txt` entfernen oder mit `#` auskommentieren |
 | hdbsql nicht gefunden | anderer Clientpfad | `which hdbsql`, Wert für `HDBSQL` anpassen |
 | Skript bricht wortlos ab | `~/.sapenv.sh` enthält ein `exit` | behoben; Stand im Skriptkopf prüfen |
 

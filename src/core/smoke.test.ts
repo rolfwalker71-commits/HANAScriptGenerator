@@ -1,8 +1,18 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { userInfo, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { defaultConfig } from './defaults.js';
 import { generateAll } from './generate.js';
@@ -15,12 +25,21 @@ import type { ExportConfig } from './types.js';
  */
 
 const fakeHdbsql = `#!/bin/bash
-# Attrappe: beantwortet den Verbindungstest und legt bei EXPORT Dateien an.
-SQL="\${3:-}"
+# Attrappe: beantwortet den Verbindungstest und die Frage nach einem Schema
+# und legt bei EXPORT Dateien an. Die Abfrage ist immer das letzte Argument.
+# Schemas in FAKE_MISSING_SCHEMAS gibt es in dieser Datenbank nicht.
+SQL="\${@: -1}"
 
 case "\${SQL}" in
     *CURRENT_USER*)
         echo "SYSTEM"
+        ;;
+    *SYS.SCHEMAS*)
+        NAME="$(printf '%s' "\${SQL}" | sed -n "s/.*SCHEMA_NAME = '\\([^']*\\)'.*/\\1/p")"
+        case " \${FAKE_MISSING_SCHEMAS:-} " in
+            *" \${NAME} "*) echo 0 ;;
+            *)              echo 1 ;;
+        esac
         ;;
     EXPORT*)
         TARGET="$(printf '%s' "\${SQL}" | sed -n "s/.*INTO '\\([^']*\\)'.*/\\1/p")"
@@ -301,5 +320,122 @@ describe('generiertes Exportskript im Trockenlauf', () => {
       expect(failure.status).toBe(1);
       expect(failure.stdout).toContain('hdbsql nicht gefunden');
     }
+  });
+});
+
+describe('Schemaliste im Lauf', () => {
+  const listPath = () => join(root, 'export_schemas.txt');
+  let original = '';
+
+  beforeAll(() => {
+    original = readFileSync(listPath(), 'utf8');
+  });
+
+  afterEach(() => {
+    writeFileSync(listPath(), original, 'utf8');
+  });
+
+  /** Startet ein Skript und liefert Exitcode und Ausgabe, auch im Fehlerfall. */
+  function run(script: string, env: Record<string, string> = {}): { status: number; output: string } {
+    try {
+      const output = execFileSync('bash', [join(root, script)], {
+        stdio: 'pipe',
+        encoding: 'utf8',
+        env: { ...process.env, ...env },
+      });
+      return { status: 0, output };
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string; stderr?: string };
+      return {
+        status: failure.status ?? -1,
+        output: `${failure.stdout ?? ''}${failure.stderr ?? ''}`,
+      };
+    }
+  }
+
+  it('übernimmt eine geänderte Liste ohne neu erzeugte Skripte', () => {
+    // Wie unter Windows bearbeitet: CRLF, Kommentare, Einrückung, doppelt.
+    writeFileSync(listPath(), '# nur noch BETA\r\n\r\n   BETA   # Vertrieb\r\nBETA\r\n# ALPHA\r\n');
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toMatch(/Schemas: BETA$/m);
+    expect(output).toContain('Alle Schema-Exporte erfolgreich abgeschlossen');
+  });
+
+  it('überspringt ein Schema, das es nicht mehr gibt, ohne abzubrechen', () => {
+    const { status, output } = run('schema_export.sh', { FAKE_MISSING_SCHEMAS: 'ALPHA' });
+
+    expect(status).toBe(0);
+    expect(output).toContain(
+      'HINWEIS: Schema ALPHA steht in der Schemaliste, existiert in der Datenbank aber nicht',
+    );
+    expect(output).toContain('Erfolgreich: BETA');
+    expect(output).toContain('Uebersprungen, nicht in der Datenbank: ALPHA');
+    expect(output).toContain('Schema-Export erfolgreich abgeschlossen, mit Hinweisen');
+
+    // Der Hinweis steht auch im Log, nicht nur auf dem Bildschirm.
+    const logFile = output.match(/Logdatei: (\S+)/)?.[1] ?? '';
+    expect(readFileSync(logFile, 'utf8')).toContain('HINWEIS: Schema ALPHA');
+  });
+
+  it('meldet eine unbrauchbare Zeile als Hinweis und exportiert den Rest', () => {
+    writeFileSync(listPath(), "ALPHA\nSALES'; DROP\n");
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('Zeile 2:');
+    expect(output).toContain('kein gueltiger Schemaname');
+    expect(output).toContain('Erfolgreich: ALPHA');
+    expect(output).toContain('mit Hinweisen');
+  });
+
+  it('bricht klar ab, wenn die Schemaliste fehlt', () => {
+    renameSync(listPath(), `${listPath()}.weg`);
+    try {
+      const { status, output } = run('schema_export.sh');
+      expect(status).toBe(1);
+      expect(output).toContain('Schemaliste fehlt oder ist nicht lesbar');
+    } finally {
+      renameSync(`${listPath()}.weg`, listPath());
+    }
+  });
+
+  it('gilt als fehlgeschlagen, wenn kein Schema der Liste mehr existiert', () => {
+    const { status, output } = run('schema_export.sh', { FAKE_MISSING_SCHEMAS: 'ALPHA BETA' });
+
+    expect(status).toBe(1);
+    expect(output).toContain('Keines der Schemas');
+    expect(output).toContain('Schema-Export mit Fehlern abgeschlossen');
+  });
+
+  it('mailt Hinweise auch, wenn sonst nur bei Fehlern gemailt wird', () => {
+    const mailer = join(root, 'bin', 'fake_mail');
+    const subjectFile = join(root, 'mail_subject.txt');
+    writeFileSync(mailer, `#!/bin/bash\nprintf '%s\\n' "$2" > "${subjectFile}"\ncat > /dev/null\n`);
+    chmodSync(mailer, 0o755);
+
+    const withMail: ExportConfig = {
+      ...config,
+      mail: { enabled: true, recipient: 'ops@example.invalid', onlyOnError: true, command: mailer },
+    };
+    const script = generateAll(withMail).find((file) => file.name === 'schema_export.sh');
+    // Neben die Schemaliste, dort sucht das Skript sie.
+    writeFileSync(join(root, 'mail_export.sh'), script?.content ?? '');
+
+    const { status } = run('mail_export.sh', { FAKE_MISSING_SCHEMAS: 'ALPHA' });
+
+    expect(status).toBe(0);
+    expect(readFileSync(subjectFile, 'utf8')).toContain('Schema-Export erfolgreich mit Hinweisen');
+  });
+
+  it('nimmt im Testexport ohne Angabe das erste Schema der Liste', () => {
+    const { status, output } = run('04_test_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('nehme das erste');
+    expect(output).toContain('Testexport von Schema ALPHA');
   });
 });

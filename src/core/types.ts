@@ -106,7 +106,7 @@ export interface GeneratedFile {
   /** Ein Satz dazu, wann diese Datei ausgeführt wird. */
   purpose: string;
   /** Sprache für die Syntaxauszeichnung in der UI. */
-  language: 'bash' | 'markdown' | 'batch';
+  language: 'bash' | 'markdown' | 'batch' | 'text';
   /** true = beim Entpacken Ausführungsrecht setzen. */
   executable: boolean;
   content: string;

@@ -1,22 +1,20 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, dirName, schemaArray, scriptHeader, userGuard } from './common.js';
+import { RULE, dirName, scriptHeader, userGuard } from './common.js';
 
-/** Legt Exportbasis, Logverzeichnis und die Schema-Unterverzeichnisse an. */
+/** Legt Exportbasis, Log- und Vermerkverzeichnis an und prüft das Schreibrecht. */
 export function generatePrepareDirs(config: ExportConfig): GeneratedFile {
   const scriptDir = dirName(config.scriptPath);
 
   const content = `${scriptHeader(config, 'Schritt 2 – Verzeichnisse vorbereiten', [
     `Exportbasis: ${config.exportBase}`,
-    'Legt pro Schema ein eigenes Unterverzeichnis an, damit jeder Export',
-    'und jedes Archiv getrennt abgelegt werden koennen.',
+    'Legt Basis, Log- und Vermerkverzeichnis an und prueft das Schreibrecht.',
+    'Die Tagesordner entstehen erst beim Export.',
   ])}
 
 set -u
 
 EXPORT_BASE="${config.exportBase}"
 SCRIPT_DIR="${scriptDir}"
-
-${schemaArray(config)}
 
 ${userGuard(config)}
 
@@ -107,7 +105,7 @@ echo "Schritt 2 abgeschlossen."
   return {
     name: '02_prepare_dirs.sh',
     title: '2 · Verzeichnisse',
-    purpose: `Legt ${config.exportBase} samt Log- und Schema-Unterverzeichnissen an und prüft das Schreibrecht.`,
+    purpose: `Legt ${config.exportBase} samt Log- und Vermerkverzeichnis an und prüft das Schreibrecht.`,
     language: 'bash',
     executable: true,
     content,

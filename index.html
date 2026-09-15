@@ -170,7 +170,11 @@
               <label class="field field--wide">
                 <span>Ein Schema pro Zeile</span>
                 <textarea id="schemas" rows="7" spellcheck="false" placeholder="SALES&#10;FINANCE"></textarea>
-                <small>Komma oder Leerzeichen gehen auch. Groß geschrieben, wie in HANA hinterlegt.</small>
+                <small>
+                  Komma oder Leerzeichen gehen auch. Groß geschrieben, wie in HANA hinterlegt.
+                  Das ist die Startliste für <code>export_schemas.txt</code>. Auf dem Server
+                  werden Schemas danach direkt in dieser Datei ergänzt oder entfernt.
+                </small>
               </label>
 
               <div class="chips" id="schemaChips"></div>
