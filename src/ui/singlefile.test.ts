@@ -211,6 +211,7 @@ describe('ausgelieferte Einzeldatei', () => {
       '2 · Verzeichnisse',
       '3 · Vorabprüfung',
       '4 · Testexport',
+      'Einstellungen',
       'Schemas',
       'Hauptskript',
       '5 · Cronjob',
