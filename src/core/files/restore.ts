@@ -1,5 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { RULE, archiveExtension, scriptHeader, userGuard } from './common.js';
+import { confReadOrExit, confReader } from './exportConf.js';
 
 /**
  * Gegenstück zum Export: entpackt ein Archiv und spielt es auf Wunsch per
@@ -25,9 +26,10 @@ set -u
 HANA_KEY="${config.userstoreKey}"
 HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
-THREADS=${config.threads}
 ARCHIVE_EXT="${ext}"
 COMPRESSION="${config.compression}"
+
+${confReader(config)}
 
 RESTORE_BASE="\${EXPORT_BASE}/_restore"
 
@@ -126,6 +128,11 @@ if [ "\${DO_IMPORT}" != "--import" ]; then
     echo "  $0 \${SCHEMA} \${RESTORE_DATE} --import"
     exit 0
 fi
+
+# Erst fuer den IMPORT gebraucht. Auflisten und Entpacken gehen deshalb
+# auch dann, wenn die Einstellungen gerade nicht lesbar sind. Gelesen wird
+# vor der Rueckfrage, damit sie nicht umsonst beantwortet wird.
+${confReadOrExit(['THREADS'])}
 
 ${RULE}
 #  Sicherheitsabfrage

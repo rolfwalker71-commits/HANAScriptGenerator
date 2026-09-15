@@ -1,6 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { shCommentSafe } from '../sh.js';
-import { GENERATOR_VERSION, SCHEMA_FILE_NAME, dirName } from './common.js';
+import { EXPORT_CONF_NAME, GENERATOR_VERSION, SCHEMA_FILE_NAME, dirName } from './common.js';
 
 /**
  * Windows-Batchdatei, die den erzeugten Satz auf den Server bringt und dort
@@ -20,28 +20,42 @@ export function generateDeployScript(
 ): GeneratedFile {
   const targetDir = dirName(config.scriptPath);
 
-  // Nur was auf den Server gehoert: die Skripte, die Schemaliste und die
-  // Anleitung. Die Windows-Helfer bleiben hier.
+  // Einstellungen und Schemaliste werden auf dem Server gepflegt. Ein
+  // erneutes Uebertragen darf sie nicht zuruecksetzen.
+  const kept = [EXPORT_CONF_NAME, SCHEMA_FILE_NAME];
+  const keptList = kept.join(' ');
+
+  // Nur was auf den Server gehoert: die Skripte, die gepflegten Dateien und
+  // die Anleitung. Die Windows-Helfer bleiben hier.
   const transfer = files
     .filter(
       (file) =>
-        file.name.endsWith('.sh') || file.name.endsWith('.md') || file.name === SCHEMA_FILE_NAME,
+        file.name.endsWith('.sh') || file.name.endsWith('.md') || kept.includes(file.name),
     )
     .map((file) => file.name);
 
   // Wird auf der Gegenseite in einer Zeile ausgefuehrt.
   const remoteSetup = [
-    `sed -i 's/\\r$//' *.sh ${SCHEMA_FILE_NAME}`,
+    `sed -i 's/\\r$//' *.sh ${keptList}`,
     'chmod 750 *.sh',
-    `chmod 640 ${SCHEMA_FILE_NAME}`,
-    `chgrp %TARGET_GROUP% *.sh ${SCHEMA_FILE_NAME} 2>/dev/null`,
+    `chmod 640 ${keptList}`,
+    `chgrp %TARGET_GROUP% *.sh ${keptList} 2>/dev/null`,
   ].join(' && ');
 
-  // Die Schemaliste wird auf dem Server gepflegt. Liegt dort schon eine,
-  // bleibt sie stehen; nur beim ersten Uebertragen kommt sie mit. Nur
-  // Backticks und test, damit es in jeder Login-Shell gleich funktioniert.
-  const keepSchemaFile = `\`test -f ${SCHEMA_FILE_NAME} && echo --exclude=${SCHEMA_FILE_NAME}\``;
-  const schemaBackup = `.${SCHEMA_FILE_NAME}.keep`;
+  // Liegt eine gepflegte Datei schon auf dem Server, nimmt tar sie vom
+  // Entpacken aus; nur beim ersten Uebertragen kommt sie mit. Backticks,
+  // for und test, damit es in jeder sh-kompatiblen Login-Shell gleich laeuft.
+  const excludeKept = `\`for F in ${keptList}; do test -f $F && echo --exclude=$F; done\``;
+
+  // scp ueberschreibt ohne Rueckfrage. Deshalb vorher beiseitelegen und
+  // danach zurueckholen. Liegt schon eine Sicherung aus einem abgebrochenen
+  // Lauf, bleibt die stehen.
+  const backupKept = kept
+    .map((name) => `(test -f .${name}.keep || test ! -f ${name} || cp -p ${name} .${name}.keep)`)
+    .join(' && ');
+  const restoreKept = kept
+    .map((name) => `(test ! -f .${name}.keep || mv -f .${name}.keep ${name})`)
+    .join(' && ');
 
   const lines = [
     '@echo off',
@@ -103,7 +117,7 @@ export function generateDeployScript(
     'echo Uebertragen werden:',
     'for %%F in (%FILES%) do echo   %%F',
     'echo.',
-    `echo Eine auf dem Server schon gepflegte ${SCHEMA_FILE_NAME} bleibt unveraendert.`,
+    `echo Auf dem Server schon gepflegte ${kept.join(' und ')} bleiben unveraendert.`,
     'echo.',
     '',
     'rem Ist ein Schluessel hinterlegt, entfaellt die Abfrage ganz.',
@@ -136,7 +150,7 @@ export function generateDeployScript(
     ')',
     '',
     'echo Uebertrage in einem Durchgang ...',
-    `tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - ${keepSchemaFile} && ${remoteSetup}; ls -l *.sh ${SCHEMA_FILE_NAME}"`,
+    `tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - ${excludeKept} && ${remoteSetup}; ls -l *.sh ${keptList}"`,
     'if errorlevel 1 goto :transfer_failed',
     'goto :done',
     '',
@@ -146,10 +160,9 @@ export function generateDeployScript(
     '',
     ':use_scp',
     'echo [1/3] Lege %TARGET_DIR% an ...',
-    // scp ueberschreibt ohne Rueckfrage. Eine vorhandene Schemaliste wird
-    // deshalb vorher beiseitegelegt und in Schritt 3 zurueckgeholt. Liegt
-    // schon eine Sicherung aus einem abgebrochenen Lauf, bleibt die stehen.
-    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && (test -f ${schemaBackup} || test ! -f ${SCHEMA_FILE_NAME} || cp -p ${SCHEMA_FILE_NAME} ${schemaBackup})"`,
+    // Gepflegte Dateien werden hier beiseitegelegt und in Schritt 3
+    // zurueckgeholt, denn scp ueberschreibt sie gleich.
+    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && ${backupKept}"`,
     'if errorlevel 1 goto :transfer_failed',
     '',
     'echo [2/3] Uebertrage Dateien ...',
@@ -157,7 +170,7 @@ export function generateDeployScript(
     'if errorlevel 1 goto :transfer_failed',
     '',
     'echo [3/3] Setze Zeilenenden, Rechte und Gruppe ...',
-    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && (test ! -f ${schemaBackup} || mv -f ${schemaBackup} ${SCHEMA_FILE_NAME}) && ${remoteSetup}; ls -l *.sh ${SCHEMA_FILE_NAME}"`,
+    `ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && ${restoreKept} && ${remoteSetup}; ls -l *.sh ${keptList}"`,
     'if errorlevel 1 goto :transfer_failed',
     '',
     'rem --- Fertig -------------------------------------------------',

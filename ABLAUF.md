@@ -57,8 +57,8 @@ entpacken — die Skripte müssen zusammen in einem Ordner liegen.
 ```
 
 Überträgt alles per `scp`, setzt Zeilenenden, `chmod 750` und die Gruppe
-`sapsys`. Das Passwort von `<sid>adm` wird einmal abgefragt. Eine auf dem Server
-schon gepflegte `export_schemas.txt` bleibt dabei unverändert.
+`sapsys`. Das Passwort von `<sid>adm` wird einmal abgefragt. Auf dem Server schon
+gepflegte `export.conf` und `export_schemas.txt` bleiben dabei unverändert.
 
 Wer das nicht jedes Mal tippen will, richtet einmalig einen Schlüssel ein:
 
@@ -221,6 +221,23 @@ Nach Fehlern suchen:
 grep -i "fehler\|error" "$(ls -1t <EXPORTPFAD>/logs/schema_export_*.log | head -1)"
 ```
 
+### Einstellungen ändern
+
+```bash
+vi <SKRIPTPFAD>/export.conf
+```
+
+Threads, lokale Aufbewahrung, Mindestspeicher, Mail und StorageBox (Host,
+Benutzer, Port, Zielordner, Aufbewahrung dort), je als `SCHLUESSEL=Wert`. Gilt ab
+dem nächsten Lauf. Danach prüfen:
+
+```bash
+./03_preflight.sh
+```
+
+Ein ungültiger Wert hält den Lauf mit klarer Meldung an. SID, Benutzer, Pfade,
+Komprimierung und Uhrzeit stehen nicht darin und laufen über den Generator.
+
 ### Schemas aufnehmen oder entfernen
 
 ```bash
@@ -271,6 +288,7 @@ Netz. Der Cronjob macht das ohnehin täglich.
 | `tee: ... Keine Berechtigung` | Verzeichnisse gehören `root` | `chown -R <sid>adm:sapsys <EXPORTPFAD>` |
 | Anmeldung an der Box scheitert | `/home/.ssh` fehlt auf der Box | `./06_offload_storagebox.sh --setup` |
 | `HINWEIS: Schema ... existiert ... nicht` | Schema gelöscht oder umbenannt | Zeile in `export_schemas.txt` entfernen oder mit `#` auskommentieren |
+| `export.conf: ... fehlt` | neuerer Generator, ältere Datei | Zeile aus der neu erzeugten `export.conf` übernehmen |
 | hdbsql nicht gefunden | anderer Clientpfad | `which hdbsql`, Wert für `HDBSQL` anpassen |
 | Skript bricht wortlos ab | `~/.sapenv.sh` enthält ein `exit` | behoben; Stand im Skriptkopf prüfen |
 

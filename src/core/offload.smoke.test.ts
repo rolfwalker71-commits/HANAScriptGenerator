@@ -278,4 +278,35 @@ describe('generiertes Auslagerungsskript', () => {
     const content = readFileSync(join(config.exportBase, 'logs', logs[0] as string), 'utf8');
     expect(content).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - /m);
   });
+
+  /** Ändert eine Zeile in export.conf für die Dauer eines Laufs. */
+  function withConf<T>(pattern: RegExp, line: string, action: () => T): T {
+    const path = join(root, 'export.conf');
+    const original = readFileSync(path, 'utf8');
+    writeFileSync(path, original.replace(pattern, line), 'utf8');
+    try {
+      return action();
+    } finally {
+      writeFileSync(path, original, 'utf8');
+    }
+  }
+
+  it('nimmt den Zielordner aus export.conf, ohne neu erzeugtes Skript', () => {
+    const day = dayBefore(4);
+    makeDay(day, ['ALPHA']);
+
+    const { status, stdout } = withConf(/^BOX_PATH=.*$/m, 'BOX_PATH=/home/umgezogen', () =>
+      run([day]),
+    );
+
+    expect(status, stdout).toBe(0);
+    expect(existsSync(join(remote, 'home/umgezogen', day, `ALPHA_${day}.tar.gz`))).toBe(true);
+  });
+
+  it('lehnt einen Zielordner ab, unter dem das Aufräumen zu viel träfe', () => {
+    const { status, stdout } = withConf(/^BOX_PATH=.*$/m, 'BOX_PATH=/home', () => run(['--check']));
+
+    expect(status).not.toBe(0);
+    expect(stdout).toContain('BOX_PATH=/home ist zu allgemein');
+  });
 });

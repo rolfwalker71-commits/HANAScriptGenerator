@@ -108,6 +108,7 @@ hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
 | `README_<KUNDE>.md` | Anleitung mit Konfigurationstabelle, Ablauf und Fehlersuche |
 | `00_schemas_auslesen.cmd` | Läuft auf Windows, holt die Schemaliste aus der Datenbank |
 | `00_dateien_uebertragen.cmd` | Läuft auf Windows, überträgt alles per scp und setzt Rechte |
+| `export.conf` | Betriebswerte: Threads, Aufbewahrung, Mindestspeicher, Mail, StorageBox. Die Skripte lesen sie bei jedem Lauf |
 | `export_schemas.txt` | Die zu sichernden Schemas, eins pro Zeile. Die Skripte lesen sie bei jedem Lauf; eine Änderung braucht keinen neuen Satz Skripte |
 | `01_setup_userstore.sh` | Legt den hdbuserstore-Key an, Passwort wird interaktiv abgefragt |
 | `02_prepare_dirs.sh` | Export- und Logverzeichnisse samt Schreibtest |
@@ -125,9 +126,9 @@ dem OpenSSH-Client, der seit Windows 10 1809 dabei ist. Es legt das Zielverzeich
 an, überträgt die Skripte und die Anleitung per `scp` und setzt danach über `ssh`
 die Zeilenenden, `chmod 750` und die Gruppe `sapsys`.
 
-Eine auf dem Server schon vorhandene `export_schemas.txt` wird dabei nicht
-überschrieben: die Liste wird dort gepflegt, ein erneutes Übertragen soll diese
-Änderungen nicht zurücksetzen.
+Auf dem Server schon vorhandene `export.conf` und `export_schemas.txt` werden
+dabei nicht überschrieben: beide werden dort gepflegt, ein erneutes Übertragen
+soll diese Änderungen nicht zurücksetzen.
 
 `chown` kommt bewusst nicht vor: den Eigentümer darf nur `root` ändern, und nötig
 ist es nicht, weil per `scp` übertragene Dateien dem übertragenden Benutzer bereits

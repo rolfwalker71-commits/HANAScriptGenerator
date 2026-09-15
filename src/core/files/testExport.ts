@@ -1,5 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { RULE, SCHEMA_FILE_NAME, schemaFileReader, scriptHeader, userGuard } from './common.js';
+import { confReadOrExit, confReader } from './exportConf.js';
 
 /**
  * Einmaliger Testexport eines einzelnen Schemas in ein Wegwerfverzeichnis –
@@ -27,8 +28,9 @@ set -u
 HANA_KEY="${config.userstoreKey}"
 HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
-THREADS=${config.threads}
 COMPRESSION="${config.compression}"
+
+${confReader(config)}
 
 ${schemaFileReader()}
 
@@ -75,6 +77,8 @@ case "\${COMPRESSION}" in
 esac
 
 ${userGuard(config)}
+
+${confReadOrExit(['THREADS'])}
 
 if [ ! -x "\${HDBSQL}" ]; then
     echo "FEHLER: hdbsql nicht gefunden: \${HDBSQL}" >&2

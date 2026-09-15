@@ -1,5 +1,6 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { RULE, schemaFileReader, scriptHeader, userGuard } from './common.js';
+import { EXPORT_CONF_NAME, RULE, schemaFileReader, scriptHeader, userGuard } from './common.js';
+import { confKeys, confReader } from './exportConf.js';
 
 /**
  * Prüft alles, was der spätere Cronlauf voraussetzt: Client, Verbindung,
@@ -19,7 +20,7 @@ set -u
 HANA_KEY="${config.userstoreKey}"
 HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
-MIN_FREE_GB=${config.minFreeGb}
+${confReader(config)}
 
 ${schemaFileReader()}
 
@@ -101,7 +102,59 @@ else
 fi
 
 ${RULE}
-#  5. Schemaliste
+#  5. Einstellungen
+${RULE}
+
+CONF_OK="no"
+
+read_export_conf ${confKeys(config).join(' ')}
+case $? in
+    0)
+        ok "Einstellungen gelesen: \${EXPORT_CONF}"
+        CONF_OK="yes"
+        ;;
+    1)
+        fail "Einstellungen fehlen oder sind nicht lesbar: \${EXPORT_CONF}"
+        ;;
+    *)
+        for ERROR in "\${CONF_ERRORS[@]}"
+        do
+            fail "${EXPORT_CONF_NAME}: \${ERROR}"
+        done
+        ;;
+esac
+
+for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
+do
+    fail "${EXPORT_CONF_NAME}, \${ISSUE}"
+done
+
+if [ "\${CONF_OK}" = "yes" ] && [ "\${MAIL_ENABLED}" = "yes" ]; then
+    if [ -z "\${MAIL_RECIPIENT}" ]; then
+        fail "MAIL_ENABLED=yes, aber MAIL_RECIPIENT ist leer."
+    fi
+    if command -v "\${MAIL_COMMAND:-}" >/dev/null 2>&1; then
+        ok "Mailprogramm verfuegbar: \${MAIL_COMMAND}"
+    else
+        fail "Mailprogramm '\${MAIL_COMMAND}' wurde nicht gefunden."
+    fi
+fi
+${
+  box.enabled
+    ? `
+# Das Aufraeumen auf der Box loescht Tagesordner unter BOX_PATH.
+if [ "\${CONF_OK}" = "yes" ]; then
+    case "\${BOX_PATH%/}" in
+        ''|/home)
+            fail "BOX_PATH=\${BOX_PATH} ist zu allgemein, bitte einen eigenen Ordner angeben."
+            ;;
+    esac
+fi
+`
+    : ''
+}
+${RULE}
+#  6. Schemaliste
 ${RULE}
 
 if read_schema_file; then
@@ -120,7 +173,7 @@ else
 fi
 
 ${RULE}
-#  6. Verbindung und Zieldatenbank
+#  7. Verbindung und Zieldatenbank
 ${RULE}
 
 if [ -x "\${HDBSQL}" ]; then
@@ -138,7 +191,7 @@ if [ -x "\${HDBSQL}" ]; then
     echo
 
 ${RULE}
-#  7. Schemas in der Datenbank
+#  8. Schemas in der Datenbank
 ${RULE}
 
     note "Erwartet werden: \${SCHEMAS[*]:-keine}"
@@ -176,7 +229,7 @@ else
 fi
 
 ${RULE}
-#  8. Exportverzeichnis
+#  9. Exportverzeichnis
 ${RULE}
 
 if [ -d "\${EXPORT_BASE}" ]; then
@@ -191,13 +244,15 @@ else
 fi
 
 ${RULE}
-#  9. Speicherplatz
+#  10. Speicherplatz
 ${RULE}
 
 if [ -d "\${EXPORT_BASE}" ]; then
     df -h "\${EXPORT_BASE}" | sed 's/^/           /'
 
-    if [ "\${MIN_FREE_GB}" -gt 0 ]; then
+    if [ "\${CONF_OK}" != "yes" ]; then
+        note "Mindestgroesse unbekannt, die Einstellungen sind nicht lesbar."
+    elif [ "\${MIN_FREE_GB}" -gt 0 ]; then
         FREE_GB="$(df -BG --output=avail "\${EXPORT_BASE}" 2>/dev/null | tail -1 | tr -dc '0-9')"
         if [ -z "\${FREE_GB}" ]; then
             note "Freier Speicherplatz konnte nicht automatisch ermittelt werden."
@@ -212,7 +267,7 @@ if [ -d "\${EXPORT_BASE}" ]; then
 fi
 
 ${RULE}
-#  10. Reste der alten Ablage
+#  11. Reste der alten Ablage
 #
 #  Frueher lag unter der Basis je Schema ein Ordner. Die Aufbewahrung sieht
 #  heute nur noch Tagesordner an; alte Schemaordner blieben sonst fuer immer
@@ -241,7 +296,7 @@ ${
   box.enabled
     ? `
 ${RULE}
-#  11. StorageBox
+#  12. StorageBox
 #
 #  Diese Pruefung laeuft vor der Schluesseleinrichtung. Ein fehlender
 #  Schluessel ist deshalb ein Hinweis und kein Fehler; erst ein vorhandener
@@ -258,17 +313,21 @@ if [ -r "${box.keyPath}" ]; then
         fail "Schluessel hat Rechte \${KEY_MODE}, ssh verlangt 600."
     fi
 
-    note "Teste Anmeldung an ${box.host}:${box.port} ..."
-
-    # Eine Storage Box bietet keine Shell, deshalb sftp statt ssh.
-    if printf 'pwd\\nquit\\n' | sftp -P ${box.port} -i "${box.keyPath}" \\
-         -o BatchMode=yes -o ConnectTimeout=20 \\
-         "${box.user}@${box.host}" >/dev/null 2>&1; then
-        ok "Anmeldung an der StorageBox erfolgreich."
+    if [ "\${CONF_OK}" != "yes" ]; then
+        note "Anmeldung nicht getestet, die Einstellungen sind nicht lesbar."
     else
-        fail "Anmeldung an der StorageBox fehlgeschlagen."
-        note "Schluessel hinterlegt? Einrichten mit:"
-        note "  ./06_offload_storagebox.sh --setup"
+        note "Teste Anmeldung an \${BOX_HOST}:\${BOX_PORT} ..."
+
+        # Eine Storage Box bietet keine Shell, deshalb sftp statt ssh.
+        if printf 'pwd\\nquit\\n' | sftp -P "\${BOX_PORT}" -i "${box.keyPath}" \\
+             -o BatchMode=yes -o ConnectTimeout=20 \\
+             "\${BOX_USER}@\${BOX_HOST}" >/dev/null 2>&1; then
+            ok "Anmeldung an der StorageBox erfolgreich."
+        else
+            fail "Anmeldung an der StorageBox fehlgeschlagen."
+            note "Schluessel hinterlegt? Einrichten mit:"
+            note "  ./06_offload_storagebox.sh --setup"
+        fi
     fi
 else
     # Kein Fehler: dieser Lauf kommt vor der Schluesseleinrichtung. Erst

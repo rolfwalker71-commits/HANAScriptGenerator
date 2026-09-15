@@ -1,6 +1,7 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { offloadCronLine, offloadScheduleDescription } from './installCron.js';
 import {
+  EXPORT_CONF_NAME,
   GENERATOR_VERSION,
   SCHEMA_FILE_NAME,
   archiveExtension,
@@ -10,6 +11,7 @@ import {
   dirName,
 } from './common.js';
 import { cronLine, scheduleDescription } from './installCron.js';
+import { confSections } from './exportConf.js';
 
 /** Kundenspezifische Anleitung: Reihenfolge, Kommandos, Betrieb, Fehlersuche. */
 export function generateReadme(config: ExportConfig): GeneratedFile {
@@ -18,6 +20,13 @@ export function generateReadme(config: ExportConfig): GeneratedFile {
   const scriptDir = dirName(config.scriptPath);
   const ext = archiveExtension(config.compression);
   const first = config.schemas[0] ?? 'SCHEMA';
+  const confTable = confSections(config)
+    .flatMap((section) => section.entries)
+    .map(
+      (entry) =>
+        `| \`${entry.key}\` | ${entry.description} | ${entry.value === '' ? '–' : `\`${entry.value}\``} |`,
+    )
+    .join('\n');
   const time = `${String(config.schedule.hour).padStart(2, '0')}:${String(config.schedule.minute).padStart(2, '0')}`;
 
   const dayTree = config.schemas
@@ -50,6 +59,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | Exportpfad | ${config.exportBase} |
 | Skriptpfad | ${config.scriptPath} |
 | Schemas | ${config.schemas.join(', ')} (gepflegt in \`${SCHEMA_FILE_NAME}\`) |
+| Einstellungen | gepflegt in \`${EXPORT_CONF_NAME}\`; die folgenden Werte sind der Stand beim Erzeugen |
 | Threads | ${config.threads} |
 | Archivformat | ${compressionLabel(config.compression)} (\`*.${ext}\`) |
 | Rohexport behalten | ${config.keepRawExport ? 'ja' : 'nein, nur das Archiv bleibt'} |
@@ -74,6 +84,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | --- | --- |
 | \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
 | \`00_dateien_uebertragen.cmd\` | Läuft auf **Windows**: kopiert alles hierher per scp und setzt Rechte. |
+| \`${EXPORT_CONF_NAME}\` | Betriebswerte wie Aufbewahrung, Threads, Mail${config.offload.enabled ? ' und StorageBox' : ''}. Wird bei jedem Lauf gelesen. |
 | \`${SCHEMA_FILE_NAME}\` | Die zu sichernden Schemas, eins pro Zeile. Wird bei jedem Lauf gelesen – Schemas hier ergänzen oder entfernen. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${config.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
@@ -99,8 +110,9 @@ kopiert alle Skripte per \`scp\` nach \`${scriptDir}\`, räumt Windows-Zeilenend
 und setzt \`chmod 750\` sowie die Gruppe \`sapsys\`. Dafür genügt der OpenSSH-Client,
 den Windows seit Version 1809 mitbringt. Danach weiter bei Schritt 1.
 
-Eine auf dem Server schon vorhandene \`${SCHEMA_FILE_NAME}\` bleibt dabei unverändert:
-die Liste wird dort gepflegt und soll beim erneuten Übertragen nicht verloren gehen.
+Auf dem Server schon vorhandene \`${EXPORT_CONF_NAME}\` und \`${SCHEMA_FILE_NAME}\` bleiben dabei
+unverändert: beide werden dort gepflegt und sollen beim erneuten Übertragen nicht
+verloren gehen.
 
 \`chown\` ist dabei weder enthalten noch nötig: per \`scp\` als \`${config.osUser}\`
 übertragene Dateien gehören bereits \`${config.osUser}\`.
@@ -111,9 +123,9 @@ die Liste wird dort gepflegt und soll beim erneuten Übertragen nicht verloren g
 su - ${config.osUser}
 \`\`\`
 
-Skripte und \`${SCHEMA_FILE_NAME}\` gemeinsam in ein Arbeitsverzeichnis kopieren, zum
-Beispiel \`${scriptDir}\`, und die Skripte ausführbar machen. Die Liste muss neben
-den Skripten liegen, dort wird sie gesucht.
+Skripte, \`${EXPORT_CONF_NAME}\` und \`${SCHEMA_FILE_NAME}\` gemeinsam in ein Arbeitsverzeichnis
+kopieren, zum Beispiel \`${scriptDir}\`, und die Skripte ausführbar machen. Die beiden
+Dateien müssen neben den Skripten liegen, dort werden sie gesucht.
 
 \`\`\`bash
 chmod 750 *.sh
@@ -128,7 +140,7 @@ file *.sh
 Steht dort \`with CRLF line terminators\`, einmal umstellen:
 
 \`\`\`bash
-sed -i 's/\\r$//' *.sh ${SCHEMA_FILE_NAME}
+sed -i 's/\\r$//' *.sh ${EXPORT_CONF_NAME} ${SCHEMA_FILE_NAME}
 \`\`\`
 
 Prüfen, ob der hdbsql-Pfad stimmt:
@@ -310,7 +322,8 @@ er dabei jedes Mal frisch aus \`${SCHEMA_FILE_NAME}\`. Pro Schema nacheinander:
 4. ${config.keepRawExport ? 'Rohexport bleibt zusätzlich liegen' : 'Rohexport löschen, es bleibt nur das Archiv'}
 
 Alles eines Laufs liegt damit in **einem Tagesordner**. Erst danach fallen
-Tagesordner und Logs älter als ${config.retentionDays} Tage weg – der Ordner als Ganzes.
+Tagesordner und Logs älter als ${config.retentionDays} Tage weg – der Ordner als Ganzes
+(\`RETENTION_DAYS\` in \`${EXPORT_CONF_NAME}\`).
 
 Verglichen wird dabei der **Ordnername**, nicht die Änderungszeit: ein Zugriff
 beim Auslagern würde den Zeitstempel verschieben und die Frist stillschweigend
@@ -415,6 +428,37 @@ Vorhandene Archive auflisten:
 ./90_restore_schema.sh --list
 \`\`\`
 
+## Einstellungen ändern
+
+Betriebswerte stehen in \`${scriptDir}/${EXPORT_CONF_NAME}\`, nicht in den Skripten:
+
+| Schlüssel | Bedeutung | Wert beim Erzeugen |
+| --- | --- | --- |
+${confTable}
+
+\`\`\`bash
+vi ${scriptDir}/${EXPORT_CONF_NAME}
+\`\`\`
+
+Danach prüfen:
+
+\`\`\`bash
+./03_preflight.sh
+\`\`\`
+
+Die Änderung gilt ab dem nächsten Lauf. Ein ungültiger Wert, etwa
+\`RETENTION_DAYS=zwei\`, hält den Lauf mit einer klaren Meldung an, statt mit einem
+falschen Wert weiterzuarbeiten.
+
+Nicht in dieser Datei stehen SID, Benutzer, hdbuserstore-Key, Pfade, Komprimierung
+und die Uhrzeit des Laufs. Sie hängen an der Einrichtung – die Uhrzeit steht in der
+Crontab – und werden über den Generator geändert.
+
+\`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene \`${EXPORT_CONF_NAME}\` nicht.
+Bringt ein neuerer Generator einen zusätzlichen Schlüssel mit, meldet
+\`03_preflight.sh\` ihn als fehlend. Dann die Zeile aus der neu erzeugten
+\`${EXPORT_CONF_NAME}\` übernehmen.
+
 ## Schemas aufnehmen oder entfernen
 
 Welche Schemas gesichert werden, steht allein in \`${scriptDir}/${SCHEMA_FILE_NAME}\`,
@@ -476,7 +520,10 @@ Bestätigung durch Eintippen des Schemanamens.
 | Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${config.osUser}\` ausführen |
 | Lauf funktioniert interaktiv, per Cron nicht | Cron startet ohne Anmeldeprofil | Das Skript lädt \`~/.sapenv.sh\`; prüfen, ob die Datei existiert |
 | \`Ein Export laeuft bereits\` | Vorheriger Lauf dauert noch an | Log prüfen, Laufzeit oder Zeitplan anpassen |
-| Export bricht mit Platzmangel ab | Zielverzeichnis zu klein | \`MIN_FREE_GB\` setzen, Aufbewahrung verkürzen |
+| Export bricht mit Platzmangel ab | Zielverzeichnis zu klein | In \`${EXPORT_CONF_NAME}\` \`MIN_FREE_GB\` setzen, \`RETENTION_DAYS\` verkürzen |
+| \`Einstellungen fehlen oder sind nicht lesbar\` | \`${EXPORT_CONF_NAME}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${script}\` legen |
+| \`${EXPORT_CONF_NAME}: ... fehlt\` | Neuerer Generator, ältere Datei auf dem Server | Zeile aus der neu erzeugten \`${EXPORT_CONF_NAME}\` übernehmen |
+| \`... ist ungueltig, erwartet wird ...\` | Tippfehler in \`${EXPORT_CONF_NAME}\` | Wert korrigieren, dann \`./03_preflight.sh\` |
 | Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |
 `;
 

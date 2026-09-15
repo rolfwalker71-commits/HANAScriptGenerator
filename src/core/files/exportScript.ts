@@ -2,6 +2,7 @@ import type { ExportConfig, GeneratedFile } from '../types.js';
 import {
   HEAVY_RULE,
   OFFLOAD_SCRIPT_NAME,
+  EXPORT_CONF_NAME,
   RULE,
   SCHEMA_FILE_NAME,
   archiveExtension,
@@ -12,6 +13,7 @@ import {
   scriptHeader,
   userGuard,
 } from './common.js';
+import { EXPORT_SCRIPT_KEYS, confReader } from './exportConf.js';
 
 /**
  * Das Hauptskript: exportiert jedes Schema einzeln, archiviert jeden Export
@@ -25,7 +27,7 @@ export function generateExportScript(config: ExportConfig): GeneratedFile {
   const content = `${scriptHeader(config, 'SAP HANA Schema-Export', [
     'Jedes Schema wird einzeln exportiert und einzeln archiviert.',
     `Archivformat: ${compressionLabel(config.compression)} (*.${ext})`,
-    `Aufbewahrung: ${config.retentionDays} Tage`,
+    `Einstellungen: ${dirName(config.scriptPath)}/${EXPORT_CONF_NAME}`,
     `Schemaliste: ${dirName(config.scriptPath)}/${SCHEMA_FILE_NAME}`,
     `Aufruf: ${config.scriptPath}`,
   ])}
@@ -41,27 +43,16 @@ HANA_KEY="${config.userstoreKey}"
 HDBSQL="${config.hdbsqlPath}"
 EXPORT_BASE="${config.exportBase}"
 
-THREADS=${config.threads}
-RETENTION_DAYS=${config.retentionDays}
-
-# gz | zst | none
+# gz | zst | none. Bleibt im Skript: Restore und Auslagerung erkennen die
+# Archive an ihrer Endung, ein Wechsel gehoert deshalb in den Generator.
 COMPRESSION="${config.compression}"
-
-# yes = unkomprimiertes Exportverzeichnis zusaetzlich behalten
-KEEP_RAW_EXPORT="${config.keepRawExport ? 'yes' : 'no'}"
-
-# Mindestens freier Speicher in GB vor dem Export, 0 = Pruefung aus
-MIN_FREE_GB=${config.minFreeGb}
-
-MAIL_ENABLED="${config.mail.enabled ? 'yes' : 'no'}"
-MAIL_RECIPIENT="${config.mail.recipient}"
-MAIL_ONLY_ON_ERROR="${config.mail.onlyOnError ? 'yes' : 'no'}"
-MAIL_COMMAND="${config.mail.command}"
 
 # Auslagerung auf die StorageBox nach dem Lauf
 OFFLOAD_ENABLED="${config.offload.enabled ? 'yes' : 'no'}"
 OFFLOAD_AFTER_EXPORT="${config.offload.runAfterExport ? 'yes' : 'no'}"
 OFFLOAD_SCRIPT="${offloadScript}"
+
+${confReader(config)}
 
 ${schemaFileReader()}
 
@@ -195,8 +186,37 @@ log "SAP HANA Schema-Export gestartet"
 log "Host: $(hostname)"
 log "Linux-Benutzer: $(whoami)"
 log "Datum: \${DATE}"
+log "Einstellungen: \${EXPORT_CONF}"
 log "Schemaliste: \${SCHEMA_FILE}"
 log "${HEAVY_RULE.slice(2)}"
+
+read_export_conf ${EXPORT_SCRIPT_KEYS.join(' ')}
+RC=$?
+
+if [ \${RC} -eq 1 ]; then
+    log "FEHLER: Einstellungen fehlen oder sind nicht lesbar: \${EXPORT_CONF}"
+    log "Sie gehoeren neben dieses Skript."
+    exit 1
+fi
+
+for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
+do
+    log "HINWEIS: ${EXPORT_CONF_NAME}, \${ISSUE}."
+done
+
+if [ \${RC} -ne 0 ]; then
+    for ERROR in "\${CONF_ERRORS[@]}"
+    do
+        log "FEHLER: ${EXPORT_CONF_NAME}: \${ERROR}"
+    done
+    exit 1
+fi
+
+if [ "\${MAIL_ENABLED}" = "yes" ] && { [ -z "\${MAIL_RECIPIENT}" ] || [ -z "\${MAIL_COMMAND}" ]; }; then
+    log "HINWEIS: MAIL_ENABLED=yes, aber MAIL_RECIPIENT oder MAIL_COMMAND ist leer. Es geht keine Mail raus."
+    CONF_ISSUES+=("Mail unvollstaendig")
+    MAIL_ENABLED="no"
+fi
 
 if ! read_schema_file; then
     log "FEHLER: Schemaliste fehlt oder ist nicht lesbar: \${SCHEMA_FILE}"
@@ -462,7 +482,7 @@ if [ \${#FAILED_SCHEMAS[@]} -gt 0 ]; then
 fi
 
 # Hinweise machen den Lauf nicht fehlerhaft, sollen aber auffallen.
-HINTS=$((\${#SKIPPED_SCHEMAS[@]} + \${#SCHEMA_FILE_ISSUES[@]}))
+HINTS=$((\${#SKIPPED_SCHEMAS[@]} + \${#SCHEMA_FILE_ISSUES[@]} + \${#CONF_ISSUES[@]}))
 
 if [ \${#FAILED_SCHEMAS[@]} -gt 0 ] || [ \${#OK_SCHEMAS[@]} -eq 0 ]; then
     log "Schema-Export mit Fehlern abgeschlossen."

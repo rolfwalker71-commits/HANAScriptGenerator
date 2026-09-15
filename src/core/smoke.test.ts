@@ -323,6 +323,24 @@ describe('generiertes Exportskript im Trockenlauf', () => {
   });
 });
 
+/** Startet ein Skript und liefert Exitcode und Ausgabe, auch im Fehlerfall. */
+function run(script: string, env: Record<string, string> = {}): { status: number; output: string } {
+  try {
+    const output = execFileSync('bash', [join(root, script)], {
+      stdio: 'pipe',
+      encoding: 'utf8',
+      env: { ...process.env, ...env },
+    });
+    return { status: 0, output };
+  } catch (error) {
+    const failure = error as { status?: number; stdout?: string; stderr?: string };
+    return {
+      status: failure.status ?? -1,
+      output: `${failure.stdout ?? ''}${failure.stderr ?? ''}`,
+    };
+  }
+}
+
 describe('Schemaliste im Lauf', () => {
   const listPath = () => join(root, 'export_schemas.txt');
   let original = '';
@@ -334,24 +352,6 @@ describe('Schemaliste im Lauf', () => {
   afterEach(() => {
     writeFileSync(listPath(), original, 'utf8');
   });
-
-  /** Startet ein Skript und liefert Exitcode und Ausgabe, auch im Fehlerfall. */
-  function run(script: string, env: Record<string, string> = {}): { status: number; output: string } {
-    try {
-      const output = execFileSync('bash', [join(root, script)], {
-        stdio: 'pipe',
-        encoding: 'utf8',
-        env: { ...process.env, ...env },
-      });
-      return { status: 0, output };
-    } catch (error) {
-      const failure = error as { status?: number; stdout?: string; stderr?: string };
-      return {
-        status: failure.status ?? -1,
-        output: `${failure.stdout ?? ''}${failure.stderr ?? ''}`,
-      };
-    }
-  }
 
   it('übernimmt eine geänderte Liste ohne neu erzeugte Skripte', () => {
     // Wie unter Windows bearbeitet: CRLF, Kommentare, Einrückung, doppelt.
@@ -421,11 +421,19 @@ describe('Schemaliste im Lauf', () => {
       ...config,
       mail: { enabled: true, recipient: 'ops@example.invalid', onlyOnError: true, command: mailer },
     };
-    const script = generateAll(withMail).find((file) => file.name === 'schema_export.sh');
-    // Neben die Schemaliste, dort sucht das Skript sie.
-    writeFileSync(join(root, 'mail_export.sh'), script?.content ?? '');
 
-    const { status } = run('mail_export.sh', { FAKE_MISSING_SCHEMAS: 'ALPHA' });
+    // Eigener Ordner: die Mail-Werte stehen in dessen export.conf, und
+    // Skript, Einstellungen und Schemaliste werden gemeinsam gesucht.
+    const dir = join(root, 'mit_mail');
+    mkdirSync(dir, { recursive: true });
+    for (const file of generateAll(withMail)) {
+      if (file.name === 'schema_export.sh' || file.name === 'export.conf') {
+        writeFileSync(join(dir, file.name), file.content);
+      }
+    }
+    writeFileSync(join(dir, 'export_schemas.txt'), original);
+
+    const { status } = run('mit_mail/schema_export.sh', { FAKE_MISSING_SCHEMAS: 'ALPHA' });
 
     expect(status).toBe(0);
     expect(readFileSync(subjectFile, 'utf8')).toContain('Schema-Export erfolgreich mit Hinweisen');
@@ -437,5 +445,94 @@ describe('Schemaliste im Lauf', () => {
     expect(status).toBe(0);
     expect(output).toContain('nehme das erste');
     expect(output).toContain('Testexport von Schema ALPHA');
+  });
+});
+
+describe('Einstellungen im Lauf', () => {
+  const confPath = () => join(root, 'export.conf');
+  let original = '';
+
+  beforeAll(() => {
+    original = readFileSync(confPath(), 'utf8');
+  });
+
+  afterEach(() => {
+    writeFileSync(confPath(), original, 'utf8');
+  });
+
+  const withLine = (pattern: RegExp, line: string) =>
+    writeFileSync(confPath(), original.replace(pattern, line));
+
+  it('übernimmt einen geänderten Wert ohne neu erzeugte Skripte', () => {
+    withLine(/^RETENTION_DAYS=.*$/m, 'RETENTION_DAYS=3');
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('(3 Tage)');
+  });
+
+  it('versteht Anführungszeichen, Kommentare und Windows-Zeilenenden', () => {
+    writeFileSync(
+      confPath(),
+      original
+        .replace(/^RETENTION_DAYS=.*$/m, '  RETENTION_DAYS = "5"   # fuer den Test')
+        .replace(/\n/g, '\r\n'),
+    );
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('(5 Tage)');
+    expect(output).toContain('Alle Schema-Exporte erfolgreich abgeschlossen');
+  });
+
+  it('hält bei einem ungültigen Wert mit klarer Meldung an', () => {
+    withLine(/^RETENTION_DAYS=.*$/m, 'RETENTION_DAYS=zwei');
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(1);
+    expect(output).toContain('RETENTION_DAYS=zwei ist ungueltig, erwartet wird eine ganze Zahl ab 1');
+  });
+
+  it('nennt einen fehlenden Schlüssel beim Namen', () => {
+    withLine(/^THREADS=.*\n/m, '');
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(1);
+    expect(output).toContain('export.conf: THREADS fehlt');
+  });
+
+  it('meldet einen unbekannten Schlüssel als Hinweis, ohne anzuhalten', () => {
+    writeFileSync(confPath(), `${original}RETENTON_DAYS=3\n`);
+
+    const { status, output } = run('schema_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('unbekannter Schluessel RETENTON_DAYS');
+    expect(output).toContain('mit Hinweisen');
+  });
+
+  it('bricht klar ab, wenn export.conf fehlt', () => {
+    renameSync(confPath(), `${confPath()}.weg`);
+    try {
+      const { status, output } = run('schema_export.sh');
+      expect(status).toBe(1);
+      expect(output).toContain('Einstellungen fehlen oder sind nicht lesbar');
+    } finally {
+      renameSync(`${confPath()}.weg`, confPath());
+    }
+  });
+
+  it('nimmt die Threads des Testexports aus export.conf', () => {
+    // In einfachen Anführungszeichen, damit auch diese Schreibweise geprüft ist.
+    withLine(/^THREADS=.*$/m, "THREADS='7'");
+
+    const { status, output } = run('04_test_export.sh');
+
+    expect(status).toBe(0);
+    expect(output).toContain('WITH REPLACE THREADS 7');
   });
 });

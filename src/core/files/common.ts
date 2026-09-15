@@ -109,6 +109,9 @@ export function userGuard(config: ExportConfig, indent = ''): string {
 /** Die Liste der zu sichernden Schemas, auf dem Server neben den Skripten. */
 export const SCHEMA_FILE_NAME = 'export_schemas.txt';
 
+/** Die Betriebswerte, auf dem Server neben den Skripten. */
+export const EXPORT_CONF_NAME = 'export.conf';
+
 /**
  * Bash-Block, der die Schemaliste neben dem Skript liest. Er definiert nur;
  * gelesen wird mit `read_schema_file`, damit jedes Skript selbst entscheidet,

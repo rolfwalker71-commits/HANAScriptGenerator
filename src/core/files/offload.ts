@@ -1,5 +1,13 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
-import { OFFLOAD_SCRIPT_NAME, RULE, archiveExtension, scriptHeader, userGuard } from './common.js';
+import {
+  EXPORT_CONF_NAME,
+  OFFLOAD_SCRIPT_NAME,
+  RULE,
+  archiveExtension,
+  scriptHeader,
+  userGuard,
+} from './common.js';
+import { OFFLOAD_SCRIPT_KEYS, confReader } from './exportConf.js';
 
 /**
  * Kopiert die Tagesarchive per rsync über SSH auf eine Hetzner StorageBox.
@@ -17,7 +25,7 @@ export function generateOffloadScript(config: ExportConfig): GeneratedFile {
   const ext = archiveExtension(config.compression);
 
   const content = `${scriptHeader(config, 'Tagesarchive auf die StorageBox auslagern', [
-    `Ziel: ${box.user || '<benutzer>'}@${box.host || '<box>'}:${box.remotePath || '<pfad>'}`,
+    `Ziel und Zugang: BOX_* in ${EXPORT_CONF_NAME}`,
     '',
     'Aufruf:',
     '  ./' + OFFLOAD_SCRIPT_NAME + '                 heutigen Tagesordner',
@@ -39,23 +47,13 @@ ${RULE}
 
 EXPORT_BASE="${config.exportBase}"
 
-BOX_HOST="${box.host}"
-BOX_USER="${box.user}"
-
-# Hetzner betreibt SSH auf einer Storage Box auf Port 23, nicht 22.
-BOX_PORT=${box.port}
-
-# Zielverzeichnis auf der Box. Darunter entsteht je Tag ein Ordner.
-BOX_PATH="${box.remotePath}"
-
 # Privater Schluessel dieses Servers. Ein Cronlauf kann kein Passwort
 # eintippen, deshalb Schluesselanmeldung.
 SSH_KEY="${box.keyPath}"
 
-# Aufbewahrung auf der Box in Tagen. 0 = nichts dort loeschen.
-REMOTE_RETENTION_DAYS=${box.remoteRetentionDays}
-
 ARCHIVE_EXT="${ext}"
+
+${confReader(config)}
 
 ${RULE}
 #  Laufzeitwerte
@@ -81,8 +79,8 @@ ${RULE}
 
 COMMON_OPTS="-o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new"
 
-SSH_OPTS="-p \${BOX_PORT} -i \${SSH_KEY} \${COMMON_OPTS} -o BatchMode=yes"
-SFTP_OPTS="-P \${BOX_PORT} -i \${SSH_KEY} \${COMMON_OPTS} -o BatchMode=yes"
+# SSH_OPTS und SFTP_OPTS entstehen erst, wenn die Einstellungen gelesen
+# sind: der Port steht in ${EXPORT_CONF_NAME}.
 
 # Alle sftp-Aufrufe laufen hierueber, damit die Optionen nur an einer
 # Stelle stehen.
@@ -172,10 +170,38 @@ do
     fi
 done
 
-if [ -z "\${BOX_HOST}" ] || [ -z "\${BOX_USER}" ] || [ -z "\${BOX_PATH}" ]; then
-    log "FEHLER: Die StorageBox ist nicht vollstaendig konfiguriert."
+read_export_conf ${OFFLOAD_SCRIPT_KEYS.join(' ')}
+RC=$?
+
+if [ \${RC} -eq 1 ]; then
+    log "FEHLER: Einstellungen fehlen oder sind nicht lesbar: \${EXPORT_CONF}"
     exit 1
 fi
+
+for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
+do
+    log "HINWEIS: ${EXPORT_CONF_NAME}, \${ISSUE}."
+done
+
+if [ \${RC} -ne 0 ]; then
+    for ERROR in "\${CONF_ERRORS[@]}"
+    do
+        log "FEHLER: ${EXPORT_CONF_NAME}: \${ERROR}"
+    done
+    exit 1
+fi
+
+# Das Aufraeumen loescht Tagesordner unter BOX_PATH. In der Wurzel oder
+# direkt in /home kaeme es dem uebrigen Inhalt der Box zu nahe.
+case "\${BOX_PATH%/}" in
+    ''|/home)
+        log "FEHLER: BOX_PATH=\${BOX_PATH} ist zu allgemein, bitte einen eigenen Ordner angeben."
+        exit 1
+        ;;
+esac
+
+SSH_OPTS="-p \${BOX_PORT} -i \${SSH_KEY} \${COMMON_OPTS} -o BatchMode=yes"
+SFTP_OPTS="-P \${BOX_PORT} -i \${SSH_KEY} \${COMMON_OPTS} -o BatchMode=yes"
 
 case "\${1:-}" in
     --setup|--setup-key|--install-key) KEY_OPTIONAL=yes ;;
