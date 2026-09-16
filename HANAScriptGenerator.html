@@ -262,7 +262,8 @@
           <section class="step" data-title="Benachrichtigung">
             <h2>Soll der Lauf sich melden?</h2>
             <p class="step__lead">
-              Optional. Ohne Mail bleibt das Log im Exportverzeichnis die einzige Rückmeldung.
+              Optional, aber beides zusammen möglich. Ohne eine der beiden Meldungen bleibt das
+              Log im Exportverzeichnis die einzige Rückmeldung.
             </p>
 
             <div class="group">
@@ -286,6 +287,58 @@
                 <label class="field field--check">
                   <input type="checkbox" id="mailOnlyOnError" />
                   <span>Nur bei Fehlern</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="group">
+              <label class="field field--check field--wide">
+                <input type="checkbox" id="notifyEnabled" />
+                <span>Läufe von einem Ping-Dienst überwachen lassen</span>
+              </label>
+
+              <div id="notifyFields" class="subgroup">
+                <p class="field--wide">
+                  <small>
+                    Gedacht für <a href="https://healthchecks.io" target="_blank" rel="noopener">healthchecks.io</a>
+                    oder eine selbst betriebene Instanz davon. Das Skript meldet Beginn und Ende
+                    jedes Laufs; der Dienst zeigt ein Dashboard und schlägt Alarm. Er merkt als
+                    Einziger auch, wenn ein Lauf <strong>ganz ausbleibt</strong> – das kann eine
+                    Meldung, die der Server selbst verschickt, grundsätzlich nicht.
+                    Die Crontab bleibt unverändert.
+                  </small>
+                </p>
+
+                <label class="field field--wide">
+                  <span>Ping-Adresse für den Export</span>
+                  <input type="password" id="notifyUrl" autocomplete="off" spellcheck="false"
+                         placeholder="https://hc-ping.com/…" />
+                  <small>
+                    Im Dienst einen Check anlegen und dessen Ping-Adresse hier eintragen. Wer sie
+                    kennt, kann falsche Erfolgsmeldungen schicken: sie landet in
+                    <code>export.conf</code> (chmod 600) und nie im Log.
+                  </small>
+                </label>
+
+                <label class="field field--wide">
+                  <span>Ping-Adresse für die Auslagerung</span>
+                  <input type="password" id="notifyOffloadUrl" autocomplete="off" spellcheck="false"
+                         placeholder="https://hc-ping.com/… (eigener Check)" />
+                  <small>
+                    Ein <strong>zweiter</strong> Check. Auf derselben Adresse überschriebe der
+                    spätere Lauf die Meldung des früheren.
+                  </small>
+                </label>
+
+                <label class="field">
+                  <span>Logzeilen im Ping</span>
+                  <input type="number" id="notifyMaxLines" min="0" max="50" />
+                  <small>Fehler- und Hinweiszeilen, die zur Ansicht mitgeschickt werden.</small>
+                </label>
+
+                <label class="field">
+                  <span>Proxy (optional)</span>
+                  <input type="text" id="notifyProxy" placeholder="http://proxy:3128" />
                 </label>
               </div>
             </div>
@@ -403,18 +456,18 @@
     </main>
 
     <script>
-var Ot=Object.defineProperty;var Ht=(D,b,x)=>b in D?Ot(D,b,{enumerable:!0,configurable:!0,writable:!0,value:x}):D[b]=x;var fe=(D,b,x)=>Ht(D,typeof b!="symbol"?b+"":b,x);(function(){"use strict";var ke;const D=/^[A-Za-z_][A-Za-z0-9_#$]*$/,b=/^[A-Za-z][A-Za-z0-9]{2}$/,x=/^[a-z_][a-z0-9_-]*\$?$/;function z(e){return e.replace(/\r?\n/g," ").trim()}function U(e){const t=e.trim().replace(/\/{2,}/g,"/");return t.length>1?t.replace(/\/+$/,""):t}function pe(e){const t=new Set,n=[];for(const s of e.split(/[\s,;]+/)){const o=s.trim();if(o.length===0)continue;const a=o.toUpperCase();t.has(a)||(t.add(a),n.push(o))}return n}function re(e){const t=e.padStart(2,"0").slice(0,2);return Number.parseInt(`3${t}15`,10)}function G(e,t){return`/usr/sap/${e.toUpperCase()}/HDB${t.padStart(2,"0")}`}function Ne(e,t){return`${G(e,t)}/exe/hdbsql`}function xe(e,t){return`${G(e,t)}/work/schema_exports`}function Me(e,t){return`${G(e,t)}/work/schema_export.sh`}function ve(e,t){return e.trim().length===0?"":`${G(e,t)}/work/.ssh/id_ed25519`}function se(e){return e.trim().length===0?"":`${e.trim().toLowerCase()}adm`}function X(e,t){const n=e.trim();return b.test(n)?{port:re(t),hdbsqlPath:Ne(n,t),exportBase:xe(n,t),scriptPath:Me(n,t),osUser:se(n),keyPath:ve(n,t)}:{port:re(t),hdbsqlPath:"",exportBase:"",scriptPath:"",osUser:"",keyPath:""}}function ge(){return{customer:"",sid:"",instance:"00",host:"",port:re("00"),dbUser:"SYSTEM",osUser:"",userstoreKey:"SCHEMAEXPORT",hdbsqlPath:"",exportBase:"",scriptPath:"",schemas:[],threads:10,retentionDays:14,compression:"gz",keepRawExport:!1,minFreeGb:0,schedule:{hour:2,minute:0,dayOfWeek:"*"},mail:{enabled:!1,recipient:"",onlyOnError:!0,command:"mailx"},offload:{enabled:!1,host:"",user:"",port:23,remotePath:"",keyPath:"",runAfterExport:!0,hour:4,minute:0,remoteRetentionDays:0}}}function w(e){return{...e,customer:e.customer.trim(),sid:e.sid.trim().toUpperCase(),instance:e.instance.trim().padStart(2,"0"),host:e.host.trim(),dbUser:e.dbUser.trim(),osUser:e.osUser.trim(),userstoreKey:e.userstoreKey.trim(),hdbsqlPath:U(e.hdbsqlPath),scriptPath:U(e.scriptPath),exportBase:U(e.exportBase),schemas:e.schemas.map(t=>t.trim()).filter(t=>t.length>0),mail:{...e.mail,recipient:e.mail.recipient.trim()},schedule:{...e.schedule},offload:{...e.offload,host:e.offload.host.trim(),user:e.offload.user.trim(),remotePath:U(e.offload.remotePath),keyPath:U(e.offload.keyPath)}}}const Be=/^(\*|([0-7](-[0-7])?)(,[0-7](-[0-7])?)*)(\/\d+)?$/;function Fe(e){return e.startsWith("/")&&!e.includes(`
-`)}function ze(e){const t=[],n=(d,m)=>t.push({field:d,severity:"error",message:m}),s=(d,m)=>t.push({field:d,severity:"warning",message:m});e.customer.length===0&&s("customer","Ohne Kundenname fehlt die Zuordnung im Skriptkopf."),b.test(e.sid)||n("sid","Die SID muss dreistellig sein und mit einem Buchstaben beginnen, z. B. HDB."),/^\d{2}$/.test(e.instance)||n("instance","Die Instanznummer muss zweistellig sein, z. B. 00."),e.host.length===0?n("host","Der Hostname darf nicht leer sein."):/^[A-Za-z0-9._-]+$/.test(e.host)||n("host","Der Hostname enthält unzulässige Zeichen."),(!Number.isInteger(e.port)||e.port<1||e.port>65535)&&n("port","Der SQL-Port muss zwischen 1 und 65535 liegen."),e.dbUser.length===0&&n("dbUser","Der Datenbankbenutzer darf nicht leer sein."),x.test(e.osUser)?b.test(e.sid)&&e.osUser!==se(e.sid)&&s("osUser",`Üblich wäre ${se(e.sid)}: der SAP-Instanzbenutzer heißt <sid>adm. Weicht ${e.osUser} bewusst ab, kann der Hinweis stehen bleiben.`):n("osUser","Der Linux-Benutzer enthält unzulässige Zeichen."),/^[A-Za-z0-9_]+$/.test(e.userstoreKey)||n("userstoreKey","Der hdbuserstore-Key darf nur Buchstaben, Ziffern und _ enthalten.");for(const d of["hdbsqlPath","exportBase","scriptPath"])Fe(e[d])||n(d,"Es wird ein absoluter Pfad benötigt, beginnend mit /.");(e.exportBase==="/"||e.exportBase.split("/").length<3)&&n("exportBase","Der Exportpfad ist zu nah an der Wurzel – das Aufräumen wäre gefährlich."),e.schemas.length===0&&n("schemas","Mindestens ein Schema muss angegeben werden.");for(const d of e.schemas)D.test(d)?d!==d.toUpperCase()&&s("schemas",`Schemaname "${d}" ist nicht durchgängig groß geschrieben – HANA unterscheidet bei Quoting die Schreibweise.`):n("schemas",`Schemaname "${d}" enthält unzulässige Zeichen.`);!Number.isInteger(e.threads)||e.threads<1||e.threads>64?n("threads","THREADS muss zwischen 1 und 64 liegen."):e.threads>16&&s("threads","Mehr als 16 Threads belasten das Produktivsystem während des Exports spürbar."),(!Number.isInteger(e.retentionDays)||e.retentionDays<1)&&n("retentionDays","Die Aufbewahrung muss mindestens 1 Tag betragen."),(!Number.isInteger(e.minFreeGb)||e.minFreeGb<0)&&n("minFreeGb","Der Mindest-Speicherplatz darf nicht negativ sein.");const{hour:o,minute:a,dayOfWeek:u}=e.schedule;if((!Number.isInteger(o)||o<0||o>23)&&n("schedule","Die Stunde muss zwischen 0 und 23 liegen."),(!Number.isInteger(a)||a<0||a>59)&&n("schedule","Die Minute muss zwischen 0 und 59 liegen."),Be.test(u)||n("schedule","Das Wochentagsfeld entspricht nicht der Crontab-Syntax."),e.mail.enabled&&(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.mail.recipient)||n("mail","Für den Mailversand wird eine gültige Empfängeradresse benötigt."),/^[A-Za-z0-9._/-]+$/.test(e.mail.command)||n("mail","Das Mail-Kommando enthält unzulässige Zeichen.")),e.offload.enabled){const d=e.offload;d.host.length===0?n("offload","Ohne Adresse der StorageBox kann nicht ausgelagert werden."):/^[A-Za-z0-9._-]+$/.test(d.host)||n("offload","Die Adresse der StorageBox enthält unzulässige Zeichen."),/^[A-Za-z0-9._-]+$/.test(d.user)||n("offload","Der Benutzer der StorageBox fehlt oder enthält unzulässige Zeichen."),(/^u(123456|XXXXXX)\b/i.test(d.user)||/^u(123456|XXXXXX)\./i.test(d.host))&&n("offload","Das sind die Beispielwerte aus der Anleitung, nicht deine Zugangsdaten. Benutzer und Adresse stehen im Hetzner Robot bei der Storage Box."),!Number.isInteger(d.port)||d.port<1||d.port>65535?n("offload","Der SSH-Port der StorageBox muss zwischen 1 und 65535 liegen."):d.port===22&&s("offload","Hetzner betreibt SSH auf einer Storage Box üblicherweise auf Port 23, nicht 22."),d.remotePath.startsWith("/")?(d.remotePath==="/"||d.remotePath==="/home")&&n("offload","Ein eigenes Unterverzeichnis wählen – das Aufräumen im Heimatverzeichnis wäre gefährlich."):n("offload","Das Zielverzeichnis auf der Box muss mit / beginnen, z. B. /home/hana."),d.keyPath.startsWith("/")||n("offload","Für den SSH-Schlüssel wird ein absoluter Pfad benötigt."),(!Number.isInteger(d.hour)||d.hour<0||d.hour>23)&&n("offload","Die Stunde der Auslagerung muss zwischen 0 und 23 liegen."),(!Number.isInteger(d.minute)||d.minute<0||d.minute>59)&&n("offload","Die Minute der Auslagerung muss zwischen 0 und 59 liegen."),!Number.isInteger(d.remoteRetentionDays)||d.remoteRetentionDays<0?n("offload","Die Aufbewahrung auf der Box darf nicht negativ sein."):d.remoteRetentionDays>0&&d.remoteRetentionDays<=e.retentionDays&&s("offload",`Auf der Box wird nach ${d.remoteRetentionDays} Tagen gelöscht, lokal erst nach ${e.retentionDays}. Dann ist die Auslagerung nie älter als der lokale Bestand und bringt keinen zusätzlichen Zeitraum.`)}return e.keepRawExport&&s("keepRawExport","Rohexport und Archiv werden parallel aufbewahrt – der Platzbedarf steigt entsprechend."),t}const ie="HANAScriptGenerator",k="2026-09-16 07:08 · 5f23932",C="06_offload_storagebox.sh",r="# ------------------------------------------------------------",_="# ============================================================";function be(e){var n;const t=e.split("/");return(n=t[t.length-1])!=null?n:e}function T(e){const t=e.lastIndexOf("/");return t<=0?"/":e.slice(0,t)}function ae(e,t){const n=e.normalize("NFKD").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"").toUpperCase();return n.length>0?n:t.toUpperCase()}function y(e){switch(e){case"gz":return"tar.gz";case"zst":return"tar.zst";case"none":return"tar"}}function oe(e){switch(e){case"gz":return"tar + gzip";case"zst":return"tar + zstd";case"none":return"tar ohne Komprimierung"}}function L(e,t,n=[]){return["#!/bin/bash","#",_,`#  ${t}`,"#",`#  Kunde       : ${z(e.customer)||"-"}`,`#  Tenant      : ${e.sid} (Instanz ${e.instance})`,`#  Host        : ${e.host}:${e.port}`,`#  DB-Benutzer : ${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`,`#  Linux-User  : ${e.osUser}`,"#",...n.map(o=>`#  ${o}`),...n.length>0?["#"]:[],`#  Erzeugt durch ${ie}, Stand ${k}.`,_].join(`
-`)}function P(e,t=""){return[`if [ "$(whoami)" != "${e.osUser}" ]; then`,`    echo "FEHLER: Dieses Skript muss als ${e.osUser} laufen (aktuell: $(whoami))." >&2`,`    echo "Hinweis: der hdbuserstore-Key ${e.userstoreKey} existiert nur für ${e.osUser}." >&2`,"    exit 1","fi"].map(n=>n.length>0?t+n:n).join(`
-`)}const $="export_schemas.txt",E="export.conf";function le(){return`${r}
+var wn=Object.defineProperty;var xn=(L,_,F)=>_ in L?wn(L,_,{enumerable:!0,configurable:!0,writable:!0,value:F}):L[_]=F;var ge=(L,_,F)=>xn(L,typeof _!="symbol"?_+"":_,F);(function(){"use strict";var Me;const L=/^[A-Za-z_][A-Za-z0-9_#$]*$/,_=/^[A-Za-z][A-Za-z0-9]{2}$/,F=/^[a-z_][a-z0-9_-]*\$?$/;function y(e){return e.replace(/\r?\n/g," ").trim()}function U(e){const n=e.trim().replace(/\/{2,}/g,"/");return n.length>1?n.replace(/\/+$/,""):n}function pe(e){const n=new Set,t=[];for(const s of e.split(/[\s,;]+/)){const d=s.trim();if(d.length===0)continue;const a=d.toUpperCase();n.has(a)||(n.add(a),t.push(d))}return t}function ie(e){const n=e.padStart(2,"0").slice(0,2);return Number.parseInt(`3${n}15`,10)}function X(e,n){return`/usr/sap/${e.toUpperCase()}/HDB${n.padStart(2,"0")}`}function ve(e,n){return`${X(e,n)}/exe/hdbsql`}function Be(e,n){return`${X(e,n)}/work/schema_exports`}function ye(e,n){return`${X(e,n)}/work/schema_export.sh`}function Ue(e,n){return e.trim().length===0?"":`${X(e,n)}/work/.ssh/id_ed25519`}function ae(e){return e.trim().length===0?"":`${e.trim().toLowerCase()}adm`}function V(e,n){const t=e.trim();return _.test(t)?{port:ie(n),hdbsqlPath:ve(t,n),exportBase:Be(t,n),scriptPath:ye(t,n),osUser:ae(t),keyPath:Ue(t,n)}:{port:ie(n),hdbsqlPath:"",exportBase:"",scriptPath:"",osUser:"",keyPath:""}}function be(){return{customer:"",sid:"",instance:"00",host:"",port:ie("00"),dbUser:"SYSTEM",osUser:"",userstoreKey:"SCHEMAEXPORT",hdbsqlPath:"",exportBase:"",scriptPath:"",schemas:[],threads:10,retentionDays:14,compression:"gz",keepRawExport:!1,minFreeGb:0,schedule:{hour:2,minute:0,dayOfWeek:"*"},mail:{enabled:!1,recipient:"",onlyOnError:!0,command:"mailx"},notify:{enabled:!1,url:"",offloadUrl:"",proxy:"",maxDetailLines:12},offload:{enabled:!1,host:"",user:"",port:23,remotePath:"",keyPath:"",runAfterExport:!0,hour:4,minute:0,remoteRetentionDays:0}}}function k(e){return{...e,customer:e.customer.trim(),sid:e.sid.trim().toUpperCase(),instance:e.instance.trim().padStart(2,"0"),host:e.host.trim(),dbUser:e.dbUser.trim(),osUser:e.osUser.trim(),userstoreKey:e.userstoreKey.trim(),hdbsqlPath:U(e.hdbsqlPath),scriptPath:U(e.scriptPath),exportBase:U(e.exportBase),schemas:e.schemas.map(n=>n.trim()).filter(n=>n.length>0),mail:{...e.mail,recipient:e.mail.recipient.trim()},notify:{...e.notify,url:e.notify.url.trim(),offloadUrl:e.notify.offloadUrl.trim(),proxy:e.notify.proxy.trim()},schedule:{...e.schedule},offload:{...e.offload,host:e.offload.host.trim(),user:e.offload.user.trim(),remotePath:U(e.offload.remotePath),keyPath:U(e.offload.keyPath)}}}const ze=/^(\*|([0-7](-[0-7])?)(,[0-7](-[0-7])?)*)(\/\d+)?$/;function Ke(e){return e.startsWith("/")&&!e.includes(`
+`)}function Ye(e){const n=[],t=(o,m)=>n.push({field:o,severity:"error",message:m}),s=(o,m)=>n.push({field:o,severity:"warning",message:m});e.customer.length===0&&s("customer","Ohne Kundenname fehlt die Zuordnung im Skriptkopf."),_.test(e.sid)||t("sid","Die SID muss dreistellig sein und mit einem Buchstaben beginnen, z. B. HDB."),/^\d{2}$/.test(e.instance)||t("instance","Die Instanznummer muss zweistellig sein, z. B. 00."),e.host.length===0?t("host","Der Hostname darf nicht leer sein."):/^[A-Za-z0-9._-]+$/.test(e.host)||t("host","Der Hostname enthält unzulässige Zeichen."),(!Number.isInteger(e.port)||e.port<1||e.port>65535)&&t("port","Der SQL-Port muss zwischen 1 und 65535 liegen."),e.dbUser.length===0&&t("dbUser","Der Datenbankbenutzer darf nicht leer sein."),F.test(e.osUser)?_.test(e.sid)&&e.osUser!==ae(e.sid)&&s("osUser",`Üblich wäre ${ae(e.sid)}: der SAP-Instanzbenutzer heißt <sid>adm. Weicht ${e.osUser} bewusst ab, kann der Hinweis stehen bleiben.`):t("osUser","Der Linux-Benutzer enthält unzulässige Zeichen."),/^[A-Za-z0-9_]+$/.test(e.userstoreKey)||t("userstoreKey","Der hdbuserstore-Key darf nur Buchstaben, Ziffern und _ enthalten.");for(const o of["hdbsqlPath","exportBase","scriptPath"])Ke(e[o])||t(o,"Es wird ein absoluter Pfad benötigt, beginnend mit /.");(e.exportBase==="/"||e.exportBase.split("/").length<3)&&t("exportBase","Der Exportpfad ist zu nah an der Wurzel – das Aufräumen wäre gefährlich."),e.schemas.length===0&&t("schemas","Mindestens ein Schema muss angegeben werden.");for(const o of e.schemas)L.test(o)?o!==o.toUpperCase()&&s("schemas",`Schemaname "${o}" ist nicht durchgängig groß geschrieben – HANA unterscheidet bei Quoting die Schreibweise.`):t("schemas",`Schemaname "${o}" enthält unzulässige Zeichen.`);!Number.isInteger(e.threads)||e.threads<1||e.threads>64?t("threads","THREADS muss zwischen 1 und 64 liegen."):e.threads>16&&s("threads","Mehr als 16 Threads belasten das Produktivsystem während des Exports spürbar."),(!Number.isInteger(e.retentionDays)||e.retentionDays<1)&&t("retentionDays","Die Aufbewahrung muss mindestens 1 Tag betragen."),(!Number.isInteger(e.minFreeGb)||e.minFreeGb<0)&&t("minFreeGb","Der Mindest-Speicherplatz darf nicht negativ sein.");const{hour:d,minute:a,dayOfWeek:u}=e.schedule;if((!Number.isInteger(d)||d<0||d>23)&&t("schedule","Die Stunde muss zwischen 0 und 23 liegen."),(!Number.isInteger(a)||a<0||a>59)&&t("schedule","Die Minute muss zwischen 0 und 59 liegen."),ze.test(u)||t("schedule","Das Wochentagsfeld entspricht nicht der Crontab-Syntax."),e.mail.enabled&&(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.mail.recipient)||t("mail","Für den Mailversand wird eine gültige Empfängeradresse benötigt."),/^[A-Za-z0-9._/-]+$/.test(e.mail.command)||t("mail","Das Mail-Kommando enthält unzulässige Zeichen.")),e.notify.enabled){const o=e.notify,m=(b,E)=>{/^http:\/\//i.test(b)?t("notify",`${E} muss https sein – über http läge sie offen im Netz.`):/^https:\/\/[^\s"'<>]+$/.test(b)||t("notify",`${E} muss mit https:// beginnen und darf keinen Leerraum enthalten.`)};o.url.length===0?t("notify","Ohne Ping-Adresse für den Export kann nichts überwacht werden."):m(o.url,"Die Ping-Adresse des Exports"),o.offloadUrl.length>0?(m(o.offloadUrl,"Die Ping-Adresse der Auslagerung"),o.offloadUrl===o.url&&t("notify","Export und Auslagerung brauchen je einen eigenen Check. Auf derselben Adresse überschreibt der spätere Lauf die Meldung des früheren.")):e.offload.enabled&&s("notify","Die Auslagerung läuft, wird aber nicht überwacht. Ein fehlgeschlagener Auslagerungslauf bliebe unbemerkt."),o.proxy.length>0&&!/^https?:\/\/[^\s]+$/.test(o.proxy)&&t("notify","Der Proxy wird als http://host:port angegeben."),(!Number.isInteger(o.maxDetailLines)||o.maxDetailLines<0||o.maxDetailLines>50)&&t("notify","Zwischen 0 und 50 Zeilen dürfen als Ping-Inhalt mitgehen.")}if(e.offload.enabled){const o=e.offload;o.host.length===0?t("offload","Ohne Adresse der StorageBox kann nicht ausgelagert werden."):/^[A-Za-z0-9._-]+$/.test(o.host)||t("offload","Die Adresse der StorageBox enthält unzulässige Zeichen."),/^[A-Za-z0-9._-]+$/.test(o.user)||t("offload","Der Benutzer der StorageBox fehlt oder enthält unzulässige Zeichen."),(/^u(123456|XXXXXX)\b/i.test(o.user)||/^u(123456|XXXXXX)\./i.test(o.host))&&t("offload","Das sind die Beispielwerte aus der Anleitung, nicht deine Zugangsdaten. Benutzer und Adresse stehen im Hetzner Robot bei der Storage Box."),!Number.isInteger(o.port)||o.port<1||o.port>65535?t("offload","Der SSH-Port der StorageBox muss zwischen 1 und 65535 liegen."):o.port===22&&s("offload","Hetzner betreibt SSH auf einer Storage Box üblicherweise auf Port 23, nicht 22."),o.remotePath.startsWith("/")?(o.remotePath==="/"||o.remotePath==="/home")&&t("offload","Ein eigenes Unterverzeichnis wählen – das Aufräumen im Heimatverzeichnis wäre gefährlich."):t("offload","Das Zielverzeichnis auf der Box muss mit / beginnen, z. B. /home/hana."),o.keyPath.startsWith("/")||t("offload","Für den SSH-Schlüssel wird ein absoluter Pfad benötigt."),(!Number.isInteger(o.hour)||o.hour<0||o.hour>23)&&t("offload","Die Stunde der Auslagerung muss zwischen 0 und 23 liegen."),(!Number.isInteger(o.minute)||o.minute<0||o.minute>59)&&t("offload","Die Minute der Auslagerung muss zwischen 0 und 59 liegen."),!Number.isInteger(o.remoteRetentionDays)||o.remoteRetentionDays<0?t("offload","Die Aufbewahrung auf der Box darf nicht negativ sein."):o.remoteRetentionDays>0&&o.remoteRetentionDays<=e.retentionDays&&s("offload",`Auf der Box wird nach ${o.remoteRetentionDays} Tagen gelöscht, lokal erst nach ${e.retentionDays}. Dann ist die Auslagerung nie älter als der lokale Bestand und bringt keinen zusätzlichen Zeitraum.`)}return e.keepRawExport&&s("keepRawExport","Rohexport und Archiv werden parallel aufbewahrt – der Platzbedarf steigt entsprechend."),n}const oe="HANAScriptGenerator",w="2026-09-16 07:48 · a35adc9",H="06_offload_storagebox.sh",r="# ------------------------------------------------------------",R="# ============================================================";function _e(e){var t;const n=e.split("/");return(t=n[n.length-1])!=null?t:e}function O(e){const n=e.lastIndexOf("/");return n<=0?"/":e.slice(0,n)}function le(e,n){const t=e.normalize("NFKD").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"").toUpperCase();return t.length>0?t:n.toUpperCase()}function z(e){switch(e){case"gz":return"tar.gz";case"zst":return"tar.zst";case"none":return"tar"}}function he(e){switch(e){case"gz":return"tar + gzip";case"zst":return"tar + zstd";case"none":return"tar ohne Komprimierung"}}function C(e,n,t=[]){return["#!/bin/bash","#",R,`#  ${n}`,"#",`#  Kunde       : ${y(e.customer)||"-"}`,`#  Tenant      : ${e.sid} (Instanz ${e.instance})`,`#  Host        : ${e.host}:${e.port}`,`#  DB-Benutzer : ${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`,`#  Linux-User  : ${e.osUser}`,"#",...t.map(d=>`#  ${d}`),...t.length>0?["#"]:[],`#  Erzeugt durch ${oe}, Stand ${w}.`,R].join(`
+`)}function N(e,n=""){return[`if [ "$(whoami)" != "${e.osUser}" ]; then`,`    echo "FEHLER: Dieses Skript muss als ${e.osUser} laufen (aktuell: $(whoami))." >&2`,`    echo "Hinweis: der hdbuserstore-Key ${e.userstoreKey} existiert nur für ${e.osUser}." >&2`,"    exit 1","fi"].map(t=>t.length>0?n+t:t).join(`
+`)}const S="export_schemas.txt",c="export.conf";function de(){return`${r}
 #  Schemaliste
 #
-#  Die Schemas stehen nicht im Skript, sondern in ${$} im
+#  Die Schemas stehen nicht im Skript, sondern in ${S} im
 #  selben Verzeichnis. Ein Schema pro Zeile; Leerzeilen und Kommentare mit
 #  # werden uebergangen. Aenderungen dort gelten ab dem naechsten Lauf.
 ${r}
 
-SCHEMA_FILE="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)/${$}"
+SCHEMA_FILE="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)/${S}"
 SCHEMAS=()
 SCHEMA_FILE_ISSUES=()
 
@@ -466,9 +519,9 @@ read_schema_file()
     done < "\${SCHEMA_FILE}"
 
     return 0
-}`}const V="##SCHEMA##",Ae=[`SELECT '${V}' || S.SCHEMA_NAME || '##'`,"|| IFNULL(TO_VARCHAR(T.CNT), '0') || '##'","|| IFNULL(TO_VARCHAR(ROUND(M.MB, 1)), '') || '##'","FROM SYS.SCHEMAS S","LEFT JOIN (SELECT SCHEMA_NAME, COUNT(*) AS CNT FROM SYS.TABLES GROUP BY SCHEMA_NAME) T","ON T.SCHEMA_NAME = S.SCHEMA_NAME","LEFT JOIN (SELECT SCHEMA_NAME, SUM(MEMORY_SIZE_IN_TOTAL)/1048576 AS MB FROM SYS.M_CS_TABLES GROUP BY SCHEMA_NAME) M","ON M.SCHEMA_NAME = S.SCHEMA_NAME","WHERE S.SCHEMA_NAME NOT LIKE '\\_SYS%' ESCAPE '\\'","AND S.SCHEMA_NAME NOT IN ('SYS', 'PUBLIC')","ORDER BY S.SCHEMA_NAME;"].join(" ");function Ue(e){return`hdbsql -n ${e.host}:${e.port} -u ${e.dbUser} "${Ae}"`}function _e(e){return{name:"00_schemas_auslesen.cmd",title:"0 · Schemaliste",purpose:"Läuft auf dem Windows-Rechner, holt alle Schemas aus der Datenbank und schreibt schemas.txt für die Auswahl im Wizard.",language:"batch",executable:!1,content:["@echo off","rem Bewusst OHNE enabledelayedexpansion: beim Einlesen ueber eine","rem for-Schleife wuerde die verzoegerte Erweiterung ein Passwort mit",'rem "!" oder "^" stillschweigend veraendern. Die Bloecke unten sind',"rem deshalb ueber Sprungmarken geloest statt ueber if/else.","setlocal","","rem ============================================================","rem  Schemaliste aus SAP HANA holen","rem",`rem  Kunde : ${z(e.customer)||"-"}`,`rem  Ziel  : ${e.host}:${e.port} als ${e.dbUser}`,"rem","rem  Laeuft auf Windows, dort wo der SAP HANA Client installiert ist.","rem  Schreibt schemas.txt neben diese Datei. Die Datei anschliessend",'rem  im HANAScriptGenerator ueber "schemas.txt laden" oeffnen.',"rem",`rem  Erzeugt durch HANAScriptGenerator, Stand ${k}.`,"rem ============================================================","","rem --- Konfiguration ------------------------------------------","","rem Voller Pfad, falls hdbsql nicht im PATH liegt, zum Beispiel:",'rem set "HDBSQL=C:\\Program Files\\SAP\\hdbclient\\hdbsql.exe"','set "HDBSQL=hdbsql"',"",`set "HANA_HOST=${e.host}"`,`set "HANA_PORT=${e.port}"`,`set "HANA_USER=${e.dbUser}"`,"","rem Bei einem Mandantensystem hier den Namen der Datenbank eintragen,","rem zum Beispiel SYSTEMDB oder den Namen des Tenants. Leer lassen, wenn","rem der Port direkt zur gewuenschten Datenbank gehoert.",'set "HANA_DB="',"","rem Optional: Name eines hdbuserstore-Key auf DIESEM Windows-Rechner.","rem Ist er gesetzt, wird nicht nach dem Passwort gefragt.",'set "USERSTORE_KEY="',"",'set "OUTFILE=%~dp0schemas.txt"','set "PWFILE=%TEMP%\\hsg_pw_%RANDOM%.tmp"',"","rem --- hdbsql suchen ------------------------------------------","",'where "%HDBSQL%" >nul 2>&1',"if not errorlevel 1 goto :have_hdbsql",'if exist "%HDBSQL%" goto :have_hdbsql',"","echo FEHLER: hdbsql wurde nicht gefunden: %HDBSQL%","echo.","echo Der SAP HANA Client muss auf diesem Rechner installiert sein.","echo Ueblicher Pfad:","echo   C:\\Program Files\\SAP\\hdbclient\\hdbsql.exe","echo.","echo Diesen Pfad oben im Skript bei HDBSQL eintragen.","echo.","pause","exit /b 1","",":have_hdbsql","","rem --- Abfrage vorbereiten ------------------------------------","",`set "SQL=${Ae.replace(/%/g,"%%")}"`,"",'set "DBOPT="','if defined HANA_DB set "DBOPT=-d %HANA_DB%"',"","if defined USERSTORE_KEY goto :use_key","","rem --- Passwort verdeckt einlesen -----------------------------","rem",'rem  Der Umweg ueber eine Datei und "set /p" ist Absicht. Ein Passwort','rem  aus einer for-Schleife zu uebernehmen veraendert Zeichen wie "!".',"","echo Passwort fuer %HANA_USER% auf %HANA_HOST%:%HANA_PORT%",`powershell -NoProfile -Command "$s = Read-Host -AsSecureString 'Passwort'; [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))" > "%PWFILE%"`,"",'set "HANA_PW="','set /p HANA_PW=<"%PWFILE%"','del "%PWFILE%" >nul 2>&1',"","if not defined HANA_PW goto :no_password","","echo Frage Schemas ab ...","","rem Hinweis: -p uebergibt das Passwort als Argument und macht es kurz","rem in der Prozessliste sichtbar. Fuer diesen einmaligen Aufruf auf dem","rem eigenen Rechner vertretbar. Die erzeugten Linux-Skripte machen das","rem bewusst nicht, sondern nutzen den hdbuserstore.",'"%HDBSQL%" -n %HANA_HOST%:%HANA_PORT% %DBOPT% -u %HANA_USER% -p "%HANA_PW%" "%SQL%" > "%OUTFILE%" 2>&1','set "RC=%errorlevel%"','set "HANA_PW="',"goto :check","",":use_key","echo Frage Schemas ab ueber hdbuserstore-Key %USERSTORE_KEY% ...",'"%HDBSQL%" -U "%USERSTORE_KEY%" "%SQL%" > "%OUTFILE%" 2>&1','set "RC=%errorlevel%"',"goto :check","",":no_password","echo FEHLER: Es wurde kein Passwort eingegeben.","pause","exit /b 1","",":check","","rem --- Ergebnis -----------------------------------------------","",'if "%RC%"=="0" goto :have_answer',"","echo.","echo FEHLER: hdbsql meldete Rueckgabewert %RC%.","echo Antwort der Datenbank:","echo.",'type "%OUTFILE%"',"echo.",'echo Steht dort "authentication failed", dann pruefen:',"echo   - Passwort ohne Tippfehler? Zum Gegentest ohne dieses Skript:",'echo       hdbsql -n %HANA_HOST%:%HANA_PORT% -u %HANA_USER% "SELECT CURRENT_USER FROM DUMMY"',"echo     Dabei fragt hdbsql selbst nach dem Passwort.","echo   - Richtige Datenbank? Bei einem Mandantensystem hat SYSTEM in","echo     SYSTEMDB ein anderes Passwort als im Tenant. Dann oben","echo     HANA_DB setzen oder den Port des Tenants verwenden.","echo.","pause","exit /b %RC%","",":have_answer","",`findstr /C:"${V}" "%OUTFILE%" >nul`,"if not errorlevel 1 goto :done","","echo.","echo WARNUNG: In der Antwort steht kein einziges Schema.","echo Inhalt von schemas.txt:","echo.",'type "%OUTFILE%"',"echo.","pause","exit /b 1","",":done","echo.","echo Gefundene Schemas:","echo.",`for /f "tokens=2 delims=#" %%S in ('findstr /C:"${V}" "%OUTFILE%"') do echo   %%S`,"echo.","echo Geschrieben: %OUTFILE%","echo.",'echo Diese Datei jetzt im HANAScriptGenerator unter "Schemas"','echo ueber "schemas.txt laden" oeffnen.',"echo.","pause",""].join(`\r
-`)}}function ye(e,t){const n=T(e.scriptPath),s=[E,$],o=s.join(" "),a=t.filter(c=>c.name.endsWith(".sh")||c.name.endsWith(".md")||s.includes(c.name)).map(c=>c.name),u=[`sed -i 's/\\r$//' *.sh ${o}`,"chmod 750 *.sh",`chmod 640 ${o}`,`chgrp %TARGET_GROUP% *.sh ${o} 2>/dev/null`].join(" && "),d=`\`for F in ${o}; do test -f $F && echo --exclude=$F; done\``,m=s.map(c=>`(test -f .${c}.keep || test ! -f ${c} || cp -p ${c} .${c}.keep)`).join(" && "),H=s.map(c=>`(test ! -f .${c}.keep || mv -f .${c}.keep ${c})`).join(" && "),S=["@echo off","setlocal enabledelayedexpansion","","rem ============================================================","rem  Dateien auf den HANA-Server uebertragen","rem",`rem  Kunde : ${z(e.customer)||"-"}`,`rem  Ziel  : ${e.osUser}@${e.host}:${n}`,"rem","rem  Nutzt nur Windows-Bordmittel: den OpenSSH-Client (ab Windows 10","rem  Version 1809) und tar (ab 1803).","rem","rem  Aufruf:","rem    00_dateien_uebertragen.cmd         uebertragen, eine Passwortabfrage","rem    00_dateien_uebertragen.cmd --key   einmalig SSH-Schluessel einrichten,","rem                                       danach gar keine Abfrage mehr","rem    00_dateien_uebertragen.cmd --scp   Einzelschritte statt einem Durchgang","rem","rem  Diese Datei muss im selben Ordner liegen wie die Skripte.","rem",`rem  Erzeugt durch HANAScriptGenerator, Stand ${k}.`,"rem ============================================================","","rem --- Konfiguration ------------------------------------------","",`set "SSH_HOST=${e.host}"`,`set "SSH_USER=${e.osUser}"`,'set "SSH_PORT=22"',`set "TARGET_DIR=${n}"`,'set "TARGET_GROUP=sapsys"','set "SSH_KEY=%USERPROFILE%\\.ssh\\id_ed25519"',"",`set "FILES=${a.join(" ")}"`,"","rem --- OpenSSH vorhanden? -------------------------------------","","where ssh >nul 2>&1","if errorlevel 1 goto :no_openssh","where scp >nul 2>&1","if errorlevel 1 goto :no_openssh","",'if /I "%~1"=="--key" goto :setup_key',"","rem --- Liegen alle Dateien hier? ------------------------------","",'pushd "%~dp0"',"",'set "MISSING="','for %%F in (%FILES%) do if not exist "%%F" (',"    echo FEHLER: Datei fehlt in diesem Ordner: %%F",'    set "MISSING=1"',")","if defined MISSING goto :missing","","echo Ziel: %SSH_USER%@%SSH_HOST%:%TARGET_DIR%","echo.","echo Uebertragen werden:","for %%F in (%FILES%) do echo   %%F","echo.",`echo Auf dem Server schon gepflegte ${s.join(" und ")} bleiben unveraendert.`,"echo.","","rem Ist ein Schluessel hinterlegt, entfaellt die Abfrage ganz.",'ssh -o BatchMode=yes -o ConnectTimeout=10 -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "exit" >nul 2>&1',"if errorlevel 1 (","    echo Das Passwort von %SSH_USER% wird einmal abgefragt.","    echo.","    echo Wer es gar nicht mehr eingeben will, richtet einmalig einen","    echo SSH-Schluessel ein:","    echo     %~nx0 --key",") else (","    echo SSH-Schluessel erkannt, es wird kein Passwort abgefragt.",")","echo.","",'if /I "%~1"=="--scp" goto :use_scp',"","rem --- Ein Durchgang ueber tar --------------------------------","rem","rem  tar schreibt den Satz in die SSH-Verbindung, die Gegenseite","rem  entpackt ihn und setzt gleich Zeilenenden, Rechte und Gruppe.","rem  Eine Verbindung, eine Abfrage. Das Passwort liest ssh von der","rem  Konsole und nicht aus der Pipe, deshalb stoert das Umleiten nicht.","","where tar >nul 2>&1","if errorlevel 1 (","    echo Hinweis: tar wurde nicht gefunden, es wird einzeln uebertragen.","    echo.","    goto :use_scp",")","","echo Uebertrage in einem Durchgang ...",`tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - ${d} && ${u}; ls -l *.sh ${o}"`,"if errorlevel 1 goto :transfer_failed","goto :done","","rem --- Einzelschritte -----------------------------------------","rem","rem  Rueckfallweg ohne tar: drei Verbindungen, also drei Abfragen.","",":use_scp","echo [1/3] Lege %TARGET_DIR% an ...",`ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && ${m}"`,"if errorlevel 1 goto :transfer_failed","","echo [2/3] Uebertrage Dateien ...","scp -P %SSH_PORT% %FILES% %SSH_USER%@%SSH_HOST%:%TARGET_DIR%/","if errorlevel 1 goto :transfer_failed","","echo [3/3] Setze Zeilenenden, Rechte und Gruppe ...",`ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && ${H} && ${u}; ls -l *.sh ${o}"`,"if errorlevel 1 goto :transfer_failed","","rem --- Fertig -------------------------------------------------","rem","rem  chown fehlt mit Absicht: den Eigentuemer darf nur root aendern.","rem  Noetig ist es auch nicht, denn was als %SSH_USER% ankommt, gehoert","rem  bereits %SSH_USER%. Die Gruppe laesst sich mit chgrp setzen, weil","rem  der Benutzer ihr angehoert.","",":done","popd","","echo.","echo ============================================================","echo Uebertragung abgeschlossen.","echo.","echo Weiter auf dem Server:","echo   ssh %SSH_USER%@%SSH_HOST%","echo   cd %TARGET_DIR%","echo   ./01_setup_userstore.sh","echo   ./02_prepare_dirs.sh","echo   ./03_preflight.sh","echo ============================================================","echo.","pause","exit /b 0","","rem --- SSH-Schluessel einrichten ------------------------------","rem","rem  Einmal das Passwort, danach nie wieder. Nur der oeffentliche Teil","rem  des Schluessels geht an ~/.ssh/authorized_keys des Servers; der","rem  private Teil verlaesst diesen Rechner nicht.","",":setup_key","echo Richte SSH-Schluessel fuer %SSH_USER%@%SSH_HOST% ein.","echo.","","where ssh-keygen >nul 2>&1","if errorlevel 1 goto :no_openssh","",'if exist "%SSH_KEY%" (',"    echo Vorhandener Schluessel wird verwendet: %SSH_KEY%",") else (","    echo Erzeuge neuen Schluessel: %SSH_KEY%",'    if not exist "%USERPROFILE%\\.ssh" mkdir "%USERPROFILE%\\.ssh"','    ssh-keygen -t ed25519 -N "" -C "HANAScriptGenerator" -f "%SSH_KEY%"',"    if errorlevel 1 goto :key_failed",")","echo.","",'if not exist "%SSH_KEY%.pub" goto :key_failed',"","echo Das Passwort von %SSH_USER% wird jetzt ein letztes Mal gebraucht.","echo.",'type "%SSH_KEY%.pub" | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys; sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys"',"if errorlevel 1 goto :key_failed","","echo.","echo Teste die Anmeldung ohne Passwort ...",'ssh -o BatchMode=yes -o ConnectTimeout=10 -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "echo Anmeldung ohne Passwort funktioniert."',"if errorlevel 1 (","    echo.","    echo WARNUNG: Der Test ist fehlgeschlagen.","    echo Manche Server verbieten die Schluesselanmeldung oder verlangen","    echo strengere Rechte. Auf dem Server als %SSH_USER% pruefen:","    echo   chmod 700 ~/.ssh","    echo   chmod 600 ~/.ssh/authorized_keys","    echo.","    pause","    exit /b 1",")","","echo.","echo Fertig. Jetzt ohne Schalter starten, es wird kein Passwort mehr","echo abgefragt:","echo   %~nx0","echo.","pause","exit /b 0","","rem --- Fehlerfaelle -------------------------------------------","",":no_openssh","echo FEHLER: ssh, scp oder ssh-keygen wurde nicht gefunden.","echo.","echo Der OpenSSH-Client ist ein Windows-Bordmittel, aber nicht auf","echo jedem System eingeschaltet. Einschalten unter:","echo   Einstellungen - Apps - Optionale Features - OpenSSH-Client","echo.","echo Oder in einer PowerShell als Administrator:","echo   Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0","echo.","pause","exit /b 1","",":missing","popd","echo.","echo Diese Datei muss im selben Ordner liegen wie die erzeugten","echo Skripte. Das ZIP also vollstaendig entpacken und erst dann","echo starten.","echo.","pause","exit /b 1","",":transfer_failed","popd","echo.","echo FEHLER: Die Uebertragung ist fehlgeschlagen.","echo Zu pruefen:","echo   - Ist %SSH_HOST% ueber SSH erreichbar? Test: ssh %SSH_USER%@%SSH_HOST%","echo   - Stimmt der Benutzer %SSH_USER%?","echo   - Darf %SSH_USER% in %TARGET_DIR% schreiben?","echo.","echo Mit %~nx0 --scp laufen die Schritte einzeln, das zeigt genauer,","echo woran es scheitert.","echo.","pause","exit /b 1","",":key_failed","echo.","echo FEHLER: Der Schluessel konnte nicht eingerichtet werden.","echo Die Meldung darueber sagt, woran es lag.","echo.","pause","exit /b 1",""];return{name:"00_dateien_uebertragen.cmd",title:"0 · Übertragen",purpose:`Überträgt die Skripte nach ${e.osUser}@${e.host}:${n} und setzt Zeilenenden, Rechte und Gruppe – in einem Durchgang mit einer Passwortabfrage, mit --key ganz ohne.`,language:"batch",executable:!1,content:S.join(`\r
-`)}}function Ke(e){const t=`${L(e,"Schritt 1 – hdbuserstore-Key anlegen",["Der hdbuserstore ist benutzerspezifisch. Key und Cronjob muessen",`deshalb beide unter ${e.osUser} eingerichtet werden.`,"Das Passwort wird interaktiv abgefragt und nirgends abgelegt."])}
+}`}const W="##SCHEMA##",Ae=[`SELECT '${W}' || S.SCHEMA_NAME || '##'`,"|| IFNULL(TO_VARCHAR(T.CNT), '0') || '##'","|| IFNULL(TO_VARCHAR(ROUND(M.MB, 1)), '') || '##'","FROM SYS.SCHEMAS S","LEFT JOIN (SELECT SCHEMA_NAME, COUNT(*) AS CNT FROM SYS.TABLES GROUP BY SCHEMA_NAME) T","ON T.SCHEMA_NAME = S.SCHEMA_NAME","LEFT JOIN (SELECT SCHEMA_NAME, SUM(MEMORY_SIZE_IN_TOTAL)/1048576 AS MB FROM SYS.M_CS_TABLES GROUP BY SCHEMA_NAME) M","ON M.SCHEMA_NAME = S.SCHEMA_NAME","WHERE S.SCHEMA_NAME NOT LIKE '\\_SYS%' ESCAPE '\\'","AND S.SCHEMA_NAME NOT IN ('SYS', 'PUBLIC')","ORDER BY S.SCHEMA_NAME;"].join(" ");function Ge(e){return`hdbsql -n ${e.host}:${e.port} -u ${e.dbUser} "${Ae}"`}function Re(e){return{name:"00_schemas_auslesen.cmd",title:"0 · Schemaliste",purpose:"Läuft auf dem Windows-Rechner, holt alle Schemas aus der Datenbank und schreibt schemas.txt für die Auswahl im Wizard.",language:"batch",executable:!1,content:["@echo off","rem Bewusst OHNE enabledelayedexpansion: beim Einlesen ueber eine","rem for-Schleife wuerde die verzoegerte Erweiterung ein Passwort mit",'rem "!" oder "^" stillschweigend veraendern. Die Bloecke unten sind',"rem deshalb ueber Sprungmarken geloest statt ueber if/else.","setlocal","","rem ============================================================","rem  Schemaliste aus SAP HANA holen","rem",`rem  Kunde : ${y(e.customer)||"-"}`,`rem  Ziel  : ${e.host}:${e.port} als ${e.dbUser}`,"rem","rem  Laeuft auf Windows, dort wo der SAP HANA Client installiert ist.","rem  Schreibt schemas.txt neben diese Datei. Die Datei anschliessend",'rem  im HANAScriptGenerator ueber "schemas.txt laden" oeffnen.',"rem",`rem  Erzeugt durch HANAScriptGenerator, Stand ${w}.`,"rem ============================================================","","rem --- Konfiguration ------------------------------------------","","rem Voller Pfad, falls hdbsql nicht im PATH liegt, zum Beispiel:",'rem set "HDBSQL=C:\\Program Files\\SAP\\hdbclient\\hdbsql.exe"','set "HDBSQL=hdbsql"',"",`set "HANA_HOST=${e.host}"`,`set "HANA_PORT=${e.port}"`,`set "HANA_USER=${e.dbUser}"`,"","rem Bei einem Mandantensystem hier den Namen der Datenbank eintragen,","rem zum Beispiel SYSTEMDB oder den Namen des Tenants. Leer lassen, wenn","rem der Port direkt zur gewuenschten Datenbank gehoert.",'set "HANA_DB="',"","rem Optional: Name eines hdbuserstore-Key auf DIESEM Windows-Rechner.","rem Ist er gesetzt, wird nicht nach dem Passwort gefragt.",'set "USERSTORE_KEY="',"",'set "OUTFILE=%~dp0schemas.txt"','set "PWFILE=%TEMP%\\hsg_pw_%RANDOM%.tmp"',"","rem --- hdbsql suchen ------------------------------------------","",'where "%HDBSQL%" >nul 2>&1',"if not errorlevel 1 goto :have_hdbsql",'if exist "%HDBSQL%" goto :have_hdbsql',"","echo FEHLER: hdbsql wurde nicht gefunden: %HDBSQL%","echo.","echo Der SAP HANA Client muss auf diesem Rechner installiert sein.","echo Ueblicher Pfad:","echo   C:\\Program Files\\SAP\\hdbclient\\hdbsql.exe","echo.","echo Diesen Pfad oben im Skript bei HDBSQL eintragen.","echo.","pause","exit /b 1","",":have_hdbsql","","rem --- Abfrage vorbereiten ------------------------------------","",`set "SQL=${Ae.replace(/%/g,"%%")}"`,"",'set "DBOPT="','if defined HANA_DB set "DBOPT=-d %HANA_DB%"',"","if defined USERSTORE_KEY goto :use_key","","rem --- Passwort verdeckt einlesen -----------------------------","rem",'rem  Der Umweg ueber eine Datei und "set /p" ist Absicht. Ein Passwort','rem  aus einer for-Schleife zu uebernehmen veraendert Zeichen wie "!".',"","echo Passwort fuer %HANA_USER% auf %HANA_HOST%:%HANA_PORT%",`powershell -NoProfile -Command "$s = Read-Host -AsSecureString 'Passwort'; [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))" > "%PWFILE%"`,"",'set "HANA_PW="','set /p HANA_PW=<"%PWFILE%"','del "%PWFILE%" >nul 2>&1',"","if not defined HANA_PW goto :no_password","","echo Frage Schemas ab ...","","rem Hinweis: -p uebergibt das Passwort als Argument und macht es kurz","rem in der Prozessliste sichtbar. Fuer diesen einmaligen Aufruf auf dem","rem eigenen Rechner vertretbar. Die erzeugten Linux-Skripte machen das","rem bewusst nicht, sondern nutzen den hdbuserstore.",'"%HDBSQL%" -n %HANA_HOST%:%HANA_PORT% %DBOPT% -u %HANA_USER% -p "%HANA_PW%" "%SQL%" > "%OUTFILE%" 2>&1','set "RC=%errorlevel%"','set "HANA_PW="',"goto :check","",":use_key","echo Frage Schemas ab ueber hdbuserstore-Key %USERSTORE_KEY% ...",'"%HDBSQL%" -U "%USERSTORE_KEY%" "%SQL%" > "%OUTFILE%" 2>&1','set "RC=%errorlevel%"',"goto :check","",":no_password","echo FEHLER: Es wurde kein Passwort eingegeben.","pause","exit /b 1","",":check","","rem --- Ergebnis -----------------------------------------------","",'if "%RC%"=="0" goto :have_answer',"","echo.","echo FEHLER: hdbsql meldete Rueckgabewert %RC%.","echo Antwort der Datenbank:","echo.",'type "%OUTFILE%"',"echo.",'echo Steht dort "authentication failed", dann pruefen:',"echo   - Passwort ohne Tippfehler? Zum Gegentest ohne dieses Skript:",'echo       hdbsql -n %HANA_HOST%:%HANA_PORT% -u %HANA_USER% "SELECT CURRENT_USER FROM DUMMY"',"echo     Dabei fragt hdbsql selbst nach dem Passwort.","echo   - Richtige Datenbank? Bei einem Mandantensystem hat SYSTEM in","echo     SYSTEMDB ein anderes Passwort als im Tenant. Dann oben","echo     HANA_DB setzen oder den Port des Tenants verwenden.","echo.","pause","exit /b %RC%","",":have_answer","",`findstr /C:"${W}" "%OUTFILE%" >nul`,"if not errorlevel 1 goto :done","","echo.","echo WARNUNG: In der Antwort steht kein einziges Schema.","echo Inhalt von schemas.txt:","echo.",'type "%OUTFILE%"',"echo.","pause","exit /b 1","",":done","echo.","echo Gefundene Schemas:","echo.",`for /f "tokens=2 delims=#" %%S in ('findstr /C:"${W}" "%OUTFILE%"') do echo   %%S`,"echo.","echo Geschrieben: %OUTFILE%","echo.",'echo Diese Datei jetzt im HANAScriptGenerator unter "Schemas"','echo ueber "schemas.txt laden" oeffnen.',"echo.","pause",""].join(`\r
+`)}}function Xe(e,n){const t=O(e.scriptPath),s=[c,S],d=s.join(" "),a=n.filter(f=>f.name.endsWith(".sh")||f.name.endsWith(".md")||s.includes(f.name)).map(f=>f.name),u=[`sed -i 's/\\r$//' *.sh ${d}`,"chmod 750 *.sh",`chmod 600 ${c}`,`chmod 640 ${S}`,`chgrp %TARGET_GROUP% *.sh ${d} 2>/dev/null`].join(" && "),o=`\`for F in ${d}; do test -f $F && echo --exclude=$F; done\``,m=s.map(f=>`(test -f .${f}.keep || test ! -f ${f} || cp -p ${f} .${f}.keep)`).join(" && "),b=s.map(f=>`(test ! -f .${f}.keep || mv -f .${f}.keep ${f})`).join(" && "),E=["@echo off","setlocal enabledelayedexpansion","","rem ============================================================","rem  Dateien auf den HANA-Server uebertragen","rem",`rem  Kunde : ${y(e.customer)||"-"}`,`rem  Ziel  : ${e.osUser}@${e.host}:${t}`,"rem","rem  Nutzt nur Windows-Bordmittel: den OpenSSH-Client (ab Windows 10","rem  Version 1809) und tar (ab 1803).","rem","rem  Aufruf:","rem    00_dateien_uebertragen.cmd         uebertragen, eine Passwortabfrage","rem    00_dateien_uebertragen.cmd --key   einmalig SSH-Schluessel einrichten,","rem                                       danach gar keine Abfrage mehr","rem    00_dateien_uebertragen.cmd --scp   Einzelschritte statt einem Durchgang","rem","rem  Diese Datei muss im selben Ordner liegen wie die Skripte.","rem",`rem  Erzeugt durch HANAScriptGenerator, Stand ${w}.`,"rem ============================================================","","rem --- Konfiguration ------------------------------------------","",`set "SSH_HOST=${e.host}"`,`set "SSH_USER=${e.osUser}"`,'set "SSH_PORT=22"',`set "TARGET_DIR=${t}"`,'set "TARGET_GROUP=sapsys"','set "SSH_KEY=%USERPROFILE%\\.ssh\\id_ed25519"',"",`set "FILES=${a.join(" ")}"`,"","rem --- OpenSSH vorhanden? -------------------------------------","","where ssh >nul 2>&1","if errorlevel 1 goto :no_openssh","where scp >nul 2>&1","if errorlevel 1 goto :no_openssh","",'if /I "%~1"=="--key" goto :setup_key',"","rem --- Liegen alle Dateien hier? ------------------------------","",'pushd "%~dp0"',"",'set "MISSING="','for %%F in (%FILES%) do if not exist "%%F" (',"    echo FEHLER: Datei fehlt in diesem Ordner: %%F",'    set "MISSING=1"',")","if defined MISSING goto :missing","","echo Ziel: %SSH_USER%@%SSH_HOST%:%TARGET_DIR%","echo.","echo Uebertragen werden:","for %%F in (%FILES%) do echo   %%F","echo.",`echo Auf dem Server schon gepflegte ${s.join(" und ")} bleiben unveraendert.`,"echo.","","rem Ist ein Schluessel hinterlegt, entfaellt die Abfrage ganz.",'ssh -o BatchMode=yes -o ConnectTimeout=10 -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "exit" >nul 2>&1',"if errorlevel 1 (","    echo Das Passwort von %SSH_USER% wird einmal abgefragt.","    echo.","    echo Wer es gar nicht mehr eingeben will, richtet einmalig einen","    echo SSH-Schluessel ein:","    echo     %~nx0 --key",") else (","    echo SSH-Schluessel erkannt, es wird kein Passwort abgefragt.",")","echo.","",'if /I "%~1"=="--scp" goto :use_scp',"","rem --- Ein Durchgang ueber tar --------------------------------","rem","rem  tar schreibt den Satz in die SSH-Verbindung, die Gegenseite","rem  entpackt ihn und setzt gleich Zeilenenden, Rechte und Gruppe.","rem  Eine Verbindung, eine Abfrage. Das Passwort liest ssh von der","rem  Konsole und nicht aus der Pipe, deshalb stoert das Umleiten nicht.","","where tar >nul 2>&1","if errorlevel 1 (","    echo Hinweis: tar wurde nicht gefunden, es wird einzeln uebertragen.","    echo.","    goto :use_scp",")","","echo Uebertrage in einem Durchgang ...",`tar -cf - %FILES% | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && tar -xf - ${o} && ${u}; ls -l *.sh ${d}"`,"if errorlevel 1 goto :transfer_failed","goto :done","","rem --- Einzelschritte -----------------------------------------","rem","rem  Rueckfallweg ohne tar: drei Verbindungen, also drei Abfragen.","",":use_scp","echo [1/3] Lege %TARGET_DIR% an ...",`ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "mkdir -p '%TARGET_DIR%' && cd '%TARGET_DIR%' && ${m}"`,"if errorlevel 1 goto :transfer_failed","","echo [2/3] Uebertrage Dateien ...","scp -P %SSH_PORT% %FILES% %SSH_USER%@%SSH_HOST%:%TARGET_DIR%/","if errorlevel 1 goto :transfer_failed","","echo [3/3] Setze Zeilenenden, Rechte und Gruppe ...",`ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "cd '%TARGET_DIR%' && ${b} && ${u}; ls -l *.sh ${d}"`,"if errorlevel 1 goto :transfer_failed","","rem --- Fertig -------------------------------------------------","rem","rem  chown fehlt mit Absicht: den Eigentuemer darf nur root aendern.","rem  Noetig ist es auch nicht, denn was als %SSH_USER% ankommt, gehoert","rem  bereits %SSH_USER%. Die Gruppe laesst sich mit chgrp setzen, weil","rem  der Benutzer ihr angehoert.","",":done","popd","","echo.","echo ============================================================","echo Uebertragung abgeschlossen.","echo.","echo Weiter auf dem Server:","echo   ssh %SSH_USER%@%SSH_HOST%","echo   cd %TARGET_DIR%","echo   ./01_setup_userstore.sh","echo   ./02_prepare_dirs.sh","echo   ./03_preflight.sh","echo ============================================================","echo.","pause","exit /b 0","","rem --- SSH-Schluessel einrichten ------------------------------","rem","rem  Einmal das Passwort, danach nie wieder. Nur der oeffentliche Teil","rem  des Schluessels geht an ~/.ssh/authorized_keys des Servers; der","rem  private Teil verlaesst diesen Rechner nicht.","",":setup_key","echo Richte SSH-Schluessel fuer %SSH_USER%@%SSH_HOST% ein.","echo.","","where ssh-keygen >nul 2>&1","if errorlevel 1 goto :no_openssh","",'if exist "%SSH_KEY%" (',"    echo Vorhandener Schluessel wird verwendet: %SSH_KEY%",") else (","    echo Erzeuge neuen Schluessel: %SSH_KEY%",'    if not exist "%USERPROFILE%\\.ssh" mkdir "%USERPROFILE%\\.ssh"','    ssh-keygen -t ed25519 -N "" -C "HANAScriptGenerator" -f "%SSH_KEY%"',"    if errorlevel 1 goto :key_failed",")","echo.","",'if not exist "%SSH_KEY%.pub" goto :key_failed',"","echo Das Passwort von %SSH_USER% wird jetzt ein letztes Mal gebraucht.","echo.",'type "%SSH_KEY%.pub" | ssh -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys; sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys"',"if errorlevel 1 goto :key_failed","","echo.","echo Teste die Anmeldung ohne Passwort ...",'ssh -o BatchMode=yes -o ConnectTimeout=10 -p %SSH_PORT% %SSH_USER%@%SSH_HOST% "echo Anmeldung ohne Passwort funktioniert."',"if errorlevel 1 (","    echo.","    echo WARNUNG: Der Test ist fehlgeschlagen.","    echo Manche Server verbieten die Schluesselanmeldung oder verlangen","    echo strengere Rechte. Auf dem Server als %SSH_USER% pruefen:","    echo   chmod 700 ~/.ssh","    echo   chmod 600 ~/.ssh/authorized_keys","    echo.","    pause","    exit /b 1",")","","echo.","echo Fertig. Jetzt ohne Schalter starten, es wird kein Passwort mehr","echo abgefragt:","echo   %~nx0","echo.","pause","exit /b 0","","rem --- Fehlerfaelle -------------------------------------------","",":no_openssh","echo FEHLER: ssh, scp oder ssh-keygen wurde nicht gefunden.","echo.","echo Der OpenSSH-Client ist ein Windows-Bordmittel, aber nicht auf","echo jedem System eingeschaltet. Einschalten unter:","echo   Einstellungen - Apps - Optionale Features - OpenSSH-Client","echo.","echo Oder in einer PowerShell als Administrator:","echo   Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0","echo.","pause","exit /b 1","",":missing","popd","echo.","echo Diese Datei muss im selben Ordner liegen wie die erzeugten","echo Skripte. Das ZIP also vollstaendig entpacken und erst dann","echo starten.","echo.","pause","exit /b 1","",":transfer_failed","popd","echo.","echo FEHLER: Die Uebertragung ist fehlgeschlagen.","echo Zu pruefen:","echo   - Ist %SSH_HOST% ueber SSH erreichbar? Test: ssh %SSH_USER%@%SSH_HOST%","echo   - Stimmt der Benutzer %SSH_USER%?","echo   - Darf %SSH_USER% in %TARGET_DIR% schreiben?","echo.","echo Mit %~nx0 --scp laufen die Schritte einzeln, das zeigt genauer,","echo woran es scheitert.","echo.","pause","exit /b 1","",":key_failed","echo.","echo FEHLER: Der Schluessel konnte nicht eingerichtet werden.","echo Die Meldung darueber sagt, woran es lag.","echo.","pause","exit /b 1",""];return{name:"00_dateien_uebertragen.cmd",title:"0 · Übertragen",purpose:`Überträgt die Skripte nach ${e.osUser}@${e.host}:${t} und setzt Zeilenenden, Rechte und Gruppe – in einem Durchgang mit einer Passwortabfrage, mit --key ganz ohne.`,language:"batch",executable:!1,content:E.join(`\r
+`)}}function Ve(e){const n=`${C(e,"Schritt 1 – hdbuserstore-Key anlegen",["Der hdbuserstore ist benutzerspezifisch. Key und Cronjob muessen",`deshalb beide unter ${e.osUser} eingerichtet werden.`,"Das Passwort wird interaktiv abgefragt und nirgends abgelegt."])}
 
 set -u
 
@@ -476,7 +529,7 @@ HANA_KEY="${e.userstoreKey}"
 HANA_ENV="${e.host}:${e.port}"
 HANA_USER="${e.dbUser}"
 
-${P(e)}
+${N(e)}
 
 ${r}
 #  hdbuserstore verfuegbar?
@@ -594,14 +647,14 @@ fi
 
 echo
 echo "Schritt 1 abgeschlossen."
-`;return{name:"01_setup_userstore.sh",title:"1 · Userstore",purpose:`Legt den hdbuserstore-Key ${e.userstoreKey} für ${e.osUser} an und testet ihn sofort.`,language:"bash",executable:!0,content:t}}function Ye(e){const t=T(e.scriptPath),n=`${L(e,"Schritt 2 – Verzeichnisse vorbereiten",[`Exportbasis: ${e.exportBase}`,"Legt Basis, Log- und Vermerkverzeichnis an und prueft das Schreibrecht.","Die Tagesordner entstehen erst beim Export."])}
+`;return{name:"01_setup_userstore.sh",title:"1 · Userstore",purpose:`Legt den hdbuserstore-Key ${e.userstoreKey} für ${e.osUser} an und testet ihn sofort.`,language:"bash",executable:!0,content:n}}function We(e){const n=O(e.scriptPath),t=`${C(e,"Schritt 2 – Verzeichnisse vorbereiten",[`Exportbasis: ${e.exportBase}`,"Legt Basis, Log- und Vermerkverzeichnis an und prueft das Schreibrecht.","Die Tagesordner entstehen erst beim Export."])}
 
 set -u
 
 EXPORT_BASE="${e.exportBase}"
-SCRIPT_DIR="${t}"
+SCRIPT_DIR="${n}"
 
-${P(e)}
+${N(e)}
 
 ${r}
 #  Verzeichnisse anlegen
@@ -685,18 +738,18 @@ echo
 df -h "\${EXPORT_BASE}"
 echo
 echo "Schritt 2 abgeschlossen."
-`;return{name:"02_prepare_dirs.sh",title:"2 · Verzeichnisse",purpose:`Legt ${e.exportBase} samt Log- und Vermerkverzeichnis an und prüft das Schreibrecht.`,language:"bash",executable:!0,content:n}}const Ge=["THREADS","RETENTION_DAYS","MIN_FREE_GB","KEEP_RAW_EXPORT","MAIL_ENABLED","MAIL_RECIPIENT","MAIL_ONLY_ON_ERROR","MAIL_COMMAND"],Xe=["BOX_HOST","BOX_USER","BOX_PORT","BOX_PATH","REMOTE_RETENTION_DAYS"],he=e=>e?"yes":"no";function W(e){const t=e.offload,n=[{title:"Export",entries:[{key:"THREADS",kind:"count",value:String(e.threads),description:"Parallele Threads für EXPORT und IMPORT."},{key:"RETENTION_DAYS",kind:"count",value:String(e.retentionDays),description:"Lokale Aufbewahrung in Tagen. Ältere Tagesordner und Logs entfernt jeder Lauf."},{key:"MIN_FREE_GB",kind:"number",value:String(e.minFreeGb),description:"Mindestens freier Speicher in GB vor dem Export, 0 = keine Prüfung."},{key:"KEEP_RAW_EXPORT",kind:"yesno",value:he(e.keepRawExport),description:"yes = unkomprimiertes Exportverzeichnis zusätzlich behalten."}]},{title:"Mail",entries:[{key:"MAIL_ENABLED",kind:"yesno",value:he(e.mail.enabled),description:"yes = nach dem Lauf eine Mail schicken."},{key:"MAIL_RECIPIENT",kind:"text",value:e.mail.recipient,description:"Empfängeradresse."},{key:"MAIL_ONLY_ON_ERROR",kind:"yesno",value:he(e.mail.onlyOnError),description:"yes = nur bei Fehlern oder Hinweisen mailen, no = nach jedem Lauf."},{key:"MAIL_COMMAND",kind:"text",value:e.mail.command,description:"Mailprogramm, aufgerufen als: PROGRAMM -s BETREFF ADRESSE."}]}];return t.enabled&&n.push({title:"StorageBox",entries:[{key:"BOX_HOST",kind:"word",value:t.host,description:"Hostname der Storage Box."},{key:"BOX_USER",kind:"word",value:t.user,description:"Benutzer bzw. Unterkonto auf der Box."},{key:"BOX_PORT",kind:"port",value:String(t.port),description:"SSH-Port. Hetzner verwendet auf einer Storage Box 23, nicht 22."},{key:"BOX_PATH",kind:"path",value:t.remotePath,description:"Zielverzeichnis auf der Box, darunter je Tag ein Ordner. Nicht / oder /home."},{key:"REMOTE_RETENTION_DAYS",kind:"number",value:String(t.remoteRetentionDays),description:"Aufbewahrung auf der Box in Tagen, 0 = dort nichts löschen."}]}),n}function Ve(e){return W(e).flatMap(t=>t.entries.map(n=>n.key))}function We(e){return e.replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss")}function Ze(e){return/[\s#'"]/.test(e)?`"${e.replace(/"/g,"")}"`:e}function qe(e){const t=`${T(e.scriptPath)}/${E}`,n=W(e).map(o=>[r,`#  ${o.title}`,r,"",...o.entries.flatMap(a=>[`# ${We(a.description)}`,`${a.key}=${Ze(a.value)}`,""])].join(`
-`)),s=[_,"#  Einstellungen fuer den Schema-Export","#",`#  Kunde  : ${z(e.customer)||"-"}`,`#  Tenant : ${e.sid} (Instanz ${e.instance})`,`#  Datei  : ${t}`,"#","#  Eine Einstellung pro Zeile als SCHLUESSEL=Wert. Leerzeilen und Zeilen",'#  mit # am Anfang werden uebergangen, Werte mit Leerzeichen in "...".',"#","#  Die Skripte lesen die Datei bei jedem Lauf. Aenderungen gelten ab dem","#  naechsten Lauf; danach pruefen mit:  ./03_preflight.sh","#","#  Nicht hier, sondern in Skripten und Crontab: SID, Benutzer,","#  hdbuserstore-Key, Pfade, Komprimierung und die Uhrzeit des Laufs.","#",`#  Erzeugt durch ${ie}, Stand ${k}.`,_,"",...n].join(`
-`);return{name:E,title:"Einstellungen",purpose:"Betriebswerte wie Aufbewahrung, Threads, Mail und StorageBox. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ändern.",language:"text",executable:!1,content:s}}function K(e){const t=W(e).flatMap(n=>n.entries).map(n=>`        [${n.key}]=${n.kind}`).join(`
+`;return{name:"02_prepare_dirs.sh",title:"2 · Verzeichnisse",purpose:`Legt ${e.exportBase} samt Log- und Vermerkverzeichnis an und prüft das Schreibrecht.`,language:"bash",executable:!0,content:t}}const Ze=["THREADS","RETENTION_DAYS","MIN_FREE_GB","KEEP_RAW_EXPORT","MAIL_ENABLED","MAIL_RECIPIENT","MAIL_ONLY_ON_ERROR","MAIL_COMMAND"],je=["BOX_HOST","BOX_USER","BOX_PORT","BOX_PATH","REMOTE_RETENTION_DAYS"],Te=["NOTIFY_ENABLED","NOTIFY_PING_URL","NOTIFY_PING_URL_OFFLOAD","NOTIFY_MAX_LINES","NOTIFY_PROXY"];function qe(e){return[...Ze,...e.notify.enabled?Te:[]]}function Je(e){return[...je,...e.notify.enabled?Te:[]]}const Z=e=>e?"yes":"no";function j(e){const n=e.offload,t=[{title:"Export",entries:[{key:"THREADS",kind:"count",value:String(e.threads),description:"Parallele Threads für EXPORT und IMPORT."},{key:"RETENTION_DAYS",kind:"count",value:String(e.retentionDays),description:"Lokale Aufbewahrung in Tagen. Ältere Tagesordner und Logs entfernt jeder Lauf."},{key:"MIN_FREE_GB",kind:"number",value:String(e.minFreeGb),description:"Mindestens freier Speicher in GB vor dem Export, 0 = keine Prüfung."},{key:"KEEP_RAW_EXPORT",kind:"yesno",value:Z(e.keepRawExport),description:"yes = unkomprimiertes Exportverzeichnis zusätzlich behalten."}]},{title:"Mail",entries:[{key:"MAIL_ENABLED",kind:"yesno",value:Z(e.mail.enabled),description:"yes = nach dem Lauf eine Mail schicken."},{key:"MAIL_RECIPIENT",kind:"text",value:e.mail.recipient,description:"Empfängeradresse."},{key:"MAIL_ONLY_ON_ERROR",kind:"yesno",value:Z(e.mail.onlyOnError),description:"yes = nur bei Fehlern oder Hinweisen mailen, no = nach jedem Lauf."},{key:"MAIL_COMMAND",kind:"text",value:e.mail.command,description:"Mailprogramm, aufgerufen als: PROGRAMM -s BETREFF ADRESSE."}]}];if(e.notify.enabled){const s=e.notify;t.push({title:"Ueberwachung",entries:[{key:"NOTIFY_ENABLED",kind:"yesno",value:Z(s.enabled),description:"yes = Beginn und Ende jedes Laufs an den Ping-Dienst melden."},{key:"NOTIFY_PING_URL",kind:"text",value:s.url,description:"Ping-Adresse des Checks fuer den Export, z. B. https://hc-ping.com/<uuid>."},{key:"NOTIFY_PING_URL_OFFLOAD",kind:"text",value:s.offloadUrl,description:"Eigener Check fuer die Auslagerung, leer = keiner. Nie derselbe wie oben."},{key:"NOTIFY_MAX_LINES",kind:"number",value:String(s.maxDetailLines),description:"Wie viele Zeilen aus dem Log mitgeschickt werden, 0 = nur die Kopfdaten."},{key:"NOTIFY_PROXY",kind:"text",value:s.proxy,description:"Proxy als http://host:port, leer = direkt hinaus."}]})}return n.enabled&&t.push({title:"StorageBox",entries:[{key:"BOX_HOST",kind:"word",value:n.host,description:"Hostname der Storage Box."},{key:"BOX_USER",kind:"word",value:n.user,description:"Benutzer bzw. Unterkonto auf der Box."},{key:"BOX_PORT",kind:"port",value:String(n.port),description:"SSH-Port. Hetzner verwendet auf einer Storage Box 23, nicht 22."},{key:"BOX_PATH",kind:"path",value:n.remotePath,description:"Zielverzeichnis auf der Box, darunter je Tag ein Ordner. Nicht / oder /home."},{key:"REMOTE_RETENTION_DAYS",kind:"number",value:String(n.remoteRetentionDays),description:"Aufbewahrung auf der Box in Tagen, 0 = dort nichts löschen."}]}),t}function Qe(e){return j(e).flatMap(n=>n.entries.map(t=>t.key))}function en(e){return e.replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss")}function nn(e){return/[\s#'"]/.test(e)?`"${e.replace(/"/g,"")}"`:e}function tn(e){const n=`${O(e.scriptPath)}/${c}`,t=j(e).map(d=>[r,`#  ${d.title}`,r,"",...d.entries.flatMap(a=>[`# ${en(a.description)}`,`${a.key}=${nn(a.value)}`,""])].join(`
+`)),s=[R,"#  Einstellungen fuer den Schema-Export","#",`#  Kunde  : ${y(e.customer)||"-"}`,`#  Tenant : ${e.sid} (Instanz ${e.instance})`,`#  Datei  : ${n}`,"#","#  Eine Einstellung pro Zeile als SCHLUESSEL=Wert. Leerzeilen und Zeilen",'#  mit # am Anfang werden uebergangen, Werte mit Leerzeichen in "...".',"#","#  Die Skripte lesen die Datei bei jedem Lauf. Aenderungen gelten ab dem","#  naechsten Lauf; danach pruefen mit:  ./03_preflight.sh","#","#  Nicht hier, sondern in Skripten und Crontab: SID, Benutzer,","#  hdbuserstore-Key, Pfade, Komprimierung und die Uhrzeit des Laufs.","#",`#  Erzeugt durch ${oe}, Stand ${w}.`,R,"",...t].join(`
+`);return{name:c,title:"Einstellungen",purpose:"Betriebswerte wie Aufbewahrung, Threads, Mail, Ueberwachung und StorageBox. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ändern.",language:"text",executable:!1,content:s}}function K(e){const n=j(e).flatMap(t=>t.entries).map(t=>`        [${t.key}]=${t.kind}`).join(`
 `);return`${r}
 #  Einstellungen
 #
-#  Betriebswerte wie Aufbewahrung, Threads, Mail und StorageBox stehen nicht
-#  im Skript, sondern in ${E} im selben Verzeichnis. Die Datei
+#  Betriebswerte wie Aufbewahrung, Threads, Mail, Ueberwachung und StorageBox stehen nicht
+#  im Skript, sondern in ${c} im selben Verzeichnis. Die Datei
 #  wird zeilenweise gelesen und nicht mit "source" geladen.
 ${r}
 
-EXPORT_CONF="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)/${E}"
+EXPORT_CONF="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)/${c}"
 CONF_ISSUES=()
 CONF_ERRORS=()
 
@@ -719,7 +772,7 @@ read_export_conf()
     local PATH_PATTERN='^/[^[:space:]]*$'
 
     local -A KINDS=(
-${t}
+${n}
     )
     local -A EXPECTED=(
         [count]="eine ganze Zahl ab 1"
@@ -806,7 +859,7 @@ ${t}
 
     [ \${#CONF_ERRORS[@]} -eq 0 ] || return 2
     return 0
-}`}function Re(e){return`read_export_conf ${e.join(" ")}
+}`}function Oe(e){return`read_export_conf ${e.join(" ")}
 case $? in
     0)
         ;;
@@ -815,10 +868,210 @@ case $? in
         exit 1
         ;;
     *)
-        printf 'FEHLER: ${E}: %s\\n' "\${CONF_ERRORS[@]}" >&2
+        printf 'FEHLER: ${c}: %s\\n' "\${CONF_ERRORS[@]}" >&2
         exit 1
         ;;
-esac`}function Je(e){const t=e.compression==="zst",n=e.offload;return{name:"03_preflight.sh",title:"3 · Vorabprüfung",purpose:"Prüft Client, Verbindung, Schemas, Werkzeuge und Speicherplatz, ohne etwas zu verändern.",language:"bash",executable:!0,content:`${L(e,"Schritt 3 – Vorabpruefung",["Prueft alle Voraussetzungen des spaeteren Exports.","Dieses Skript veraendert nichts und kann jederzeit wiederholt werden."])}
+esac`}function q(e){return e==="export"?"NOTIFY_PING_URL":"NOTIFY_PING_URL_OFFLOAD"}function De(){return`# Zeilen, die als Inhalt der Abschlussmeldung mitgehen.
+NTF_BODY=()
+# Je Schema eine Zeile für die Übersicht in der Meldung.
+NTF_ROWS=()
+
+notify_add()
+{
+    NTF_BODY+=("$*")
+}
+
+# Sekunden als m:ss oder h:mm:ss.
+notify_duration()
+{
+    local S="\${1:-0}"
+
+    if [ "\${S}" -ge 3600 ]; then
+        printf '%d:%02d:%02d' $((S / 3600)) $(((S % 3600) / 60)) $((S % 60))
+    else
+        printf '%d:%02d' $((S / 60)) $((S % 60))
+    fi
+}
+
+# notify_row SCHEMA ZUSTAND GROESSE SEKUNDEN
+#
+# Feste Spaltenbreiten, damit die Tabelle in der Weboberfläche des Dienstes
+# untereinander steht. Schemanamen duerfen bis 127 Zeichen lang sein; die
+# Spalte laeuft dann ueber, statt den Namen abzuschneiden – der Name ist die
+# Information, die Ausrichtung nur Bequemlichkeit.
+notify_row()
+{
+    NTF_ROWS+=("$(printf '%-22s %-14s %8s %9s' "\${1}" "\${2}" "\${3:--}" "$(notify_duration "\${4:-0}")")")
+}`}function Le(e,n){const t=`${r}
+#  Ueberwachung
+${r}
+`;return e.notify.enabled?`${t}#
+#  Gemeldet wird an einen Ping-Dienst im healthchecks.io-Stil: zu Beginn an
+#  <Adresse>/start, am Ende an <Adresse>/<Exitcode>. Der Dienst wertet 0 als
+#  Erfolg und jeden anderen Wert als Fehlschlag.
+#
+#  Der Umweg ueber einen fremden Dienst hat einen Grund, der sich hier nicht
+#  nachbauen laesst: bleibt ein Lauf ganz aus, kann dieser Server das nicht
+#  melden. Dort faellt genau das auf, weil der erwartete Ping fehlt.
+#
+#  Die Crontab bleibt unberuehrt - gemeldet wird aus dem Skript heraus.
+${r}
+
+# Wird von notify_begin aus den Einstellungen gesetzt.
+NTF_PING_URL=""
+
+${De()}
+
+# notify_ping EREIGNIS   (start oder ein Exitcode)
+#
+# Endet immer mit 0. Eine gescheiterte Meldung darf einen erfolgreichen
+# Export nicht nachtraeglich zum Fehlschlag machen.
+notify_ping()
+{
+    local EVENT="\${1}"
+    local RC LINE
+    local BODY_FILE=""
+    local ERR_FILE="\${LOG_DIR}/.ping_err.$$"
+    local -a OPTS=(
+        --silent --show-error
+        --output /dev/null
+        --connect-timeout 10
+        --max-time 20
+        --retry 2 --retry-delay 5
+    )
+
+    [ -n "\${NTF_PING_URL}" ] || return 0
+
+    if ! command -v curl >/dev/null 2>&1; then
+        log "WARNUNG: curl fehlt, es geht keine Meldung an die Ueberwachung."
+        return 0
+    fi
+
+    if [ -n "\${NOTIFY_PROXY}" ]; then
+        OPTS+=(--proxy "\${NOTIFY_PROXY}")
+    fi
+
+    # Der Inhalt geht nur an die Abschlussmeldung. Beim Start gibt es noch
+    # nichts zu berichten, und ein Inhalt wuerde dort nur die spaetere
+    # Meldung in der Ansicht verdecken.
+    if [ "\${EVENT}" != "start" ] && [ \${#NTF_BODY[@]} -gt 0 ]; then
+        BODY_FILE="\${LOG_DIR}/.ping_body.$$"
+
+        if : > "\${BODY_FILE}" 2>/dev/null; then
+            for LINE in \${NTF_BODY[@]+"\${NTF_BODY[@]}"}
+            do
+                printf '%s\\n' "\${LINE}" >> "\${BODY_FILE}"
+            done
+            OPTS+=(--data-binary "@\${BODY_FILE}")
+        else
+            BODY_FILE=""
+        fi
+    fi
+
+    # Die Adresse wird ueber die Konfiguration von curl gereicht statt als
+    # Argument: als Argument stuende sie in der Prozessliste, und wer sie
+    # mitliest, koennte dem Dienst falschen Erfolg melden und damit ein
+    # ausgefallenes Backup gesund aussehen lassen.
+    printf 'url = "%s"\\n' "\${NTF_PING_URL%/}/\${EVENT}" \\
+        | curl --config - "\${OPTS[@]}" 2> "\${ERR_FILE}"
+    RC=$?
+
+    if [ \${RC} -ne 0 ]; then
+        log "WARNUNG: Meldung '\${EVENT}' an die Ueberwachung fehlgeschlagen (curl \${RC})."
+        log "Der Lauf selbst ist davon unberuehrt."
+
+        # curl nennt in seinen Fehlertexten die vollstaendige Adresse.
+        while IFS= read -r LINE
+        do
+            [ -n "\${LINE}" ] && log "  \${LINE}"
+        done < <(sed 's#https://[^[:space:]]*#<Adresse entfernt>#g' "\${ERR_FILE}" 2>/dev/null)
+    fi
+
+    rm -f "\${ERR_FILE}" \${BODY_FILE:+"\${BODY_FILE}"}
+    return 0
+}
+
+# Nach dem Lesen der Einstellungen aufrufen.
+notify_begin()
+{
+    [ "\${NOTIFY_ENABLED}" = "yes" ] || return 0
+
+    if ! [[ "\${${q(n)}}" =~ ^https://[^[:space:]]+$ ]]; then
+        log "HINWEIS: ${q(n)} fehlt oder ist keine https-Adresse. Es wird nichts gemeldet."
+        CONF_ISSUES+=("${q(n)} unbrauchbar")
+        return 0
+    fi
+
+    NTF_PING_URL="\${${q(n)}}"
+
+    # Der Trap steht hier und nicht an jeder Aufrufstelle: von hier bis zum
+    # Ende steigen die Skripte an rund einem Dutzend Stellen aus, und eine
+    # davon zu vergessen hiesse, dass der Dienst den Lauf als haengend statt
+    # als gescheitert fuehrt.
+    trap 'notify_finish $?' EXIT
+
+    notify_ping start
+}
+
+# notify_finish EXITCODE
+notify_finish()
+{
+    notify_ping "\${1}"
+}`:`${t}
+# Fuer diesen Kunden nicht eingeschaltet.
+notify_begin()  { return 0; }
+notify_finish() { return 0; }
+
+${De()}`}function rn(e){return e.notify.enabled?`
+${r}
+#  Ueberwachung
+${r}
+
+if [ "\${NOTIFY_ENABLED}" = "yes" ]; then
+    if command -v curl >/dev/null 2>&1; then
+        ok "curl ist vorhanden."
+    else
+        fail "curl fehlt. Ohne curl kann nichts gemeldet werden."
+    fi
+
+${[{key:"NOTIFY_PING_URL",label:"Export"},{key:"NOTIFY_PING_URL_OFFLOAD",label:"Auslagerung"}].map(({key:t,label:s})=>`    if [ -z "\${${t}}" ]; then
+        note "${s}: keine Ping-Adresse hinterlegt, dieser Lauf wird nicht ueberwacht."
+    elif [[ "\${${t}}" =~ ^https://[^[:space:]]+$ ]]; then
+        ok "${s}: Ping-Adresse ist hinterlegt."
+    else
+        fail "${s}: ${t} ist keine https-Adresse."
+    fi`).join(`
+
+`)}
+
+    if [ -n "\${NOTIFY_PING_URL}" ] && [ "\${NOTIFY_PING_URL}" = "\${NOTIFY_PING_URL_OFFLOAD}" ]; then
+        fail "Beide Laeufe zeigen auf denselben Check. Der spaetere ueberschreibt den frueheren."
+    fi
+
+    # Nur die Namensaufloesung, kein Versand: ein Ping von hier stuende beim
+    # Dienst als echter Lauf in der Historie.
+    NTF_HOST="\${NOTIFY_PING_URL#https://}"
+    NTF_HOST="\${NTF_HOST%%/*}"
+
+    if [ -z "\${NTF_HOST}" ]; then
+        :
+    elif getent hosts "\${NTF_HOST}" >/dev/null 2>&1; then
+        ok "\${NTF_HOST} laesst sich aufloesen."
+    else
+        fail "\${NTF_HOST} laesst sich nicht aufloesen. DNS oder Proxy pruefen."
+    fi
+
+    # In der Ping-Adresse steckt die Kennung des Checks. Wer sie liest, kann
+    # dem Dienst falschen Erfolg melden - 640 hiesse: jedes Mitglied von
+    # sapsys kann das.
+    CONF_MODE="$(stat -c '%a' "\${EXPORT_CONF}" 2>/dev/null)"
+
+    if [ -n "\${CONF_MODE}" ] && [ "\${CONF_MODE}" != "600" ]; then
+        fail "${c} hat die Rechte \${CONF_MODE}, darin steht eine Ping-Adresse."
+        note "Abhilfe:  chmod 600 \${EXPORT_CONF}"
+    fi
+fi
+`:""}function sn(e){const n=e.compression==="zst",t=e.offload;return{name:"03_preflight.sh",title:"3 · Vorabprüfung",purpose:"Prüft Client, Verbindung, Schemas, Werkzeuge und Speicherplatz, ohne etwas zu verändern.",language:"bash",executable:!0,content:`${C(e,"Schritt 3 – Vorabpruefung",["Prueft alle Voraussetzungen des spaeteren Exports.","Dieses Skript veraendert nichts und kann jederzeit wiederholt werden."])}
 
 set -u
 
@@ -827,7 +1080,7 @@ HDBSQL="${e.hdbsqlPath}"
 EXPORT_BASE="${e.exportBase}"
 ${K(e)}
 
-${le()}
+${de()}
 
 CHECKS_OK=0
 CHECKS_FAILED=0
@@ -857,7 +1110,7 @@ ${r}
 #  1. Linux-Benutzer
 ${r}
 
-${P(e)}
+${N(e)}
 
 ok "Linux-Benutzer ist ${e.osUser}."
 note "Host: $(hostname)"
@@ -881,7 +1134,7 @@ ${r}
 #  3. Werkzeuge
 ${r}
 
-for TOOL in tar find du df flock${t?" zstd":""}
+for TOOL in tar find du df flock${n?" zstd":""}
 do
     if command -v "\${TOOL}" >/dev/null 2>&1; then
         ok "\${TOOL} verfuegbar."
@@ -912,7 +1165,7 @@ ${r}
 
 CONF_OK="no"
 
-read_export_conf ${Ve(e).join(" ")}
+read_export_conf ${Qe(e).join(" ")}
 case $? in
     0)
         ok "Einstellungen gelesen: \${EXPORT_CONF}"
@@ -924,14 +1177,14 @@ case $? in
     *)
         for ERROR in "\${CONF_ERRORS[@]}"
         do
-            fail "${E}: \${ERROR}"
+            fail "${c}: \${ERROR}"
         done
         ;;
 esac
 
 for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
 do
-    fail "${E}, \${ISSUE}"
+    fail "${c}, \${ISSUE}"
 done
 
 if [ "\${CONF_OK}" = "yes" ] && [ "\${MAIL_ENABLED}" = "yes" ]; then
@@ -944,7 +1197,7 @@ if [ "\${CONF_OK}" = "yes" ] && [ "\${MAIL_ENABLED}" = "yes" ]; then
         fail "Mailprogramm '\${MAIL_COMMAND}' wurde nicht gefunden."
     fi
 fi
-${n.enabled?`
+${e.notify.enabled?rn(e):""}${t.enabled?`
 # Das Aufraeumen auf der Box loescht Tagesordner unter BOX_PATH.
 if [ "\${CONF_OK}" = "yes" ]; then
     case "\${BOX_PATH%/}" in
@@ -1093,7 +1346,7 @@ if [ -n "\${OLD_LAYOUT}" ]; then
 else
     ok "Keine Reste einer frueheren Ablage gefunden."
 fi
-${n.enabled?`
+${t.enabled?`
 ${r}
 #  12. StorageBox
 #
@@ -1102,10 +1355,10 @@ ${r}
 #  Schluessel, mit dem die Anmeldung scheitert, ist einer.
 ${r}
 
-if [ -r "${n.keyPath}" ]; then
-    ok "SSH-Schluessel vorhanden: ${n.keyPath}"
+if [ -r "${t.keyPath}" ]; then
+    ok "SSH-Schluessel vorhanden: ${t.keyPath}"
 
-    KEY_MODE="$(stat -c '%a' "${n.keyPath}" 2>/dev/null)"
+    KEY_MODE="$(stat -c '%a' "${t.keyPath}" 2>/dev/null)"
     if [ "\${KEY_MODE}" = "600" ] || [ "\${KEY_MODE}" = "400" ]; then
         ok "Rechte des Schluessels: \${KEY_MODE}"
     else
@@ -1118,7 +1371,7 @@ if [ -r "${n.keyPath}" ]; then
         note "Teste Anmeldung an \${BOX_HOST}:\${BOX_PORT} ..."
 
         # Eine Storage Box bietet keine Shell, deshalb sftp statt ssh.
-        if printf 'pwd\\nquit\\n' | sftp -P "\${BOX_PORT}" -i "${n.keyPath}" \\
+        if printf 'pwd\\nquit\\n' | sftp -P "\${BOX_PORT}" -i "${t.keyPath}" \\
              -o BatchMode=yes -o ConnectTimeout=20 \\
              "\${BOX_USER}@\${BOX_HOST}" >/dev/null 2>&1; then
             ok "Anmeldung an der StorageBox erfolgreich."
@@ -1131,7 +1384,7 @@ if [ -r "${n.keyPath}" ]; then
 else
     # Kein Fehler: dieser Lauf kommt vor der Schluesseleinrichtung. Erst
     # wenn der Schluessel da ist, muss auch die Anmeldung klappen.
-    note "SSH-Schluessel noch nicht angelegt: ${n.keyPath}"
+    note "SSH-Schluessel noch nicht angelegt: ${t.keyPath}"
     note "Das ist hier in Ordnung – er entsteht in einem spaeteren Schritt:"
     note "  ./06_offload_storagebox.sh --setup"
 fi
@@ -1158,12 +1411,12 @@ if [ \${CHECKS_FAILED} -ne 0 ]; then
     exit 1
 fi
 
-echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."${n.enabled?`
+echo "Vorabpruefung bestanden. Weiter mit 04_test_export.sh."${t.enabled?`
 echo
 echo "Fuer die Auslagerung fehlt danach noch der Schluessel:"
 echo "  ./06_offload_storagebox.sh --setup"
 echo "  ./06_offload_storagebox.sh --check"`:""}
-`}}function je(e){var s;const t=(s=e.schemas[0])!=null?s:"SCHEMA",n=`${L(e,"Schritt 4 – Einmaliger Testexport",["Exportiert genau ein Schema in ein Testverzeichnis und archiviert es.","Damit sind Export und tar-Lauf bewiesen, bevor Cron uebernimmt.","","Aufruf:","  ./04_test_export.sh [SCHEMA]         Testdaten danach entfernen","  ./04_test_export.sh [SCHEMA] --keep  Testdaten liegen lassen","",`Ohne SCHEMA wird das erste aus ${$} genommen.`,"","Laeuft ohne Rueckfrage durch und endet von selbst."])}
+`}}function an(e){var s;const n=(s=e.schemas[0])!=null?s:"SCHEMA",t=`${C(e,"Schritt 4 – Einmaliger Testexport",["Exportiert genau ein Schema in ein Testverzeichnis und archiviert es.","Damit sind Export und tar-Lauf bewiesen, bevor Cron uebernimmt.","","Aufruf:","  ./04_test_export.sh [SCHEMA]         Testdaten danach entfernen","  ./04_test_export.sh [SCHEMA] --keep  Testdaten liegen lassen","",`Ohne SCHEMA wird das erste aus ${S} genommen.`,"","Laeuft ohne Rueckfrage durch und endet von selbst."])}
 
 set -u
 
@@ -1174,7 +1427,7 @@ COMPRESSION="${e.compression}"
 
 ${K(e)}
 
-${le()}
+${de()}
 
 ${r}
 #  Aufrufparameter
@@ -1218,9 +1471,9 @@ case "\${COMPRESSION}" in
     *)    echo "FEHLER: Unbekannte Komprimierung \${COMPRESSION}" >&2; exit 1 ;;
 esac
 
-${P(e)}
+${N(e)}
 
-${Re(["THREADS"])}
+${Oe(["THREADS"])}
 
 if [ ! -x "\${HDBSQL}" ]; then
     echo "FEHLER: hdbsql nicht gefunden: \${HDBSQL}" >&2
@@ -1314,8 +1567,8 @@ echo "Schritt 4 abgeschlossen. Jetzt das Hauptskript einmal manuell starten:"
 echo "  ${e.scriptPath}"
 
 exit 0
-`;return{name:"04_test_export.sh",title:"4 · Testexport",purpose:`Exportiert einmalig ein Schema – ohne Angabe das erste der Liste, ${t} – in ein Testverzeichnis und archiviert es, bevor Cron übernimmt.`,language:"bash",executable:!0,content:n}}function Qe(e){const t=`${T(e.scriptPath)}/${$}`,n=[_,"#  Zu sichernde Schemas","#",`#  Kunde  : ${z(e.customer)||"-"}`,`#  Tenant : ${e.sid} (Instanz ${e.instance})`,`#  Datei  : ${t}`,"#","#  Ein Schema pro Zeile, geschrieben wie in der Datenbank (meist gross).","#  Leerzeilen und Zeilen mit # am Anfang werden uebergangen. Ein Kommentar","#  hinter dem Namen braucht ein Leerzeichen davor:","#      SALES   # Vertrieb","#","#  Aenderungen gelten ab dem naechsten Lauf; Skripte und Crontab bleiben","#  unveraendert. Danach pruefen mit:  ./03_preflight.sh","#","#  Ein Schema, das es in der Datenbank nicht mehr gibt, bricht den Export","#  nicht ab. Es wird uebersprungen und im Log als HINWEIS vermerkt.","#",`#  Erzeugt durch ${ie}, Stand ${k}.`,_,"",...e.schemas,""].join(`
-`);return{name:$,title:"Schemas",purpose:"Die Liste der zu sichernden Schemas. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ergänzen oder entfernen.",language:"text",executable:!1,content:n}}function et(e){const t=be(e.scriptPath),n=y(e.compression),s=`${T(e.scriptPath)}/${C}`,o=`${L(e,"SAP HANA Schema-Export",["Jedes Schema wird einzeln exportiert und einzeln archiviert.",`Archivformat: ${oe(e.compression)} (*.${n})`,`Einstellungen: ${T(e.scriptPath)}/${E}`,`Schemaliste: ${T(e.scriptPath)}/${$}`,`Aufruf: ${e.scriptPath}`])}
+`;return{name:"04_test_export.sh",title:"4 · Testexport",purpose:`Exportiert einmalig ein Schema – ohne Angabe das erste der Liste, ${n} – in ein Testverzeichnis und archiviert es, bevor Cron übernimmt.`,language:"bash",executable:!0,content:t}}function on(e){const n=`${O(e.scriptPath)}/${S}`,t=[R,"#  Zu sichernde Schemas","#",`#  Kunde  : ${y(e.customer)||"-"}`,`#  Tenant : ${e.sid} (Instanz ${e.instance})`,`#  Datei  : ${n}`,"#","#  Ein Schema pro Zeile, geschrieben wie in der Datenbank (meist gross).","#  Leerzeilen und Zeilen mit # am Anfang werden uebergangen. Ein Kommentar","#  hinter dem Namen braucht ein Leerzeichen davor:","#      SALES   # Vertrieb","#","#  Aenderungen gelten ab dem naechsten Lauf; Skripte und Crontab bleiben","#  unveraendert. Danach pruefen mit:  ./03_preflight.sh","#","#  Ein Schema, das es in der Datenbank nicht mehr gibt, bricht den Export","#  nicht ab. Es wird uebersprungen und im Log als HINWEIS vermerkt.","#",`#  Erzeugt durch ${oe}, Stand ${w}.`,R,"",...e.schemas,""].join(`
+`);return{name:S,title:"Schemas",purpose:"Die Liste der zu sichernden Schemas. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ergänzen oder entfernen.",language:"text",executable:!1,content:t}}function ln(e){const n=_e(e.scriptPath),t=z(e.compression),s=`${O(e.scriptPath)}/${H}`,d=`${C(e,"SAP HANA Schema-Export",["Jedes Schema wird einzeln exportiert und einzeln archiviert.",`Archivformat: ${he(e.compression)} (*.${t})`,`Einstellungen: ${O(e.scriptPath)}/${c}`,`Schemaliste: ${O(e.scriptPath)}/${S}`,`Aufruf: ${e.scriptPath}`])}
 
 set -u
 
@@ -1339,7 +1592,7 @@ OFFLOAD_SCRIPT="${s}"
 
 ${K(e)}
 
-${le()}
+${de()}
 
 ${r}
 #  SAP-Umgebung laden
@@ -1404,6 +1657,11 @@ OK_SCHEMAS=()
 FAILED_SCHEMAS=()
 SKIPPED_SCHEMAS=()
 
+# Fuer die Laufzeit in der Abschlussmeldung.
+NTF_START_EPOCH="$(date +%s)"
+# Wird von export_schema je Schema gesetzt.
+ARCHIVE_SIZE=""
+
 case "\${COMPRESSION}" in
     gz)
         TAR_CREATE=(-czf)
@@ -1460,22 +1718,24 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "\${LOG_FILE}"
 }
 
+${Le(e,"export")}
+
 ${r}
 #  Vorabpruefungen
 ${r}
 
-${P(e)}
+${N(e)}
 
-log "${_.slice(2)}"
+log "${R.slice(2)}"
 log "SAP HANA Schema-Export gestartet"
 log "Host: $(hostname)"
 log "Linux-Benutzer: $(whoami)"
 log "Datum: \${DATE}"
 log "Einstellungen: \${EXPORT_CONF}"
 log "Schemaliste: \${SCHEMA_FILE}"
-log "${_.slice(2)}"
+log "${R.slice(2)}"
 
-read_export_conf ${Ge.join(" ")}
+read_export_conf ${qe(e).join(" ")}
 RC=$?
 
 if [ \${RC} -eq 1 ]; then
@@ -1486,13 +1746,13 @@ fi
 
 for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
 do
-    log "HINWEIS: ${E}, \${ISSUE}."
+    log "HINWEIS: ${c}, \${ISSUE}."
 done
 
 if [ \${RC} -ne 0 ]; then
     for ERROR in "\${CONF_ERRORS[@]}"
     do
-        log "FEHLER: ${E}: \${ERROR}"
+        log "FEHLER: ${c}: \${ERROR}"
     done
     exit 1
 fi
@@ -1502,6 +1762,8 @@ if [ "\${MAIL_ENABLED}" = "yes" ] && { [ -z "\${MAIL_RECIPIENT}" ] || [ -z "\${M
     CONF_ISSUES+=("Mail unvollstaendig")
     MAIL_ENABLED="no"
 fi
+
+notify_begin
 
 if ! read_schema_file; then
     log "FEHLER: Schemaliste fehlt oder ist nicht lesbar: \${SCHEMA_FILE}"
@@ -1580,6 +1842,10 @@ ${r}
 export_schema()
 {
     SCHEMA="$1"
+
+    # Zuruecksetzen, sonst traegt ein gescheitertes Schema die Groesse des
+    # vorherigen in die Uebersicht.
+    ARCHIVE_SIZE=""
     WORK_DIR="\${DAY_DIR}/\${SCHEMA}"
     ARCHIVE="\${DAY_DIR}/\${SCHEMA}_\${DATE}.\${ARCHIVE_EXT}"
 
@@ -1662,14 +1928,19 @@ do
     if [ \${RC} -eq 0 ] && [ "\${FOUND}" = "0" ]; then
         log "HINWEIS: Schema \${SCHEMA} steht in der Schemaliste, existiert in der Datenbank aber nicht. Uebersprungen."
         SKIPPED_SCHEMAS+=("\${SCHEMA}")
+        notify_row "\${SCHEMA}" "uebersprungen" "-" 0
         continue
     fi
 
+    SCHEMA_STARTED="$(date +%s)"
+
     if export_schema "\${SCHEMA}"; then
         OK_SCHEMAS+=("\${SCHEMA}")
+        notify_row "\${SCHEMA}" "ok" "\${ARCHIVE_SIZE:--}" $(($(date +%s) - SCHEMA_STARTED))
     else
         FAILED_SCHEMAS+=("\${SCHEMA}")
         EXITCODE=1
+        notify_row "\${SCHEMA}" "FEHLER" "-" $(($(date +%s) - SCHEMA_STARTED))
     fi
 done
 
@@ -1751,7 +2022,7 @@ ${r}
 #  Abschluss
 ${r}
 
-log "${_.slice(2)}"
+log "${R.slice(2)}"
 
 if [ \${#OK_SCHEMAS[@]} -gt 0 ]; then
     log "Erfolgreich: \${OK_SCHEMAS[*]}"
@@ -1778,7 +2049,7 @@ else
 fi
 
 log "Logdatei: \${LOG_FILE}"
-log "${_.slice(2)}"
+log "${R.slice(2)}"
 
 if [ "\${MAIL_ENABLED}" = "yes" ]; then
     # Hinweise gehen auch bei "nur bei Fehlern" raus. Sonst faellt eine
@@ -1795,22 +2066,72 @@ if [ "\${MAIL_ENABLED}" = "yes" ]; then
     fi
 fi
 
+${r}
+#  Inhalt der Abschlussmeldung
+#
+#  Klartext und kein JSON: der Dienst zeigt den Inhalt so an, wie er
+#  ankommt, und man liest ihn morgens mit dem Auge und nicht mit einem
+#  Programm.
+${r}
+
+if [ \${EXITCODE} -ne 0 ]; then
+    NTF_VERDICT="Schema-Export mit Fehlern"
+elif [ \${HINTS} -gt 0 ]; then
+    NTF_VERDICT="Schema-Export erfolgreich, mit Hinweisen"
+else
+    NTF_VERDICT="Schema-Export erfolgreich"
+fi
+
+notify_add "Kunde      : ${e.customer||"-"}"
+notify_add "Tenant     : ${e.sid} (Instanz ${e.instance}) auf $(hostname)"
+notify_add "Ergebnis   : \${NTF_VERDICT}"
+notify_add "Dauer      : $(notify_duration $(($(date +%s) - NTF_START_EPOCH)))"
+notify_add "Schemas    : \${#OK_SCHEMAS[@]} ok, \${#FAILED_SCHEMAS[@]} Fehler, \${#SKIPPED_SCHEMAS[@]} uebersprungen"
+notify_add "Tagesordner: \${DAY_DIR} ($(du -sh "\${DAY_DIR}" 2>/dev/null | awk '{print $1}'))"
+notify_add "Log        : \${LOG_FILE}"
+
+if [ \${#NTF_ROWS[@]} -gt 0 ]; then
+    notify_add ""
+    notify_add "$(printf '%-22s %-14s %8s %9s' 'SCHEMA' 'ZUSTAND' 'GROESSE' 'DAUER')"
+
+    for ROW in \${NTF_ROWS[@]+"\${NTF_ROWS[@]}"}
+    do
+        notify_add "\${ROW}"
+    done
+fi
+
+# Der Auszug aus dem Log ist begrenzt, die Tabelle darueber nicht: welches
+# Schema klemmte, soll auch dann vollstaendig dastehen, wenn alle klemmten.
+#
+# grep -a, weil die Ausgabe von hdbsql das Log fuer grep binaer aussehen
+# lassen kann - dann kaeme statt der Zeilen nur "Binary file matches".
+if [ "\${NOTIFY_MAX_LINES:-0}" -gt 0 ]; then
+    NTF_FOUND=0
+
+    while IFS= read -r LINE
+    do
+        [ \${NTF_FOUND} -eq 0 ] && notify_add "" && notify_add "Aus dem Log:"
+        NTF_FOUND=1
+        notify_add "  \${LINE}"
+    done < <(grep -a -E '(FEHLER|WARNUNG|ABBRUCH|HINWEIS):' "\${LOG_FILE}" 2>/dev/null              | tail -n "\${NOTIFY_MAX_LINES}")
+fi
+
 exit \${EXITCODE}
-`;return{name:t,title:"Hauptskript",purpose:`Der eigentliche Export. Wird nach ${e.scriptPath} kopiert und von Cron aufgerufen.`,language:"bash",executable:!0,content:o}}function N(e){const t=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,n=e.schedule.dayOfWeek;return n==="*"?`täglich um ${t} Uhr`:n==="1-5"?`montags bis freitags um ${t} Uhr`:n==="0"||n==="7"?`sonntags um ${t} Uhr`:n==="6"?`samstags um ${t} Uhr`:n==="6,0"||n==="0,6"?`samstags und sonntags um ${t} Uhr`:`um ${t} Uhr an den Wochentagen ${n}`}function Z(e){const{hour:t,minute:n,dayOfWeek:s}=e.schedule;return`${n} ${t} * * ${s} ${e.scriptPath} >/dev/null 2>&1`}function tt(e){return`# HANAScriptGenerator: Schema-Export ${e.sid}`}function nt(e){return`# HANAScriptGenerator: Auslagerung ${e.sid}`}function Te(e){return`${T(e.scriptPath)}/${C}`}function de(e){const{hour:t,minute:n,runAfterExport:s}=e.offload,o=s?" --pending":"";return`${n} ${t} * * * ${Te(e)}${o} >/dev/null 2>&1`}function q(e){const t=`${String(e.offload.hour).padStart(2,"0")}:${String(e.offload.minute).padStart(2,"0")}`;return e.offload.runAfterExport?`täglich um ${t} Uhr, holt Liegengebliebenes nach`:`täglich um ${t} Uhr`}function rt(e){const t=tt(e),n=Z(e),s=e.offload.enabled,o=`${L(e,"Schritt 5 – Cronjob einrichten",[`Export:     ${N(e)}`,`            ${n}`,...s?[`Auslagerung: ${q(e)}`,`            ${de(e)}`]:[],"","Aufruf:","  ./05_install_cron.sh           Eintrag setzen oder aktualisieren","  ./05_install_cron.sh --show    Nur anzeigen, nichts aendern","  ./05_install_cron.sh --remove  Eintrag entfernen"])}
+`;return{name:n,title:"Hauptskript",purpose:`Der eigentliche Export. Wird nach ${e.scriptPath} kopiert und von Cron aufgerufen.`,language:"bash",executable:!0,content:d}}function x(e){const n=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,t=e.schedule.dayOfWeek;return t==="*"?`täglich um ${n} Uhr`:t==="1-5"?`montags bis freitags um ${n} Uhr`:t==="0"||t==="7"?`sonntags um ${n} Uhr`:t==="6"?`samstags um ${n} Uhr`:t==="6,0"||t==="0,6"?`samstags und sonntags um ${n} Uhr`:`um ${n} Uhr an den Wochentagen ${t}`}function Y(e){const{hour:n,minute:t,dayOfWeek:s}=e.schedule;return`${t} ${n} * * ${s} ${e.scriptPath} >/dev/null 2>&1`}function hn(e){return`# HANAScriptGenerator: Schema-Export ${e.sid}`}function dn(e){return`# HANAScriptGenerator: Auslagerung ${e.sid}`}function He(e){return`${O(e.scriptPath)}/${H}`}function ue(e){const{hour:n,minute:t,runAfterExport:s}=e.offload,d=s?" --pending":"";return`${t} ${n} * * * ${He(e)}${d} >/dev/null 2>&1`}function J(e){const n=`${String(e.offload.hour).padStart(2,"0")}:${String(e.offload.minute).padStart(2,"0")}`;return e.offload.runAfterExport?`täglich um ${n} Uhr, holt Liegengebliebenes nach`:`täglich um ${n} Uhr`}function un(e){const n=hn(e),t=Y(e),s=e.offload.enabled,d=`${C(e,"Schritt 5 – Cronjob einrichten",[`Export:     ${x(e)}`,`            ${t}`,...s?[`Auslagerung: ${J(e)}`,`            ${ue(e)}`]:[],"","Aufruf:","  ./05_install_cron.sh           Eintrag setzen oder aktualisieren","  ./05_install_cron.sh --show    Nur anzeigen, nichts aendern","  ./05_install_cron.sh --remove  Eintrag entfernen"])}
 
 set -u
 
 SCRIPT_PATH="${e.scriptPath}"
-CRON_MARKER="${t}"
-CRON_LINE="${n}"
+CRON_MARKER="${n}"
+CRON_LINE="${t}"
 ${s?`
-OFFLOAD_SCRIPT="${Te(e)}"
-OFFLOAD_MARKER="${nt(e)}"
-OFFLOAD_LINE="${de(e)}"`:""}
+OFFLOAD_SCRIPT="${He(e)}"
+OFFLOAD_MARKER="${dn(e)}"
+OFFLOAD_LINE="${ue(e)}"`:""}
 
 MODE="\${1:-install}"
 
-${P(e)}
+${N(e)}
 
 # Ohne diese Pruefung wuerde jede unbekannte Angabe, auch ein vertipptes
 # --remvoe, den Eintrag einrichten statt etwas zu melden.
@@ -1916,12 +2237,12 @@ fi
 
 crontab "\${TMP_CRON}"
 
-echo "Export eingerichtet: ${N(e)}."${s?`
-echo "Auslagerung eingerichtet: ${q(e)}."`:""}
+echo "Export eingerichtet: ${x(e)}."${s?`
+echo "Auslagerung eingerichtet: ${J(e)}."`:""}
 echo
 echo "Aktuelle Crontab:"
 crontab -l | sed 's/^/  /'
-`;return{name:"05_install_cron.sh",title:"5 · Cronjob",purpose:s?`Trägt Export (${N(e)}) und Auslagerung (${q(e)}) idempotent in die Crontab von ${e.osUser} ein.`:`Trägt den Lauf ${N(e)} idempotent in die Crontab von ${e.osUser} ein.`,language:"bash",executable:!0,content:o}}function st(e){const t=e.offload,n=y(e.compression),s=`${L(e,"Tagesarchive auf die StorageBox auslagern",[`Ziel und Zugang: BOX_* in ${E}`,"","Aufruf:","  ./"+C+"                 heutigen Tagesordner","  ./"+C+" JJJJ-MM-TT      einen bestimmten Tag","  ./"+C+" --pending       alles Nichtuebertragene","  ./"+C+" --check         nur Verbindung pruefen","  ./"+C+" --setup         einmalige Einrichtung: Schluessel","                                         anlegen, auf der Box ablegen, pruefen","","Kopiert, nicht verschoben: lokal bleibt alles bis zum Ablauf der","oertlichen Aufbewahrung liegen."])}
+`;return{name:"05_install_cron.sh",title:"5 · Cronjob",purpose:s?`Trägt Export (${x(e)}) und Auslagerung (${J(e)}) idempotent in die Crontab von ${e.osUser} ein.`:`Trägt den Lauf ${x(e)} idempotent in die Crontab von ${e.osUser} ein.`,language:"bash",executable:!0,content:d}}function cn(e){const n=e.offload,t=z(e.compression),s=`${C(e,"Tagesarchive auf die StorageBox auslagern",[`Ziel und Zugang: BOX_* in ${c}`,"","Aufruf:","  ./"+H+"                 heutigen Tagesordner","  ./"+H+" JJJJ-MM-TT      einen bestimmten Tag","  ./"+H+" --pending       alles Nichtuebertragene","  ./"+H+" --check         nur Verbindung pruefen","  ./"+H+" --setup         einmalige Einrichtung: Schluessel","                                         anlegen, auf der Box ablegen, pruefen","","Kopiert, nicht verschoben: lokal bleibt alles bis zum Ablauf der","oertlichen Aufbewahrung liegen."])}
 
 set -u
 
@@ -1933,9 +2254,9 @@ EXPORT_BASE="${e.exportBase}"
 
 # Privater Schluessel dieses Servers. Ein Cronlauf kann kein Passwort
 # eintippen, deshalb Schluesselanmeldung.
-SSH_KEY="${t.keyPath}"
+SSH_KEY="${n.keyPath}"
 
-ARCHIVE_EXT="${n}"
+ARCHIVE_EXT="${t}"
 
 ${K(e)}
 
@@ -1964,7 +2285,7 @@ ${r}
 COMMON_OPTS="-o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new"
 
 # SSH_OPTS und SFTP_OPTS entstehen erst, wenn die Einstellungen gelesen
-# sind: der Port steht in ${E}.
+# sind: der Port steht in ${c}.
 
 # Alle sftp-Aufrufe laufen hierueber, damit die Optionen nur an einer
 # Stelle stehen.
@@ -2040,11 +2361,13 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "\${LOG_FILE}"
 }
 
+${Le(e,"offload")}
+
 ${r}
 #  Vorabpruefungen
 ${r}
 
-${P(e)}
+${N(e)}
 
 for TOOL in rsync ssh sftp
 do
@@ -2054,7 +2377,7 @@ do
     fi
 done
 
-read_export_conf ${Xe.join(" ")}
+read_export_conf ${Je(e).join(" ")}
 RC=$?
 
 if [ \${RC} -eq 1 ]; then
@@ -2064,13 +2387,13 @@ fi
 
 for ISSUE in \${CONF_ISSUES[@]+"\${CONF_ISSUES[@]}"}
 do
-    log "HINWEIS: ${E}, \${ISSUE}."
+    log "HINWEIS: ${c}, \${ISSUE}."
 done
 
 if [ \${RC} -ne 0 ]; then
     for ERROR in "\${CONF_ERRORS[@]}"
     do
-        log "FEHLER: ${E}: \${ERROR}"
+        log "FEHLER: ${c}: \${ERROR}"
     done
     exit 1
 fi
@@ -2434,6 +2757,11 @@ case "\${MODE}" in
         ;;
 
     --pending)
+        # Gemeldet wird erst ab hier: --setup und --check sind Handlaeufe mit
+        # einem Bildschirm davor und wuerden beim Dienst als echte Laeufe in
+        # der Historie stehen.
+        notify_begin
+
         DAYS="$(for ENTRY in "\${EXPORT_BASE}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
                 do
                     [ -d "\${ENTRY}" ] || continue
@@ -2443,11 +2771,18 @@ case "\${MODE}" in
 
         if [ -z "\${DAYS}" ]; then
             log "Nichts offen, alle Tagesordner sind uebertragen."
+
+            # Auch das ist ein erfolgreicher Lauf. Bliebe die Meldung aus,
+            # ginge der Check an jedem Tag auf Rot, an dem der Export schon
+            # alles ausgelagert hat - also an fast jedem.
+            notify_add "Ziel      : \${BOX_USER}@\${BOX_HOST}:\${BOX_PATH}"
+            notify_add "Ergebnis  : nichts offen, alle Tagesordner sind uebertragen"
             exit 0
         fi
         ;;
 
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+        notify_begin
         DAYS="\${MODE}"
         ;;
 
@@ -2476,15 +2811,31 @@ fi
 log "Logdatei: \${LOG_FILE}"
 log "${"=".repeat(60)}"
 
+notify_add "Ziel      : \${BOX_USER}@\${BOX_HOST}:\${BOX_PATH}"
+notify_add "Ergebnis  : $([ \${EXITCODE} -eq 0 ] && echo 'erfolgreich' || echo 'mit Fehlern')"
+notify_add "Tage      : $(echo \${DAYS} | tr '\\n' ' ')"
+notify_add "Log       : \${LOG_FILE}"
+
+if [ "\${NOTIFY_MAX_LINES:-0}" -gt 0 ]; then
+    NTF_FOUND=0
+
+    while IFS= read -r LINE
+    do
+        [ \${NTF_FOUND} -eq 0 ] && notify_add "" && notify_add "Aus dem Log:"
+        NTF_FOUND=1
+        notify_add "  \${LINE}"
+    done < <(grep -a -E '(FEHLER|WARNUNG|ABBRUCH|HINWEIS):' "\${LOG_FILE}" 2>/dev/null              | tail -n "\${NOTIFY_MAX_LINES}")
+fi
+
 exit \${EXITCODE}
-`;return{name:C,title:"6 · Auslagern",purpose:`Kopiert die Tagesarchive per rsync auf ${t.host||"die StorageBox"}. Läuft nach dem Export und lässt lokal alles liegen.`,language:"bash",executable:!0,content:s}}function it(e){const t=y(e.compression);return{name:"90_restore_schema.sh",title:"90 · Restore",purpose:"Listet Archive, entpackt eines davon und spielt es nach Rückfrage per IMPORT zurück.",language:"bash",executable:!0,content:`${L(e,"Wiederherstellung aus einem Archiv",["Entpackt ein Export-Archiv und spielt es auf Wunsch zurueck.","","Aufruf:","  ./90_restore_schema.sh --list","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT            nur entpacken","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT --import   entpacken und IMPORT","","ACHTUNG: --import ueberschreibt vorhandene Objekte des Schemas."])}
+`;return{name:H,title:"6 · Auslagern",purpose:`Kopiert die Tagesarchive per rsync auf ${n.host||"die StorageBox"}. Läuft nach dem Export und lässt lokal alles liegen.`,language:"bash",executable:!0,content:s}}function En(e){const n=z(e.compression);return{name:"90_restore_schema.sh",title:"90 · Restore",purpose:"Listet Archive, entpackt eines davon und spielt es nach Rückfrage per IMPORT zurück.",language:"bash",executable:!0,content:`${C(e,"Wiederherstellung aus einem Archiv",["Entpackt ein Export-Archiv und spielt es auf Wunsch zurueck.","","Aufruf:","  ./90_restore_schema.sh --list","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT            nur entpacken","  ./90_restore_schema.sh SCHEMA JJJJ-MM-TT --import   entpacken und IMPORT","","ACHTUNG: --import ueberschreibt vorhandene Objekte des Schemas."])}
 
 set -u
 
 HANA_KEY="${e.userstoreKey}"
 HDBSQL="${e.hdbsqlPath}"
 EXPORT_BASE="${e.exportBase}"
-ARCHIVE_EXT="${t}"
+ARCHIVE_EXT="${n}"
 COMPRESSION="${e.compression}"
 
 ${K(e)}
@@ -2498,7 +2849,7 @@ case "\${COMPRESSION}" in
     *)    echo "FEHLER: Unbekannte Komprimierung \${COMPRESSION}" >&2; exit 1 ;;
 esac
 
-${P(e)}
+${N(e)}
 
 ${r}
 #  Vorhandene Archive auflisten
@@ -2590,7 +2941,7 @@ fi
 # Erst fuer den IMPORT gebraucht. Auflisten und Entpacken gehen deshalb
 # auch dann, wenn die Einstellungen gerade nicht lesbar sind. Gelesen wird
 # vor der Rueckfrage, damit sie nicht umsonst beantwortet wird.
-${Re(["THREADS"])}
+${Oe(["THREADS"])}
 
 ${r}
 #  Sicherheitsabfrage
@@ -2637,11 +2988,11 @@ echo
 echo "IMPORT von \${SCHEMA} abgeschlossen."
 echo "Die entpackten Daten koennen jetzt entfernt werden:"
 echo "  rm -rf \${TARGET_DIR}"
-`}}function at(e){var S;const t=ae(e.customer,e.sid),n=be(e.scriptPath),s=T(e.scriptPath),o=y(e.compression),a=(S=e.schemas[0])!=null?S:"SCHEMA",u=W(e).flatMap(c=>c.entries).map(c=>`| \`${c.key}\` | ${c.description} | ${c.value===""?"–":`\`${c.value}\``} |`).join(`
-`),d=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,m=e.schemas.map((c,g)=>g===e.schemas.length-1?`│   └── ${c}_2026-01-15.${o}`:`│   ├── ${c}_2026-01-15.${o}`).join(`
-`),H=`# SAP HANA Schema-Export – ${e.customer||e.sid}
+`}}function fn(e){var E,f;const n=le(e.customer,e.sid),t=_e(e.scriptPath),s=O(e.scriptPath),d=z(e.compression),a=(E=e.schemas[0])!=null?E:"SCHEMA",u=j(e).flatMap($=>$.entries).map($=>`| \`${$.key}\` | ${$.description} | ${$.value===""?"–":`\`${$.value}\``} |`).join(`
+`),o=`${String(e.schedule.hour).padStart(2,"0")}:${String(e.schedule.minute).padStart(2,"0")}`,m=e.schemas.map(($,P)=>P===e.schemas.length-1?`│   └── ${$}_2026-01-15.${d}`:`│   ├── ${$}_2026-01-15.${d}`).join(`
+`),b=`# SAP HANA Schema-Export – ${e.customer||e.sid}
 
-Erzeugt durch HANAScriptGenerator, Stand ${k}.
+Erzeugt durch HANAScriptGenerator, Stand ${w}.
 
 Jedes Schema wird **einzeln exportiert und einzeln archiviert**. Es entsteht also
 pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Schemas.
@@ -2660,16 +3011,17 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | hdbsql | ${e.hdbsqlPath} |
 | Exportpfad | ${e.exportBase} |
 | Skriptpfad | ${e.scriptPath} |
-| Schemas | ${e.schemas.join(", ")} (gepflegt in \`${$}\`) |
-| Einstellungen | gepflegt in \`${E}\`; die folgenden Werte sind der Stand beim Erzeugen |
+| Schemas | ${e.schemas.join(", ")} (gepflegt in \`${S}\`) |
+| Einstellungen | gepflegt in \`${c}\`; die folgenden Werte sind der Stand beim Erzeugen |
 | Threads | ${e.threads} |
-| Archivformat | ${oe(e.compression)} (\`*.${o}\`) |
+| Archivformat | ${he(e.compression)} (\`*.${d}\`) |
 | Rohexport behalten | ${e.keepRawExport?"ja":"nein, nur das Archiv bleibt"} |
 | Aufbewahrung | ${e.retentionDays} Tage |
-| Zeitplan | ${N(e)} |
+| Zeitplan | ${x(e)} |
 | Mindestens frei | ${e.minFreeGb>0?`${e.minFreeGb} GB`:"keine Prüfung"} |
 | Auslagerung | ${e.offload.enabled?`${e.offload.user}@${e.offload.host}:${e.offload.remotePath} (${e.offload.remoteRetentionDays>0?`${e.offload.remoteRetentionDays} Tage dort`:"dort ohne Aufräumen"})`:"nein"} |
 | Mailbenachrichtigung | ${e.mail.enabled?`${e.mail.recipient} (${e.mail.onlyOnError?"nur bei Fehlern oder Hinweisen":"nach jedem Lauf"})`:"nein"} |
+| Überwachung | ${e.notify.enabled?`Ping-Dienst auf ${(f=e.notify.url.replace(/^https:\/\//,"").split("/")[0])!=null?f:"?"}${e.notify.offloadUrl.length>0?", Export und Auslagerung":", nur der Export"}`:"nein"} |
 
 ## Dateien
 
@@ -2677,13 +3029,13 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | --- | --- |
 | \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
 | \`00_dateien_uebertragen.cmd\` | Läuft auf **Windows**: kopiert alles hierher per scp und setzt Rechte. |
-| \`${E}\` | Betriebswerte wie Aufbewahrung, Threads, Mail${e.offload.enabled?" und StorageBox":""}. Wird bei jedem Lauf gelesen. |
-| \`${$}\` | Die zu sichernden Schemas, eins pro Zeile. Wird bei jedem Lauf gelesen – Schemas hier ergänzen oder entfernen. |
+| \`${c}\` | Betriebswerte wie Aufbewahrung, Threads, Mail${e.notify.enabled?", Überwachung":""}${e.offload.enabled?" und StorageBox":""}. Wird bei jedem Lauf gelesen.${e.notify.enabled?" **Enthält eine Ping-Adresse – `chmod 600`.**":""} |
+| \`${S}\` | Die zu sichernden Schemas, eins pro Zeile. Wird bei jedem Lauf gelesen – Schemas hier ergänzen oder entfernen. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${e.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
 | \`03_preflight.sh\` | Prüft alle Voraussetzungen, ändert nichts. |
 | \`04_test_export.sh\` | Einmaliger Testexport inklusive tar-Lauf. |
-| \`${n}\` | Das eigentliche Exportskript für den Cronlauf. |
+| \`${t}\` | Das eigentliche Exportskript für den Cronlauf. |
 | \`05_install_cron.sh\` | Trägt den Cronjob ein, aktualisiert oder entfernt ihn. |${e.offload.enabled?"\n| `06_offload_storagebox.sh` | Kopiert den Tagesordner auf die StorageBox. |":""}
 | \`90_restore_schema.sh\` | Entpackt ein Archiv und spielt es per IMPORT zurück. |
 
@@ -2701,10 +3053,10 @@ abgewiesen, statt ersatzweise etwas anderes zu tun.
 | \`./01_setup_userstore.sh\` | Legt den Userstore-Key an. Ohne Schalter. |
 | \`./02_prepare_dirs.sh\` | Legt die Verzeichnisse an. Ohne Schalter. |
 | \`./03_preflight.sh\` | Prüft alle Voraussetzungen. Ohne Schalter, ändert nichts. |
-| \`./04_test_export.sh\` | Testexport des ersten Schemas aus \`${$}\`. |
+| \`./04_test_export.sh\` | Testexport des ersten Schemas aus \`${S}\`. |
 | \`./04_test_export.sh SCHEMA\` | Testexport dieses Schemas. |
 | \`./04_test_export.sh [SCHEMA] --keep\` | Testdaten liegen lassen statt sie zu entfernen. |
-| \`${e.scriptPath}\` | Der eigentliche Export. Ohne Schalter – alles Weitere steht in \`${E}\`. |
+| \`${e.scriptPath}\` | Der eigentliche Export. Ohne Schalter – alles Weitere steht in \`${c}\`. |
 | \`./05_install_cron.sh\` | Trägt die Cron-Einträge ein oder aktualisiert sie. |
 | \`./05_install_cron.sh --show\` | Zeigt nur den geplanten Eintrag und die aktuelle Crontab. |
 | \`./05_install_cron.sh --remove\` | Entfernt die Einträge wieder. |${e.offload.enabled?"\n| `./06_offload_storagebox.sh` | Überträgt den heutigen Tagesordner. |\n| `./06_offload_storagebox.sh JJJJ-MM-TT` | Überträgt genau diesen Tag noch einmal. |\n| `./06_offload_storagebox.sh --pending` | Holt alles nach, was noch keinen Vermerk hat. |\n| `./06_offload_storagebox.sh --check` | Prüft nur die Anmeldung, überträgt nichts. |\n| `./06_offload_storagebox.sh --setup` | Einmalige Einrichtung des Schlüssels. `--setup-key` und `--install-key` sind ältere Namen dafür. |":""}
@@ -2724,7 +3076,7 @@ kopiert alle Skripte per \`scp\` nach \`${s}\`, räumt Windows-Zeilenenden weg
 und setzt \`chmod 750\` sowie die Gruppe \`sapsys\`. Dafür genügt der OpenSSH-Client,
 den Windows seit Version 1809 mitbringt. Danach weiter bei Schritt 1.
 
-Auf dem Server schon vorhandene \`${E}\` und \`${$}\` bleiben dabei
+Auf dem Server schon vorhandene \`${c}\` und \`${S}\` bleiben dabei
 unverändert: beide werden dort gepflegt und sollen beim erneuten Übertragen nicht
 verloren gehen.
 
@@ -2737,7 +3089,7 @@ verloren gehen.
 su - ${e.osUser}
 \`\`\`
 
-Skripte, \`${E}\` und \`${$}\` gemeinsam in ein Arbeitsverzeichnis
+Skripte, \`${c}\` und \`${S}\` gemeinsam in ein Arbeitsverzeichnis
 kopieren, zum Beispiel \`${s}\`, und die Skripte ausführbar machen. Die beiden
 Dateien müssen neben den Skripten liegen, dort werden sie gesucht.
 
@@ -2754,7 +3106,7 @@ file *.sh
 Steht dort \`with CRLF line terminators\`, einmal umstellen:
 
 \`\`\`bash
-sed -i 's/\\r$//' *.sh ${E} ${$}
+sed -i 's/\\r$//' *.sh ${c} ${S}
 \`\`\`
 
 Prüfen, ob der hdbsql-Pfad stimmt:
@@ -2807,14 +3159,14 @@ liegen bleiben:
 
 ### 5. Hauptskript installieren
 
-Wurde \`00_dateien_uebertragen.cmd\` benutzt, liegt \`${n}\` bereits unter
+Wurde \`00_dateien_uebertragen.cmd\` benutzt, liegt \`${t}\` bereits unter
 \`${e.scriptPath}\` und ist fertig eingerichtet — dann direkt zur Syntaxprüfung
 weiter unten springen.
 
 Sonst dorthin kopieren:
 
 \`\`\`bash
-cp ${n} ${e.scriptPath}
+cp ${t} ${e.scriptPath}
 \`\`\`
 
 Eigentümer und Rechte setzen:
@@ -2897,11 +3249,11 @@ Das Skript sichert eine bestehende Crontab, entfernt frühere Einträge zu diese
 Export und setzt:
 
 \`\`\`
-${Z(e)}${e.offload.enabled?`
-${de(e)}`:""}
+${Y(e)}${e.offload.enabled?`
+${ue(e)}`:""}
 \`\`\`${e.offload.enabled?`
 
-Der zweite Eintrag läuft ${q(e)}.${e.offload.runAfterExport?` Die eigentliche Auslagerung erledigt schon das Exportskript;
+Der zweite Eintrag läuft ${J(e)}.${e.offload.runAfterExport?` Die eigentliche Auslagerung erledigt schon das Exportskript;
 dieser Termin sammelt nur auf, was liegengeblieben ist.`:""}`:""}
 
 Kontrolle:
@@ -2914,17 +3266,17 @@ Entfernen lässt sich der Eintrag jederzeit mit \`./05_install_cron.sh --remove\
 
 ## Was täglich passiert
 
-Um ${d} Uhr (${N(e)}) läuft der Export. Die Schemas liest
-er dabei jedes Mal frisch aus \`${$}\`. Pro Schema nacheinander:
+Um ${o} Uhr (${x(e)}) läuft der Export. Die Schemas liest
+er dabei jedes Mal frisch aus \`${S}\`. Pro Schema nacheinander:
 
 1. \`EXPORT "SCHEMA"."*" AS BINARY INTO '.../JJJJ-MM-TT/SCHEMA' WITH REPLACE THREADS ${e.threads}\`
-2. \`tar\` über den Schemaordner nach \`JJJJ-MM-TT/SCHEMA_JJJJ-MM-TT.${o}\`
+2. \`tar\` über den Schemaordner nach \`JJJJ-MM-TT/SCHEMA_JJJJ-MM-TT.${d}\`
 3. Prüfen, ob sich das Archiv lesen lässt
 4. ${e.keepRawExport?"Rohexport bleibt zusätzlich liegen":"Rohexport löschen, es bleibt nur das Archiv"}
 
 Alles eines Laufs liegt damit in **einem Tagesordner**. Erst danach fallen
 Tagesordner und Logs älter als ${e.retentionDays} Tage weg – der Ordner als Ganzes
-(\`RETENTION_DAYS\` in \`${E}\`).
+(\`RETENTION_DAYS\` in \`${c}\`).
 
 Verglichen wird dabei der **Ordnername**, nicht die Änderungszeit: ein Zugriff
 beim Auslagern würde den Zeitstempel verschieben und die Frist stillschweigend
@@ -3027,14 +3379,14 @@ Vorhandene Archive auflisten:
 
 ## Einstellungen ändern
 
-Betriebswerte stehen in \`${s}/${E}\`, nicht in den Skripten:
+Betriebswerte stehen in \`${s}/${c}\`, nicht in den Skripten:
 
 | Schlüssel | Bedeutung | Wert beim Erzeugen |
 | --- | --- | --- |
 ${u}
 
 \`\`\`bash
-vi ${s}/${E}
+vi ${s}/${c}
 \`\`\`
 
 Danach prüfen:
@@ -3051,19 +3403,19 @@ Nicht in dieser Datei stehen SID, Benutzer, hdbuserstore-Key, Pfade, Komprimieru
 und die Uhrzeit des Laufs. Sie hängen an der Einrichtung – die Uhrzeit steht in der
 Crontab – und werden über den Generator geändert.
 
-\`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene \`${E}\` nicht.
+\`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene \`${c}\` nicht.
 Bringt ein neuerer Generator einen zusätzlichen Schlüssel mit, meldet
 \`03_preflight.sh\` ihn als fehlend. Dann die Zeile aus der neu erzeugten
-\`${E}\` übernehmen.
+\`${c}\` übernehmen.
 
 ## Schemas aufnehmen oder entfernen
 
-Welche Schemas gesichert werden, steht allein in \`${s}/${$}\`,
+Welche Schemas gesichert werden, steht allein in \`${s}/${S}\`,
 ein Schema pro Zeile. Export, Vorabprüfung und Testexport lesen die Datei bei
 jedem Lauf.
 
 \`\`\`bash
-vi ${s}/${$}
+vi ${s}/${S}
 \`\`\`
 
 Leerzeilen und Zeilen mit \`#\` am Anfang werden übergangen. Ein Schema lässt sich
@@ -3083,7 +3435,60 @@ fehlgeschlagen.
 \`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene Liste nicht. Soll sie
 doch aus dem Generator übernommen werden, die Datei auf dem Server vorher löschen.
 
-## Wiederherstellung
+${e.notify.enabled?`## Überwachung
+
+Die Skripte melden sich bei jedem Lauf an einen Ping-Dienst im Stil von
+[healthchecks.io](https://healthchecks.io): einmal zu Beginn an
+\`<Adresse>/start\`, einmal am Ende an \`<Adresse>/<Exitcode>\`. Der Dienst
+wertet 0 als Erfolg und jeden anderen Wert als Fehlschlag und zeigt daraus ein
+Dashboard im Browser.
+
+**Die Crontab wird dafür nicht angefasst.** Gemeldet wird aus dem Skript
+heraus, der Cronjob bleibt unverändert.
+
+Der Umweg über einen fremden Dienst hat einen Grund, der sich auf diesem
+Server nicht nachbauen lässt: Bleibt ein Lauf **ganz aus** – weil die Maschine
+steht, der Cron nicht lief oder das Skript fehlt –, kann dieser Server das
+nicht melden. Dort fällt genau das auf, weil der erwartete Ping fehlt.
+
+### Einrichtung im Dienst
+
+1. Je Lauf einen eigenen Check anlegen: einen für den Export${e.offload.enabled?" und einen für die Auslagerung":""}.
+   **Nie denselben Check für beide** – der spätere Lauf überschriebe die
+   Meldung des früheren, und ein Fehlschlag verschwände.
+2. Den Zeitplan des Checks auf den Cronjob abstimmen (\`${Y(e).split(" ").slice(0,5).join(" ")}\`),
+   sonst schlägt er zur falschen Zeit Alarm.
+3. Die Ping-Adressen in \`${c}\` eintragen:
+   \`NOTIFY_PING_URL\`${e.offload.enabled?" und `NOTIFY_PING_URL_OFFLOAD`":""}.
+4. Prüfen mit \`./03_preflight.sh\`.
+
+### Was mitgeschickt wird
+
+An die Abschlussmeldung hängt das Skript eine Übersicht als Klartext: Kunde,
+Tenant, Dauer, eine Zeile je Schema mit Zustand, Größe und Laufzeit sowie die
+letzten \`NOTIFY_MAX_LINES\` Fehler- und Hinweiszeilen aus dem Log. Die Tabelle
+der Schemas wird **nicht** gekürzt – welches Schema klemmte, steht auch dann
+vollständig da, wenn alle klemmten.
+
+Damit verlassen Hostname, Schemanamen und Fehlertexte dieses System. Ist das
+nicht gewollt, lässt sich healthchecks als Docker-Container selbst betreiben;
+in \`${c}\` ändert sich dann nur die Adresse.
+
+### Die Ping-Adresse ist ein Geheimnis
+
+Wer sie kennt, kann dem Dienst **falschen Erfolg** melden und damit ein
+ausgefallenes Backup gesund aussehen lassen. Deshalb:
+
+- \`${c}\` gehört auf \`chmod 600\`; \`03_preflight.sh\` prüft das.
+- Die Skripte schreiben die Adresse nie ins Log und reichen sie curl über
+  dessen Konfiguration statt als Argument – als Argument stünde sie in der
+  Prozessliste.
+- Sie gehört nicht in Tickets oder Screenshots.
+
+Eine gescheiterte Meldung lässt den Lauf unberührt: sie steht als \`WARNUNG\`
+im Log, der Exitcode des Exports ändert sich dadurch nicht.
+
+`:""}## Wiederherstellung
 
 \`\`\`bash
 ./90_restore_schema.sh ${a} 2026-01-15
@@ -3107,24 +3512,24 @@ Bestätigung durch Eintippen des Schemanamens.
 | \`Permission denied\` beim Aufruf | Ausführungsrecht fehlt | \`chmod 750 ${e.scriptPath}\` |
 | Alte Schemaordner unter dem Exportpfad | Ablage vor der Umstellung auf Tagesordner | \`03_preflight.sh\` listet sie; nach Sichtung entfernen |
 | \`bad interpreter: ^M\` oder \`: not found\` | Datei kam mit Windows-Zeilenenden an | \`sed -i 's/\\r$//' *.sh\` |
-| \`HINWEIS: Schema ... existiert in der Datenbank aber nicht\` | Schema gelöscht oder umbenannt | Zeile in \`${$}\` entfernen oder mit \`#\` auskommentieren |
-| \`Schemaliste fehlt oder ist nicht lesbar\` | \`${$}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${n}\` legen |
+| \`HINWEIS: Schema ... existiert in der Datenbank aber nicht\` | Schema gelöscht oder umbenannt | Zeile in \`${S}\` entfernen oder mit \`#\` auskommentieren |
+| \`Schemaliste fehlt oder ist nicht lesbar\` | \`${S}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${t}\` legen |
 | \`hdbsql nicht gefunden\` | Anderer Clientpfad | \`which hdbsql\`, Wert für \`HDBSQL\` anpassen |
 | Anmeldung schlägt fehl | Key gehört einem anderen Linux-Benutzer | \`01_setup_userstore.sh\` als \`${e.osUser}\` ausführen |
 | Lauf funktioniert interaktiv, per Cron nicht | Cron startet ohne Anmeldeprofil | Das Skript lädt \`~/.sapenv.sh\`; prüfen, ob die Datei existiert |
 | \`Ein Export laeuft bereits\` | Vorheriger Lauf dauert noch an | Log prüfen, Laufzeit oder Zeitplan anpassen |
-| Export bricht mit Platzmangel ab | Zielverzeichnis zu klein | In \`${E}\` \`MIN_FREE_GB\` setzen, \`RETENTION_DAYS\` verkürzen |
-| \`Einstellungen fehlen oder sind nicht lesbar\` | \`${E}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${n}\` legen |
-| \`${E}: ... fehlt\` | Neuerer Generator, ältere Datei auf dem Server | Zeile aus der neu erzeugten \`${E}\` übernehmen |
-| \`... ist ungueltig, erwartet wird ...\` | Tippfehler in \`${E}\` | Wert korrigieren, dann \`./03_preflight.sh\` |
-| Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |
-`;return{name:`README_${t}.md`,title:"Anleitung",purpose:"Kundenspezifischer Ablauf von der Einrichtung bis zur Wiederherstellung.",language:"markdown",executable:!1,content:H}}function ot(e){const t=w(e),n=[at(t),Ke(t),Ye(t),Je(t),je(t),qe(t),Qe(t),et(t),rt(t),...t.offload.enabled?[st(t)]:[],it(t)];return[n[0],_e(t),ye(t,n),...n.slice(1)]}function Oe(e){var o;const t=new RegExp(`${V}(.*?)##(.*?)##(.*?)##`),n=new Set,s=[];for(const a of e.split(/\r?\n/)){const u=t.exec(a);if(u===null)continue;const d=((o=u[1])!=null?o:"").trim();!D.test(d)||n.has(d)||(n.add(d),s.push({name:d,tables:He(u[2]),sizeMb:He(u[3])}))}return s.sort((a,u)=>a.name.localeCompare(u.name,"de"))}function He(e){const t=Number.parseFloat((e!=null?e:"").trim());return Number.isFinite(t)?t:null}function lt(e){const t=[];return e.tables!==null&&t.push(`${e.tables} ${e.tables===1?"Tabelle":"Tabellen"}`),e.sizeMb!==null&&e.sizeMb>0&&t.push(e.sizeMb>=1024?`${(e.sizeMb/1024).toFixed(1)} GB`:`${Math.round(e.sizeMb)} MB`),t.join(" · ")}const ht=(()=>{const e=new Uint32Array(256);for(let t=0;t<256;t++){let n=t;for(let s=0;s<8;s++)n=n&1?3988292384^n>>>1:n>>>1;e[t]=n>>>0}return e})();function dt(e){let t=4294967295;for(const n of e)t=t>>>8^ht[(t^n)&255];return(t^4294967295)>>>0}function ut(e){return{time:e.getHours()<<11|e.getMinutes()<<5|Math.floor(e.getSeconds()/2)&31,date:e.getFullYear()-1980<<9|e.getMonth()+1<<5|e.getDate()}}class ct{constructor(){fe(this,"chunks",[]);fe(this,"length",0)}push(t){this.chunks.push(t),this.length+=t.length}u16(t){this.push(new Uint8Array([t&255,t>>>8&255]))}u32(t){this.push(new Uint8Array([t&255,t>>>8&255,t>>>16&255,t>>>24&255]))}toBlob(t){return new Blob(this.chunks,{type:t})}}function Et(e){const t=new Set;for(const n of e){const s=n.split("/");s.pop();let o="";for(const a of s)o+=`${a}/`,t.add(o)}return[...t].sort()}function St(e,t){const n=(t?16384:32768)|e,s=t?16:32;return n*65536+s}function mt(e,t=new Date){const n=new TextEncoder,{time:s,date:o}=ut(t),a=new ct,u=[],d=[...Et(e.map(S=>S.name)).map(S=>({name:S,content:"",mode:493,isDirectory:!0})),...e.map(S=>({...S,isDirectory:!1}))];for(const S of d){const c=n.encode(S.name),g=n.encode(S.content),F=dt(g),ne=a.length;a.u32(67324752),a.u16(20),a.u16(2048),a.u16(0),a.u16(s),a.u16(o),a.u32(F),a.u32(g.length),a.u32(g.length),a.u16(c.length),a.u16(0),a.push(c),a.push(g),u.push({record:S,crc:F,size:g.length,offset:ne})}const m=a.length;for(const{record:S,crc:c,size:g,offset:F}of u){const ne=n.encode(S.name);a.u32(33639248),a.u16(788),a.u16(20),a.u16(2048),a.u16(0),a.u16(s),a.u16(o),a.u32(c),a.u32(g),a.u32(g),a.u16(ne.length),a.u16(0),a.u16(0),a.u16(0),a.u16(0),a.u32(St(S.mode,S.isDirectory)),a.u32(F),a.push(ne)}const H=a.length-m;return a.u32(101010256),a.u16(0),a.u16(0),a.u16(u.length),a.u16(u.length),a.u32(H),a.u32(m),a.u16(0),a.toBlob("application/zip")}const ue="hana-script-generator.profiles.v1",De="hana-script-generator.last.v1",Ce="hana-script-generator.compact.v1";function h(e){const t=document.getElementById(e);if(t===null)throw new Error(`Element #${e} fehlt im Dokument.`);return t}const i={customer:h("customer"),sid:h("sid"),instance:h("instance"),host:h("host"),port:h("port"),dbUser:h("dbUser"),osUser:h("osUser"),userstoreKey:h("userstoreKey"),hdbsqlPath:h("hdbsqlPath"),exportBase:h("exportBase"),scriptPath:h("scriptPath"),schemas:h("schemas"),threads:h("threads"),compression:h("compression"),minFreeGb:h("minFreeGb"),keepRawExport:h("keepRawExport"),retentionDays:h("retentionDays"),scheduleTime:h("scheduleTime"),scheduleDow:h("scheduleDow"),scheduleDowCustom:h("scheduleDowCustom"),mailEnabled:h("mailEnabled"),mailRecipient:h("mailRecipient"),mailCommand:h("mailCommand"),mailOnlyOnError:h("mailOnlyOnError"),offloadEnabled:h("offloadEnabled"),offloadHost:h("offloadHost"),offloadUser:h("offloadUser"),offloadPort:h("offloadPort"),offloadRemotePath:h("offloadRemotePath"),offloadKeyPath:h("offloadKeyPath"),offloadRunAfter:h("offloadRunAfter"),offloadRetention:h("offloadRetention"),offloadTime:h("offloadTime")},l={form:h("configForm"),stepNav:h("stepNav"),btnBack:h("btnBack"),btnNext:h("btnNext"),wizardStatus:h("wizardStatus"),summary:h("summary"),cronPreview:h("cronPreview"),issues:h("issues"),tabs:h("fileTabs"),fileName:h("fileName"),filePurpose:h("filePurpose"),fileContent:h("fileContent"),schemaChips:h("schemaChips"),schemaPicker:h("schemaPicker"),discoverHint:h("discoverHint"),btnDownloadLister:h("btnDownloadLister"),btnCopyCommand:h("btnCopyCommand"),schemaPaste:h("schemaPaste"),inputSchemaListing:h("inputSchemaListing"),mailFields:h("mailFields"),offloadFields:h("offloadFields"),offloadTimeHint:h("offloadTimeHint"),profileSelect:h("profileSelect"),btnSaveProfile:h("btnSaveProfile"),btnDeleteProfile:h("btnDeleteProfile"),btnExportJson:h("btnExportJson"),inputImportJson:h("inputImportJson"),btnReset:h("btnReset"),btnDensity:h("btnDensity"),buildVersion:h("buildVersion"),btnDerivePaths:h("btnDerivePaths"),btnCopy:h("btnCopy"),btnDownload:h("btnDownload"),btnDownloadAll:h("btnDownloadAll")},Y=Array.from(l.form.querySelectorAll(".step")),$t=[["customer","sid","instance","host","port","dbUser","osUser","userstoreKey"],["hdbsqlPath","exportBase","scriptPath"],["schemas"],["threads","compression","keepRawExport","minFreeGb"],["retentionDays","schedule"],["mail"],["offload"],[]],I=Y.length-1;let f=0,A=X("","00"),p=[],M=null,O=[];function v(){const[e="2",t="0"]=i.scheduleTime.value.split(":"),n=i.scheduleDow.value;return{customer:i.customer.value,sid:i.sid.value,instance:i.instance.value,host:i.host.value,port:Number.parseInt(i.port.value,10),dbUser:i.dbUser.value,osUser:i.osUser.value,userstoreKey:i.userstoreKey.value,hdbsqlPath:i.hdbsqlPath.value,exportBase:i.exportBase.value,scriptPath:i.scriptPath.value,schemas:pe(i.schemas.value),threads:Number.parseInt(i.threads.value,10),retentionDays:Number.parseInt(i.retentionDays.value,10),compression:i.compression.value,keepRawExport:i.keepRawExport.checked,minFreeGb:Number.parseInt(i.minFreeGb.value,10),schedule:{hour:Number.parseInt(e,10),minute:Number.parseInt(t,10),dayOfWeek:n==="__custom"?i.scheduleDowCustom.value.trim():n},mail:{enabled:i.mailEnabled.checked,recipient:i.mailRecipient.value,command:i.mailCommand.value,onlyOnError:i.mailOnlyOnError.checked},offload:{...(()=>{const[s="4",o="0"]=i.offloadTime.value.split(":");return{hour:Number.parseInt(s,10),minute:Number.parseInt(o,10)}})(),enabled:i.offloadEnabled.checked,host:i.offloadHost.value,user:i.offloadUser.value,port:Number.parseInt(i.offloadPort.value,10),remotePath:i.offloadRemotePath.value,keyPath:i.offloadKeyPath.value,runAfterExport:i.offloadRunAfter.checked,remoteRetentionDays:Number.parseInt(i.offloadRetention.value,10)}}}function J(e){i.customer.value=e.customer,i.sid.value=e.sid,i.instance.value=e.instance,i.host.value=e.host,i.port.value=String(e.port),i.dbUser.value=e.dbUser,i.osUser.value=e.osUser,i.userstoreKey.value=e.userstoreKey,i.hdbsqlPath.value=e.hdbsqlPath,i.exportBase.value=e.exportBase,i.scriptPath.value=e.scriptPath,i.schemas.value=e.schemas.join(`
-`),i.threads.value=String(e.threads),i.retentionDays.value=String(e.retentionDays),i.compression.value=e.compression,i.keepRawExport.checked=e.keepRawExport,i.minFreeGb.value=String(e.minFreeGb);const{hour:t,minute:n,dayOfWeek:s}=e.schedule;i.scheduleTime.value=`${String(t).padStart(2,"0")}:${String(n).padStart(2,"0")}`,Array.from(i.scheduleDow.options).map(a=>a.value).includes(s)?(i.scheduleDow.value=s,i.scheduleDowCustom.value=""):(i.scheduleDow.value="__custom",i.scheduleDowCustom.value=s),i.mailEnabled.checked=e.mail.enabled,i.mailRecipient.value=e.mail.recipient,i.mailCommand.value=e.mail.command,i.mailOnlyOnError.checked=e.mail.onlyOnError,i.offloadEnabled.checked=e.offload.enabled,i.offloadHost.value=e.offload.host,i.offloadUser.value=e.offload.user,i.offloadPort.value=String(e.offload.port),i.offloadRemotePath.value=e.offload.remotePath,i.offloadKeyPath.value=e.offload.keyPath,i.offloadRunAfter.checked=e.offload.runAfterExport,i.offloadRetention.value=String(e.offload.remoteRetentionDays),i.offloadTime.value=`${String(e.offload.hour).padStart(2,"0")}:${String(e.offload.minute).padStart(2,"0")}`,A=X(e.sid,e.instance),Pe(),Le()}function ce(e){const t=ge();return{...t,...e,schedule:{...t.schedule,...e.schedule},mail:{...t.mail,...e.mail},offload:{...t.offload,...e.offload}}}function Le(){i.scheduleDowCustom.hidden=i.scheduleDow.value!=="__custom",l.mailFields.hidden=!i.mailEnabled.checked,l.offloadFields.hidden=!i.offloadEnabled.checked,l.offloadTimeHint.textContent=i.offloadRunAfter.checked?"Holt nach, was liegengeblieben ist – etwa nach einer Nacht ohne Netz.":"Eigener täglicher Auslagerungslauf, da nicht direkt nach dem Export."}function Pe(){const e=X(i.sid.value.trim().toUpperCase(),i.instance.value.trim()),t=(n,s,o)=>{o.length!==0&&(n.value.trim().length===0||n.value===s)&&(n.value=o)};if(t(i.port,String(A.port),String(e.port)),e.hdbsqlPath.length===0){A={...A,port:e.port};return}t(i.osUser,A.osUser,e.osUser),t(i.offloadKeyPath,A.keyPath,e.keyPath),t(i.hdbsqlPath,A.hdbsqlPath,e.hdbsqlPath),t(i.exportBase,A.exportBase,e.exportBase),t(i.scriptPath,A.scriptPath,e.scriptPath),A=e}function j(e,t){var s;const n=(s=$t[t])!=null?s:[];return e.filter(o=>n.includes(o.field))}function ft(e){for(let t=0;t<Y.length;t++)if(j(e,t).some(n=>n.severity==="error"))return t;return null}function B(e){f=Math.max(0,Math.min(I,e)),R(),window.scrollTo({top:0,behavior:"smooth"})}function pt(e){l.stepNav.replaceChildren(...Y.map((t,n)=>{var d;const s=j(e,n).some(m=>m.severity==="error"),o=document.createElement("button");o.type="button",o.className="steps__item",o.setAttribute("aria-current",String(n===f)),s?o.dataset.state="blocked":n<f&&(o.dataset.state="done");const a=document.createElement("span");a.className="steps__num",a.textContent=n===I?"✓":String(n+1);const u=document.createElement("span");return u.textContent=(d=t.dataset.title)!=null?d:`Schritt ${n+1}`,o.append(a,u),o.addEventListener("click",()=>B(n)),o}))}function gt(e){const t=e.host.length>0&&Number.isInteger(e.port)&&e.dbUser.length>0;if(l.btnDownloadLister.disabled=!t,l.btnCopyCommand.disabled=!t,!t){l.discoverHint.textContent="Dafür fehlen noch Host, Port oder Datenbankbenutzer aus Schritt 1.";return}if(p.length>0){l.discoverHint.textContent=`Liste geladen: ${p.length} Schemas von ${e.host}.`;return}l.discoverHint.textContent=`Beides fragt ${e.host}:${e.port} als ${e.dbUser} ab und setzt den SAP HANA Client auf dem Windows-Rechner voraus. Der Befehl braucht keine Datei und umgeht damit die Ausführungssperre, die Windows heruntergeladenen .cmd-Dateien auferlegt.`}function bt(e){if(l.schemaPicker.hidden=p.length===0,p.length===0)return;const t=new Set(e.schemas.map(u=>u.toUpperCase())),n=document.createElement("div");n.className="picker__head";const s=document.createElement("span");s.textContent=`${p.length} Schemas gefunden, ${t.size} ausgewählt`;const o=document.createElement("button");o.type="button",o.className="btn btn--link",o.textContent=t.size===p.length?"Auswahl aufheben":"Alle auswählen",o.addEventListener("click",()=>{const u=t.size===p.length?[]:p.map(d=>d.name);i.schemas.value=u.join(`
-`),R()}),n.append(s,o);const a=document.createElement("div");a.className="picker__list";for(const u of p){const d=document.createElement("label");d.className="picker__row";const m=document.createElement("input");m.type="checkbox",m.checked=t.has(u.name.toUpperCase()),m.addEventListener("change",()=>{const c=pe(i.schemas.value),g=m.checked?[...c,u.name]:c.filter(F=>F.toUpperCase()!==u.name.toUpperCase());i.schemas.value=[...new Set(g)].join(`
-`),R()});const H=document.createElement("span");H.className="picker__name",H.textContent=u.name;const S=document.createElement("span");S.className="picker__meta",S.textContent=lt(u),d.append(m,H,S),a.append(d)}l.schemaPicker.replaceChildren(n,a)}function At(e){l.schemaChips.replaceChildren(...e.schemas.map(t=>{const n=document.createElement("span");return n.className="chip",n.textContent=t,n}))}function _t(e){const t=f===I?e:j(e,f);l.issues.hidden=t.length===0,l.issues.replaceChildren(...t.map(n=>{const s=document.createElement("p");return s.className=`issue issue--${n.severity}`,s.textContent=n.message,s}))}function Rt(e){const t=y(e.compression),n=[["Kunde",e.customer||"–"],["System",`${e.sid} (Instanz ${e.instance}) auf ${e.host}:${e.port}`],["Anmeldung",`${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`],["Linux-Benutzer",e.osUser],["Schemas",`${e.schemas.join(", ")} – je ein eigenes Archiv`],["Exportpfad",e.exportBase],["Skriptpfad",e.scriptPath],["Archiv",`${oe(e.compression)} als SCHEMA_JJJJ-MM-TT.${t}`],["Aufbewahrung",`${e.retentionDays} Tage`],["Zeitplan",`${N(e)} – ${Z(e)}`],["StorageBox",e.offload.enabled?`${e.offload.user}@${e.offload.host}:${e.offload.remotePath} (${e.offload.remoteRetentionDays>0?`${e.offload.remoteRetentionDays} Tage dort`:"dort ohne Aufräumen"})`:"keine Auslagerung"],["Mail",e.mail.enabled?`${e.mail.recipient} (${e.mail.onlyOnError?"nur bei Fehlern":"nach jedem Lauf"})`:"keine"]];l.summary.replaceChildren(...n.flatMap(([s,o])=>{const a=document.createElement("dt");a.textContent=s;const u=document.createElement("dd");return u.textContent=o,[a,u]}))}function Tt(e){l.tabs.replaceChildren(...e.map(t=>{const n=document.createElement("button");return n.type="button",n.className="tab",n.textContent=t.title,n.setAttribute("aria-selected",String(t.name===M)),n.addEventListener("click",()=>{M=t.name,R()}),n}))}function Ee(){var e;return(e=O.find(t=>t.name===M))!=null?e:O[0]}function Ie(e){l.btnCopy.disabled=!e,l.btnDownload.disabled=!e,l.btnDownloadAll.disabled=!e}function R(){var a,u;const e=w(v()),t=ze(e);Y.forEach((d,m)=>{d.hidden=m!==f}),pt(t),_t(t),At(e),bt(e),gt(e),Le(),l.cronPreview.textContent=e.scriptPath.length>0?`Crontab-Eintrag: ${Z(e)}`:"Crontab-Eintrag erscheint, sobald der Skriptpfad feststeht.",l.btnBack.disabled=f===0,l.btnNext.hidden=f===I;const n=j(t,f).some(d=>d.severity==="error");l.btnNext.disabled=n,l.btnNext.textContent=f===I-1?"Skripte erzeugen":"Weiter";const s=ft(t);if(f===I&&s!==null?l.wizardStatus.textContent=`Es fehlt noch etwas in Schritt ${s+1}.`:l.wizardStatus.textContent=`Schritt ${f+1} von ${Y.length}`,s!==null){l.tabs.replaceChildren(),l.summary.replaceChildren(),l.fileName.textContent="Noch keine Ausgabe",l.filePurpose.textContent="Die Vorschau erscheint, sobald alle Pflichtangaben stehen.",l.fileContent.textContent="",O=[],Ie(!1);return}O=ot(e),O.some(d=>d.name===M)||(M=(u=(a=O[0])==null?void 0:a.name)!=null?u:null),Rt(e),Tt(O);const o=Ee();o!==void 0&&(l.fileName.textContent=o.name,l.filePurpose.textContent=o.purpose,l.fileContent.textContent=o.content,Ie(!0),ee(De,e))}function Q(e,t){const n=URL.createObjectURL(e),s=document.createElement("a");s.href=n,s.download=t,document.body.append(s),s.click(),s.remove(),setTimeout(()=>URL.revokeObjectURL(n),5e3)}async function Se(e,t){const n=e.textContent;e.textContent=t,await new Promise(s=>setTimeout(s,1200)),e.textContent=n}function ee(e,t){try{localStorage.setItem(e,JSON.stringify(t))}catch{}}function me(e){try{const t=localStorage.getItem(e);return t===null?null:JSON.parse(t)}catch{return null}}function te(){var e;return(e=me(ue))!=null?e:{}}function $e(e=""){const t=te(),n=Object.keys(t).sort((s,o)=>s.localeCompare(o,"de"));l.profileSelect.replaceChildren(new Option("Kundenprofil laden…",""),...n.map(s=>new Option(s,s))),l.profileSelect.value=e}l.form.addEventListener("input",e=>{(e.target===i.sid||e.target===i.instance)&&Pe(),R()}),l.form.addEventListener("change",()=>R()),l.form.addEventListener("submit",e=>e.preventDefault()),l.btnNext.addEventListener("click",()=>B(f+1)),l.btnBack.addEventListener("click",()=>B(f-1)),l.btnDerivePaths.addEventListener("click",()=>{const e=X(i.sid.value.trim().toUpperCase(),i.instance.value.trim());e.hdbsqlPath.length!==0&&(i.port.value=String(e.port),i.hdbsqlPath.value=e.hdbsqlPath,i.exportBase.value=e.exportBase,i.scriptPath.value=e.scriptPath,i.offloadKeyPath.value=e.keyPath,A=e,R())}),l.btnCopy.addEventListener("click",async()=>{const e=Ee();if(e!==void 0)try{await navigator.clipboard.writeText(e.content),await Se(l.btnCopy,"Kopiert")}catch{await Se(l.btnCopy,"Nicht erlaubt")}}),l.btnDownload.addEventListener("click",()=>{const e=Ee();e!==void 0&&Q(new Blob([e.content],{type:"text/plain;charset=utf-8"}),e.name)}),l.btnDownloadAll.addEventListener("click",()=>{if(O.length===0)return;const e=w(v()),t=`hana_schema_export_${ae(e.customer,e.sid)}`,n=mt(O.map(s=>({name:`${t}/${s.name}`,content:s.content,mode:s.executable?488:416})));Q(n,`${t}.zip`)}),l.btnSaveProfile.addEventListener("click",()=>{const e=w(v()),t=window.prompt("Profilname",e.customer||e.sid);if(t===null||t.trim().length===0)return;const n=te();n[t.trim()]=e,ee(ue,n),$e(t.trim())}),l.profileSelect.addEventListener("change",()=>{const e=te()[l.profileSelect.value];e!==void 0&&(J(ce(e)),B(I))}),l.btnDeleteProfile.addEventListener("click",()=>{const e=l.profileSelect.value;if(e===""||!window.confirm(`Profil "${e}" löschen?`))return;const t=te();delete t[e],ee(ue,t),$e()}),l.btnExportJson.addEventListener("click",()=>{const e=w(v());Q(new Blob([JSON.stringify(e,null,2)],{type:"application/json"}),`hana_export_${ae(e.customer,e.sid)}.json`)}),l.inputImportJson.addEventListener("change",async()=>{var t;const e=(t=l.inputImportJson.files)==null?void 0:t[0];if(e!==void 0)try{const n=JSON.parse(await e.text());J(ce(n)),B(I)}catch{window.alert("Die Datei konnte nicht als Konfiguration gelesen werden.")}finally{l.inputImportJson.value=""}}),l.btnCopyCommand.addEventListener("click",async()=>{const e=Ue(w(v()));try{await navigator.clipboard.writeText(e),await Se(l.btnCopyCommand,"Kopiert")}catch{window.prompt("Diesen Befehl in einem cmd-Fenster ausführen:",e)}}),l.schemaPaste.addEventListener("input",()=>{p=Oe(l.schemaPaste.value),R()}),l.btnDownloadLister.addEventListener("click",()=>{const e=_e(w(v()));Q(new Blob([e.content],{type:"text/plain;charset=utf-8"}),e.name)}),l.inputSchemaListing.addEventListener("change",async()=>{var n,s;const e=(n=l.inputSchemaListing.files)==null?void 0:n[0];if(e===void 0)return;const t=await e.text();if(p=Oe(t),p.length===0){const o=(s=t.split(/\r?\n/).find(a=>a.trim().length>0))!=null?s:"";window.alert(`In ${e.name} steht kein Schema.
+| Export bricht mit Platzmangel ab | Zielverzeichnis zu klein | In \`${c}\` \`MIN_FREE_GB\` setzen, \`RETENTION_DAYS\` verkürzen |
+| \`Einstellungen fehlen oder sind nicht lesbar\` | \`${c}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${t}\` legen |
+| \`${c}: ... fehlt\` | Neuerer Generator, ältere Datei auf dem Server | Zeile aus der neu erzeugten \`${c}\` übernehmen |
+| \`... ist ungueltig, erwartet wird ...\` | Tippfehler in \`${c}\` | Wert korrigieren, dann \`./03_preflight.sh\` |
+| Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |${e.notify.enabled?"\n| `Meldung ... fehlgeschlagen (curl 6)` | Name nicht auflösbar | DNS prüfen, ggf. `NOTIFY_PROXY` setzen |\n| `Meldung ... fehlgeschlagen (curl 7)` oder `28` | Keine Verbindung oder Zeitüberschreitung | Firewall für ausgehendes HTTPS prüfen, ggf. `NOTIFY_PROXY` setzen |\n| `curl fehlt` | curl nicht installiert | `zypper install curl`; der Export läuft trotzdem weiter |\n| Dienst meldet „läuft zu lange“, obwohl alles gut ist | Zeitplan des Checks passt nicht zum Cronjob | Im Dienst Zeitplan und Toleranz an den Cronjob angleichen |\n| Dienst bleibt still, obwohl nichts lief | Beide Läufe zeigen auf denselben Check | Je Lauf einen eigenen Check; `03_preflight.sh` meldet das |":""}
+`;return{name:`README_${n}.md`,title:"Anleitung",purpose:"Kundenspezifischer Ablauf von der Einrichtung bis zur Wiederherstellung.",language:"markdown",executable:!1,content:b}}function mn(e){const n=k(e),t=[fn(n),Ve(n),We(n),sn(n),an(n),tn(n),on(n),ln(n),un(n),...n.offload.enabled?[cn(n)]:[],En(n)];return[t[0],Re(n),Xe(n,t),...t.slice(1)]}function Ce(e){var d;const n=new RegExp(`${W}(.*?)##(.*?)##(.*?)##`),t=new Set,s=[];for(const a of e.split(/\r?\n/)){const u=n.exec(a);if(u===null)continue;const o=((d=u[1])!=null?d:"").trim();!L.test(o)||t.has(o)||(t.add(o),s.push({name:o,tables:Ne(u[2]),sizeMb:Ne(u[3])}))}return s.sort((a,u)=>a.name.localeCompare(u.name,"de"))}function Ne(e){const n=Number.parseFloat((e!=null?e:"").trim());return Number.isFinite(n)?n:null}function $n(e){const n=[];return e.tables!==null&&n.push(`${e.tables} ${e.tables===1?"Tabelle":"Tabellen"}`),e.sizeMb!==null&&e.sizeMb>0&&n.push(e.sizeMb>=1024?`${(e.sizeMb/1024).toFixed(1)} GB`:`${Math.round(e.sizeMb)} MB`),n.join(" · ")}const Sn=(()=>{const e=new Uint32Array(256);for(let n=0;n<256;n++){let t=n;for(let s=0;s<8;s++)t=t&1?3988292384^t>>>1:t>>>1;e[n]=t>>>0}return e})();function gn(e){let n=4294967295;for(const t of e)n=n>>>8^Sn[(n^t)&255];return(n^4294967295)>>>0}function pn(e){return{time:e.getHours()<<11|e.getMinutes()<<5|Math.floor(e.getSeconds()/2)&31,date:e.getFullYear()-1980<<9|e.getMonth()+1<<5|e.getDate()}}class bn{constructor(){ge(this,"chunks",[]);ge(this,"length",0)}push(n){this.chunks.push(n),this.length+=n.length}u16(n){this.push(new Uint8Array([n&255,n>>>8&255]))}u32(n){this.push(new Uint8Array([n&255,n>>>8&255,n>>>16&255,n>>>24&255]))}toBlob(n){return new Blob(this.chunks,{type:n})}}function _n(e){const n=new Set;for(const t of e){const s=t.split("/");s.pop();let d="";for(const a of s)d+=`${a}/`,n.add(d)}return[...n].sort()}function An(e,n){const t=(n?16384:32768)|e,s=n?16:32;return t*65536+s}function Rn(e,n=new Date){const t=new TextEncoder,{time:s,date:d}=pn(n),a=new bn,u=[],o=[..._n(e.map(E=>E.name)).map(E=>({name:E,content:"",mode:493,isDirectory:!0})),...e.map(E=>({...E,isDirectory:!1}))];for(const E of o){const f=t.encode(E.name),$=t.encode(E.content),P=gn($),se=a.length;a.u32(67324752),a.u16(20),a.u16(2048),a.u16(0),a.u16(s),a.u16(d),a.u32(P),a.u32($.length),a.u32($.length),a.u16(f.length),a.u16(0),a.push(f),a.push($),u.push({record:E,crc:P,size:$.length,offset:se})}const m=a.length;for(const{record:E,crc:f,size:$,offset:P}of u){const se=t.encode(E.name);a.u32(33639248),a.u16(788),a.u16(20),a.u16(2048),a.u16(0),a.u16(s),a.u16(d),a.u32(f),a.u32($),a.u32($),a.u16(se.length),a.u16(0),a.u16(0),a.u16(0),a.u16(0),a.u32(An(E.mode,E.isDirectory)),a.u32(P),a.push(se)}const b=a.length-m;return a.u32(101010256),a.u16(0),a.u16(0),a.u16(u.length),a.u16(u.length),a.u32(b),a.u32(m),a.u16(0),a.toBlob("application/zip")}const ce="hana-script-generator.profiles.v1",Ie="hana-script-generator.last.v1",Pe="hana-script-generator.compact.v1";function l(e){const n=document.getElementById(e);if(n===null)throw new Error(`Element #${e} fehlt im Dokument.`);return n}const i={customer:l("customer"),sid:l("sid"),instance:l("instance"),host:l("host"),port:l("port"),dbUser:l("dbUser"),osUser:l("osUser"),userstoreKey:l("userstoreKey"),hdbsqlPath:l("hdbsqlPath"),exportBase:l("exportBase"),scriptPath:l("scriptPath"),schemas:l("schemas"),threads:l("threads"),compression:l("compression"),minFreeGb:l("minFreeGb"),keepRawExport:l("keepRawExport"),retentionDays:l("retentionDays"),scheduleTime:l("scheduleTime"),scheduleDow:l("scheduleDow"),scheduleDowCustom:l("scheduleDowCustom"),mailEnabled:l("mailEnabled"),mailRecipient:l("mailRecipient"),mailCommand:l("mailCommand"),mailOnlyOnError:l("mailOnlyOnError"),notifyEnabled:l("notifyEnabled"),notifyUrl:l("notifyUrl"),notifyOffloadUrl:l("notifyOffloadUrl"),notifyMaxLines:l("notifyMaxLines"),notifyProxy:l("notifyProxy"),offloadEnabled:l("offloadEnabled"),offloadHost:l("offloadHost"),offloadUser:l("offloadUser"),offloadPort:l("offloadPort"),offloadRemotePath:l("offloadRemotePath"),offloadKeyPath:l("offloadKeyPath"),offloadRunAfter:l("offloadRunAfter"),offloadRetention:l("offloadRetention"),offloadTime:l("offloadTime")},h={form:l("configForm"),stepNav:l("stepNav"),btnBack:l("btnBack"),btnNext:l("btnNext"),wizardStatus:l("wizardStatus"),summary:l("summary"),cronPreview:l("cronPreview"),issues:l("issues"),tabs:l("fileTabs"),fileName:l("fileName"),filePurpose:l("filePurpose"),fileContent:l("fileContent"),schemaChips:l("schemaChips"),schemaPicker:l("schemaPicker"),discoverHint:l("discoverHint"),btnDownloadLister:l("btnDownloadLister"),btnCopyCommand:l("btnCopyCommand"),schemaPaste:l("schemaPaste"),inputSchemaListing:l("inputSchemaListing"),mailFields:l("mailFields"),notifyFields:l("notifyFields"),offloadFields:l("offloadFields"),offloadTimeHint:l("offloadTimeHint"),profileSelect:l("profileSelect"),btnSaveProfile:l("btnSaveProfile"),btnDeleteProfile:l("btnDeleteProfile"),btnExportJson:l("btnExportJson"),inputImportJson:l("inputImportJson"),btnReset:l("btnReset"),btnDensity:l("btnDensity"),buildVersion:l("buildVersion"),btnDerivePaths:l("btnDerivePaths"),btnCopy:l("btnCopy"),btnDownload:l("btnDownload"),btnDownloadAll:l("btnDownloadAll")},G=Array.from(h.form.querySelectorAll(".step")),Tn=[["customer","sid","instance","host","port","dbUser","osUser","userstoreKey"],["hdbsqlPath","exportBase","scriptPath"],["schemas"],["threads","compression","keepRawExport","minFreeGb"],["retentionDays","schedule"],["mail","notify"],["offload"],[]],I=G.length-1;let g=0,A=V("","00"),p=[],M=null,D=[];function v(){const[e="2",n="0"]=i.scheduleTime.value.split(":"),t=i.scheduleDow.value;return{customer:i.customer.value,sid:i.sid.value,instance:i.instance.value,host:i.host.value,port:Number.parseInt(i.port.value,10),dbUser:i.dbUser.value,osUser:i.osUser.value,userstoreKey:i.userstoreKey.value,hdbsqlPath:i.hdbsqlPath.value,exportBase:i.exportBase.value,scriptPath:i.scriptPath.value,schemas:pe(i.schemas.value),threads:Number.parseInt(i.threads.value,10),retentionDays:Number.parseInt(i.retentionDays.value,10),compression:i.compression.value,keepRawExport:i.keepRawExport.checked,minFreeGb:Number.parseInt(i.minFreeGb.value,10),schedule:{hour:Number.parseInt(e,10),minute:Number.parseInt(n,10),dayOfWeek:t==="__custom"?i.scheduleDowCustom.value.trim():t},mail:{enabled:i.mailEnabled.checked,recipient:i.mailRecipient.value,command:i.mailCommand.value,onlyOnError:i.mailOnlyOnError.checked},notify:{enabled:i.notifyEnabled.checked,url:i.notifyUrl.value,offloadUrl:i.notifyOffloadUrl.value,proxy:i.notifyProxy.value,maxDetailLines:Number.parseInt(i.notifyMaxLines.value,10)},offload:{...(()=>{const[s="4",d="0"]=i.offloadTime.value.split(":");return{hour:Number.parseInt(s,10),minute:Number.parseInt(d,10)}})(),enabled:i.offloadEnabled.checked,host:i.offloadHost.value,user:i.offloadUser.value,port:Number.parseInt(i.offloadPort.value,10),remotePath:i.offloadRemotePath.value,keyPath:i.offloadKeyPath.value,runAfterExport:i.offloadRunAfter.checked,remoteRetentionDays:Number.parseInt(i.offloadRetention.value,10)}}}function Q(e){i.customer.value=e.customer,i.sid.value=e.sid,i.instance.value=e.instance,i.host.value=e.host,i.port.value=String(e.port),i.dbUser.value=e.dbUser,i.osUser.value=e.osUser,i.userstoreKey.value=e.userstoreKey,i.hdbsqlPath.value=e.hdbsqlPath,i.exportBase.value=e.exportBase,i.scriptPath.value=e.scriptPath,i.schemas.value=e.schemas.join(`
+`),i.threads.value=String(e.threads),i.retentionDays.value=String(e.retentionDays),i.compression.value=e.compression,i.keepRawExport.checked=e.keepRawExport,i.minFreeGb.value=String(e.minFreeGb);const{hour:n,minute:t,dayOfWeek:s}=e.schedule;i.scheduleTime.value=`${String(n).padStart(2,"0")}:${String(t).padStart(2,"0")}`,Array.from(i.scheduleDow.options).map(a=>a.value).includes(s)?(i.scheduleDow.value=s,i.scheduleDowCustom.value=""):(i.scheduleDow.value="__custom",i.scheduleDowCustom.value=s),i.mailEnabled.checked=e.mail.enabled,i.mailRecipient.value=e.mail.recipient,i.mailCommand.value=e.mail.command,i.mailOnlyOnError.checked=e.mail.onlyOnError,i.notifyEnabled.checked=e.notify.enabled,i.notifyUrl.value=e.notify.url,i.notifyOffloadUrl.value=e.notify.offloadUrl,i.notifyMaxLines.value=String(e.notify.maxDetailLines),i.notifyProxy.value=e.notify.proxy,i.offloadEnabled.checked=e.offload.enabled,i.offloadHost.value=e.offload.host,i.offloadUser.value=e.offload.user,i.offloadPort.value=String(e.offload.port),i.offloadRemotePath.value=e.offload.remotePath,i.offloadKeyPath.value=e.offload.keyPath,i.offloadRunAfter.checked=e.offload.runAfterExport,i.offloadRetention.value=String(e.offload.remoteRetentionDays),i.offloadTime.value=`${String(e.offload.hour).padStart(2,"0")}:${String(e.offload.minute).padStart(2,"0")}`,A=V(e.sid,e.instance),we(),ke()}function Ee(e){const n=be();return{...n,...e,schedule:{...n.schedule,...e.schedule},mail:{...n.mail,...e.mail},notify:{...n.notify,...e.notify},offload:{...n.offload,...e.offload}}}function ke(){i.scheduleDowCustom.hidden=i.scheduleDow.value!=="__custom",h.mailFields.hidden=!i.mailEnabled.checked,h.notifyFields.hidden=!i.notifyEnabled.checked,h.offloadFields.hidden=!i.offloadEnabled.checked,h.offloadTimeHint.textContent=i.offloadRunAfter.checked?"Holt nach, was liegengeblieben ist – etwa nach einer Nacht ohne Netz.":"Eigener täglicher Auslagerungslauf, da nicht direkt nach dem Export."}function we(){const e=V(i.sid.value.trim().toUpperCase(),i.instance.value.trim()),n=(t,s,d)=>{d.length!==0&&(t.value.trim().length===0||t.value===s)&&(t.value=d)};if(n(i.port,String(A.port),String(e.port)),e.hdbsqlPath.length===0){A={...A,port:e.port};return}n(i.osUser,A.osUser,e.osUser),n(i.offloadKeyPath,A.keyPath,e.keyPath),n(i.hdbsqlPath,A.hdbsqlPath,e.hdbsqlPath),n(i.exportBase,A.exportBase,e.exportBase),n(i.scriptPath,A.scriptPath,e.scriptPath),A=e}function ee(e,n){var s;const t=(s=Tn[n])!=null?s:[];return e.filter(d=>t.includes(d.field))}function On(e){for(let n=0;n<G.length;n++)if(ee(e,n).some(t=>t.severity==="error"))return n;return null}function B(e){g=Math.max(0,Math.min(I,e)),T(),window.scrollTo({top:0,behavior:"smooth"})}function Dn(e){h.stepNav.replaceChildren(...G.map((n,t)=>{var o;const s=ee(e,t).some(m=>m.severity==="error"),d=document.createElement("button");d.type="button",d.className="steps__item",d.setAttribute("aria-current",String(t===g)),s?d.dataset.state="blocked":t<g&&(d.dataset.state="done");const a=document.createElement("span");a.className="steps__num",a.textContent=t===I?"✓":String(t+1);const u=document.createElement("span");return u.textContent=(o=n.dataset.title)!=null?o:`Schritt ${t+1}`,d.append(a,u),d.addEventListener("click",()=>B(t)),d}))}function Ln(e){const n=e.host.length>0&&Number.isInteger(e.port)&&e.dbUser.length>0;if(h.btnDownloadLister.disabled=!n,h.btnCopyCommand.disabled=!n,!n){h.discoverHint.textContent="Dafür fehlen noch Host, Port oder Datenbankbenutzer aus Schritt 1.";return}if(p.length>0){h.discoverHint.textContent=`Liste geladen: ${p.length} Schemas von ${e.host}.`;return}h.discoverHint.textContent=`Beides fragt ${e.host}:${e.port} als ${e.dbUser} ab und setzt den SAP HANA Client auf dem Windows-Rechner voraus. Der Befehl braucht keine Datei und umgeht damit die Ausführungssperre, die Windows heruntergeladenen .cmd-Dateien auferlegt.`}function Hn(e){if(h.schemaPicker.hidden=p.length===0,p.length===0)return;const n=new Set(e.schemas.map(u=>u.toUpperCase())),t=document.createElement("div");t.className="picker__head";const s=document.createElement("span");s.textContent=`${p.length} Schemas gefunden, ${n.size} ausgewählt`;const d=document.createElement("button");d.type="button",d.className="btn btn--link",d.textContent=n.size===p.length?"Auswahl aufheben":"Alle auswählen",d.addEventListener("click",()=>{const u=n.size===p.length?[]:p.map(o=>o.name);i.schemas.value=u.join(`
+`),T()}),t.append(s,d);const a=document.createElement("div");a.className="picker__list";for(const u of p){const o=document.createElement("label");o.className="picker__row";const m=document.createElement("input");m.type="checkbox",m.checked=n.has(u.name.toUpperCase()),m.addEventListener("change",()=>{const f=pe(i.schemas.value),$=m.checked?[...f,u.name]:f.filter(P=>P.toUpperCase()!==u.name.toUpperCase());i.schemas.value=[...new Set($)].join(`
+`),T()});const b=document.createElement("span");b.className="picker__name",b.textContent=u.name;const E=document.createElement("span");E.className="picker__meta",E.textContent=$n(u),o.append(m,b,E),a.append(o)}h.schemaPicker.replaceChildren(t,a)}function Cn(e){h.schemaChips.replaceChildren(...e.schemas.map(n=>{const t=document.createElement("span");return t.className="chip",t.textContent=n,t}))}function Nn(e){const n=g===I?e:ee(e,g);h.issues.hidden=n.length===0,h.issues.replaceChildren(...n.map(t=>{const s=document.createElement("p");return s.className=`issue issue--${t.severity}`,s.textContent=t.message,s}))}function In(e){var t;const n=/^https:\/\/([^/\s]+)/.exec(e);return(t=n==null?void 0:n[1])!=null?t:"nicht gesetzt"}function Pn(e){const n=z(e.compression),t=[["Kunde",e.customer||"–"],["System",`${e.sid} (Instanz ${e.instance}) auf ${e.host}:${e.port}`],["Anmeldung",`${e.dbUser} über hdbuserstore-Key ${e.userstoreKey}`],["Linux-Benutzer",e.osUser],["Schemas",`${e.schemas.join(", ")} – je ein eigenes Archiv`],["Exportpfad",e.exportBase],["Skriptpfad",e.scriptPath],["Archiv",`${he(e.compression)} als SCHEMA_JJJJ-MM-TT.${n}`],["Aufbewahrung",`${e.retentionDays} Tage`],["Zeitplan",`${x(e)} – ${Y(e)}`],["StorageBox",e.offload.enabled?`${e.offload.user}@${e.offload.host}:${e.offload.remotePath} (${e.offload.remoteRetentionDays>0?`${e.offload.remoteRetentionDays} Tage dort`:"dort ohne Aufräumen"})`:"keine Auslagerung"],["Mail",e.mail.enabled?`${e.mail.recipient} (${e.mail.onlyOnError?"nur bei Fehlern":"nach jedem Lauf"})`:"keine"],["Überwachung",e.notify.enabled?`${In(e.notify.url)}, ${e.notify.offloadUrl.length>0?"Export und Auslagerung":"nur der Export"}`:"keine"]];h.summary.replaceChildren(...t.flatMap(([s,d])=>{const a=document.createElement("dt");a.textContent=s;const u=document.createElement("dd");return u.textContent=d,[a,u]}))}function kn(e){h.tabs.replaceChildren(...e.map(n=>{const t=document.createElement("button");return t.type="button",t.className="tab",t.textContent=n.title,t.setAttribute("aria-selected",String(n.name===M)),t.addEventListener("click",()=>{M=n.name,T()}),t}))}function fe(){var e;return(e=D.find(n=>n.name===M))!=null?e:D[0]}function xe(e){h.btnCopy.disabled=!e,h.btnDownload.disabled=!e,h.btnDownloadAll.disabled=!e}function T(){var a,u;const e=k(v()),n=Ye(e);G.forEach((o,m)=>{o.hidden=m!==g}),Dn(n),Nn(n),Cn(e),Hn(e),Ln(e),ke(),h.cronPreview.textContent=e.scriptPath.length>0?`Crontab-Eintrag: ${Y(e)}`:"Crontab-Eintrag erscheint, sobald der Skriptpfad feststeht.",h.btnBack.disabled=g===0,h.btnNext.hidden=g===I;const t=ee(n,g).some(o=>o.severity==="error");h.btnNext.disabled=t,h.btnNext.textContent=g===I-1?"Skripte erzeugen":"Weiter";const s=On(n);if(g===I&&s!==null?h.wizardStatus.textContent=`Es fehlt noch etwas in Schritt ${s+1}.`:h.wizardStatus.textContent=`Schritt ${g+1} von ${G.length}`,s!==null){h.tabs.replaceChildren(),h.summary.replaceChildren(),h.fileName.textContent="Noch keine Ausgabe",h.filePurpose.textContent="Die Vorschau erscheint, sobald alle Pflichtangaben stehen.",h.fileContent.textContent="",D=[],xe(!1);return}D=mn(e),D.some(o=>o.name===M)||(M=(u=(a=D[0])==null?void 0:a.name)!=null?u:null),Pn(e),kn(D);const d=fe();d!==void 0&&(h.fileName.textContent=d.name,h.filePurpose.textContent=d.purpose,h.fileContent.textContent=d.content,xe(!0),te(Ie,e))}function ne(e,n){const t=URL.createObjectURL(e),s=document.createElement("a");s.href=t,s.download=n,document.body.append(s),s.click(),s.remove(),setTimeout(()=>URL.revokeObjectURL(t),5e3)}async function me(e,n){const t=e.textContent;e.textContent=n,await new Promise(s=>setTimeout(s,1200)),e.textContent=t}function te(e,n){try{localStorage.setItem(e,JSON.stringify(n))}catch{}}function $e(e){try{const n=localStorage.getItem(e);return n===null?null:JSON.parse(n)}catch{return null}}function re(){var e;return(e=$e(ce))!=null?e:{}}function Se(e=""){const n=re(),t=Object.keys(n).sort((s,d)=>s.localeCompare(d,"de"));h.profileSelect.replaceChildren(new Option("Kundenprofil laden…",""),...t.map(s=>new Option(s,s))),h.profileSelect.value=e}h.form.addEventListener("input",e=>{(e.target===i.sid||e.target===i.instance)&&we(),T()}),h.form.addEventListener("change",()=>T()),h.form.addEventListener("submit",e=>e.preventDefault()),h.btnNext.addEventListener("click",()=>B(g+1)),h.btnBack.addEventListener("click",()=>B(g-1)),h.btnDerivePaths.addEventListener("click",()=>{const e=V(i.sid.value.trim().toUpperCase(),i.instance.value.trim());e.hdbsqlPath.length!==0&&(i.port.value=String(e.port),i.hdbsqlPath.value=e.hdbsqlPath,i.exportBase.value=e.exportBase,i.scriptPath.value=e.scriptPath,i.offloadKeyPath.value=e.keyPath,A=e,T())}),h.btnCopy.addEventListener("click",async()=>{const e=fe();if(e!==void 0)try{await navigator.clipboard.writeText(e.content),await me(h.btnCopy,"Kopiert")}catch{await me(h.btnCopy,"Nicht erlaubt")}}),h.btnDownload.addEventListener("click",()=>{const e=fe();e!==void 0&&ne(new Blob([e.content],{type:"text/plain;charset=utf-8"}),e.name)}),h.btnDownloadAll.addEventListener("click",()=>{if(D.length===0)return;const e=k(v()),n=`hana_schema_export_${le(e.customer,e.sid)}`,t=Rn(D.map(s=>({name:`${n}/${s.name}`,content:s.content,mode:s.executable?488:416})));ne(t,`${n}.zip`)}),h.btnSaveProfile.addEventListener("click",()=>{const e=k(v()),n=window.prompt("Profilname",e.customer||e.sid);if(n===null||n.trim().length===0)return;const t=re();t[n.trim()]=e,te(ce,t),Se(n.trim())}),h.profileSelect.addEventListener("change",()=>{const e=re()[h.profileSelect.value];e!==void 0&&(Q(Ee(e)),B(I))}),h.btnDeleteProfile.addEventListener("click",()=>{const e=h.profileSelect.value;if(e===""||!window.confirm(`Profil "${e}" löschen?`))return;const n=re();delete n[e],te(ce,n),Se()}),h.btnExportJson.addEventListener("click",()=>{const e=k(v());ne(new Blob([JSON.stringify(e,null,2)],{type:"application/json"}),`hana_export_${le(e.customer,e.sid)}.json`)}),h.inputImportJson.addEventListener("change",async()=>{var n;const e=(n=h.inputImportJson.files)==null?void 0:n[0];if(e!==void 0)try{const t=JSON.parse(await e.text());Q(Ee(t)),B(I)}catch{window.alert("Die Datei konnte nicht als Konfiguration gelesen werden.")}finally{h.inputImportJson.value=""}}),h.btnCopyCommand.addEventListener("click",async()=>{const e=Ge(k(v()));try{await navigator.clipboard.writeText(e),await me(h.btnCopyCommand,"Kopiert")}catch{window.prompt("Diesen Befehl in einem cmd-Fenster ausführen:",e)}}),h.schemaPaste.addEventListener("input",()=>{p=Ce(h.schemaPaste.value),T()}),h.btnDownloadLister.addEventListener("click",()=>{const e=Re(k(v()));ne(new Blob([e.content],{type:"text/plain;charset=utf-8"}),e.name)}),h.inputSchemaListing.addEventListener("change",async()=>{var t,s;const e=(t=h.inputSchemaListing.files)==null?void 0:t[0];if(e===void 0)return;const n=await e.text();if(p=Ce(n),p.length===0){const d=(s=n.split(/\r?\n/).find(a=>a.trim().length>0))!=null?s:"";window.alert(`In ${e.name} steht kein Schema.
 
-`+(o.length>0?`Erste Zeile der Datei:
-${o}`:"Die Datei ist leer."))}l.inputSchemaListing.value="",R()});function we(e){document.documentElement.dataset.compact=e?"1":"",l.btnDensity.setAttribute("aria-pressed",String(e)),l.btnDensity.textContent=e?"Normal":"Kompakt"}l.btnDensity.addEventListener("click",()=>{const e=document.documentElement.dataset.compact!=="1";we(e),ee(Ce,e)}),l.btnReset.addEventListener("click",()=>{window.confirm("Alle Eingaben verwerfen und neu beginnen?")&&(J(ge()),l.schemaPaste.value="",p=[],M=null,B(0))}),l.buildVersion.textContent=`Stand ${k}`,l.buildVersion.title="Dieser Stand steht auch im Kopf jedes erzeugten Skripts",we(me(Ce)===!0),J(ce((ke=me(De))!=null?ke:{})),$e(),R()})();
+`+(d.length>0?`Erste Zeile der Datei:
+${d}`:"Die Datei ist leer."))}h.inputSchemaListing.value="",T()});function Fe(e){document.documentElement.dataset.compact=e?"1":"",h.btnDensity.setAttribute("aria-pressed",String(e)),h.btnDensity.textContent=e?"Normal":"Kompakt"}h.btnDensity.addEventListener("click",()=>{const e=document.documentElement.dataset.compact!=="1";Fe(e),te(Pe,e)}),h.btnReset.addEventListener("click",()=>{window.confirm("Alle Eingaben verwerfen und neu beginnen?")&&(Q(be()),h.schemaPaste.value="",p=[],M=null,B(0))}),h.buildVersion.textContent=`Stand ${w}`,h.buildVersion.title="Dieser Stand steht auch im Kopf jedes erzeugten Skripts",Fe($e(Pe)===!0),Q(Ee((Me=$e(Ie))!=null?Me:{})),Se(),T()})();
 
     </script>
   </body>
