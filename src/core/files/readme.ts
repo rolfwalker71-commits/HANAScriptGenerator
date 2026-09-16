@@ -98,6 +98,40 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
   }
 | \`90_restore_schema.sh\` | Entpackt ein Archiv und spielt es per IMPORT zurück. |
 
+## Aufrufe und Schalter
+
+Vollständig, in der Reihenfolge der Dateien. Unbekannte Angaben werden
+abgewiesen, statt ersatzweise etwas anderes zu tun.
+
+| Aufruf | Wirkung |
+| --- | --- |
+| \`00_schemas_auslesen.cmd\` | Holt die Schemaliste. Ohne Schalter, aber zwei Variablen: \`set USERSTORE_KEY=…\` nimmt den hdbuserstore statt der Passwortabfrage, \`set HANA_DB=…\` fragt einen anderen Tenant ab. |
+| \`00_dateien_uebertragen.cmd\` | Überträgt alles in einem Durchgang, eine Passwortabfrage. |
+| \`00_dateien_uebertragen.cmd --key\` | Richtet einmalig einen SSH-Schlüssel ein, danach ohne Passwort. |
+| \`00_dateien_uebertragen.cmd --scp\` | Einzelschritte statt einem Durchgang, falls \`tar\` fehlt. |
+| \`./01_setup_userstore.sh\` | Legt den Userstore-Key an. Ohne Schalter. |
+| \`./02_prepare_dirs.sh\` | Legt die Verzeichnisse an. Ohne Schalter. |
+| \`./03_preflight.sh\` | Prüft alle Voraussetzungen. Ohne Schalter, ändert nichts. |
+| \`./04_test_export.sh\` | Testexport des ersten Schemas aus \`${SCHEMA_FILE_NAME}\`. |
+| \`./04_test_export.sh SCHEMA\` | Testexport dieses Schemas. |
+| \`./04_test_export.sh [SCHEMA] --keep\` | Testdaten liegen lassen statt sie zu entfernen. |
+| \`${config.scriptPath}\` | Der eigentliche Export. Ohne Schalter – alles Weitere steht in \`${EXPORT_CONF_NAME}\`. |
+| \`./05_install_cron.sh\` | Trägt die Cron-Einträge ein oder aktualisiert sie. |
+| \`./05_install_cron.sh --show\` | Zeigt nur den geplanten Eintrag und die aktuelle Crontab. |
+| \`./05_install_cron.sh --remove\` | Entfernt die Einträge wieder. |${
+    config.offload.enabled
+      ? `
+| \`./06_offload_storagebox.sh\` | Überträgt den heutigen Tagesordner. |
+| \`./06_offload_storagebox.sh JJJJ-MM-TT\` | Überträgt genau diesen Tag noch einmal. |
+| \`./06_offload_storagebox.sh --pending\` | Holt alles nach, was noch keinen Vermerk hat. |
+| \`./06_offload_storagebox.sh --check\` | Prüft nur die Anmeldung, überträgt nichts. |
+| \`./06_offload_storagebox.sh --setup\` | Einmalige Einrichtung des Schlüssels. \`--setup-key\` und \`--install-key\` sind ältere Namen dafür. |`
+      : ''
+  }
+| \`./90_restore_schema.sh --list\` | Listet die vorhandenen Archive. Ohne Angabe passiert dasselbe. |
+| \`./90_restore_schema.sh SCHEMA JJJJ-MM-TT\` | Entpackt das Archiv. Die Datenbank bleibt unberührt. |
+| \`./90_restore_schema.sh SCHEMA JJJJ-MM-TT --import\` | Spielt zusätzlich zurück. Überschreibt Objekte und verlangt vorher den Schemanamen. |
+
 ## Einrichtung
 
 Alle Schritte laufen als \`${config.osUser}\`. Der hdbuserstore ist benutzerspezifisch –

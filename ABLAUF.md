@@ -66,6 +66,8 @@ Wer das nicht jedes Mal tippen will, richtet einmalig einen Schlüssel ein:
 00_dateien_uebertragen.cmd --key
 ```
 
+Fehlt auf dem Windows-Rechner `tar`, überträgt `--scp` in Einzelschritten.
+
 ---
 
 ## Teil 2 — Auf dem HANA-Server
@@ -187,7 +189,8 @@ Auslagerung. Kontrolle:
 crontab -l
 ```
 
-Entfernen jederzeit mit `./05_install_cron.sh --remove`.
+Nur ansehen, ohne etwas zu ändern: `./05_install_cron.sh --show`. Entfernen
+jederzeit mit `./05_install_cron.sh --remove`.
 
 ---
 
@@ -277,6 +280,36 @@ Produktivdaten und verlangt deshalb eine Bestätigung.
 Netz. Der Cronjob macht das ohnehin täglich.
 
 ---
+
+## Schalter im Überblick
+
+Vollständig. Unbekannte Angaben werden abgewiesen, statt ersatzweise etwas
+anderes zu tun.
+
+| Aufruf | Wirkung |
+| --- | --- |
+| `00_schemas_auslesen.cmd` | Schemaliste holen. Ohne Schalter, aber zwei Variablen: `set USERSTORE_KEY=…` statt Passwortabfrage, `set HANA_DB=…` für einen anderen Tenant |
+| `00_dateien_uebertragen.cmd` | Übertragen in einem Durchgang |
+| `00_dateien_uebertragen.cmd --key` | Einmalig SSH-Schlüssel einrichten, danach ohne Passwort |
+| `00_dateien_uebertragen.cmd --scp` | Einzelschritte statt einem Durchgang, falls `tar` fehlt |
+| `./01_setup_userstore.sh` | Userstore-Key anlegen. Ohne Schalter |
+| `./02_prepare_dirs.sh` | Verzeichnisse anlegen. Ohne Schalter |
+| `./03_preflight.sh` | Vorabprüfung. Ohne Schalter, ändert nichts |
+| `./04_test_export.sh` | Testexport des ersten Schemas aus `export_schemas.txt` |
+| `./04_test_export.sh <SCHEMA>` | Testexport dieses Schemas |
+| `./04_test_export.sh [<SCHEMA>] --keep` | Testdaten liegen lassen |
+| `<SKRIPTPFAD>/schema_export.sh` | Der eigentliche Export. Ohne Schalter, alles Weitere in `export.conf` |
+| `./05_install_cron.sh` | Cron-Einträge setzen oder aktualisieren |
+| `./05_install_cron.sh --show` | Nur anzeigen, nichts ändern |
+| `./05_install_cron.sh --remove` | Einträge entfernen |
+| `./06_offload_storagebox.sh` | Heutigen Tagesordner übertragen |
+| `./06_offload_storagebox.sh JJJJ-MM-TT` | Diesen Tag noch einmal übertragen |
+| `./06_offload_storagebox.sh --pending` | Alles ohne Vermerk nachholen |
+| `./06_offload_storagebox.sh --check` | Nur die Anmeldung prüfen |
+| `./06_offload_storagebox.sh --setup` | Schlüssel einrichten; `--setup-key` und `--install-key` sind ältere Namen |
+| `./90_restore_schema.sh --list` | Archive auflisten; ohne Angabe dasselbe |
+| `./90_restore_schema.sh <SCHEMA> JJJJ-MM-TT` | Entpacken, Datenbank bleibt unberührt |
+| `./90_restore_schema.sh <SCHEMA> JJJJ-MM-TT --import` | Zusätzlich zurückspielen, mit Rückfrage |
 
 ## Wenn etwas klemmt
 

@@ -100,6 +100,18 @@ MODE="\${1:-install}"
 
 ${userGuard(config)}
 
+# Ohne diese Pruefung wuerde jede unbekannte Angabe, auch ein vertipptes
+# --remvoe, den Eintrag einrichten statt etwas zu melden.
+case "\${MODE}" in
+    install|--show|--remove)
+        ;;
+    *)
+        echo "FEHLER: Unbekannter Aufruf: \${MODE}" >&2
+        echo "Erwartet: --show, --remove oder gar nichts." >&2
+        exit 1
+        ;;
+esac
+
 ${RULE}
 #  Nur anzeigen
 ${RULE}

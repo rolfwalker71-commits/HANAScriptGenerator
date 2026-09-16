@@ -366,6 +366,40 @@ describe('Protokollierung', () => {
   });
 });
 
+describe('Aufrufparameter', () => {
+  it('weist eine unbekannte Angabe beim Cronjob ab, statt einzurichten', () => {
+    // Ein vertipptes --remvoe hat frueher den Eintrag gesetzt.
+    const script =
+      generateAll(exampleConfig()).find((f) => f.name === '05_install_cron.sh')?.content ?? '';
+
+    expect(script).toContain('FEHLER: Unbekannter Aufruf');
+    expect(script).toMatch(/case "\$\{MODE\}" in\n\s+install\|--show\|--remove\)/);
+  });
+
+  it('nennt in der Anleitung jeden Aufruf mit seiner Wirkung', () => {
+    const readme =
+      generateAll(offloadConfig()).find((f) => f.name.endsWith('.md'))?.content ?? '';
+
+    expect(readme).toContain('## Aufrufe und Schalter');
+    for (const aufruf of [
+      '--key',
+      '--scp',
+      '--keep',
+      '--show',
+      '--remove',
+      '--pending',
+      '--check',
+      '--setup',
+      '--list',
+      '--import',
+      'USERSTORE_KEY',
+      'HANA_DB',
+    ]) {
+      expect(readme, aufruf).toContain(aufruf);
+    }
+  });
+});
+
 describe('Einstellungen', () => {
   /** KEY=Wert-Zeilen der erzeugten export.conf. */
   const confOf = (config: ExportConfig): Record<string, string> =>

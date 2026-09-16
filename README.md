@@ -106,18 +106,21 @@ hdbsql-Version Spaltenköpfe und Zeilenzähler formatiert.
 | Datei | Zweck |
 | --- | --- |
 | `README_<KUNDE>.md` | Anleitung mit Konfigurationstabelle, Ablauf und Fehlersuche |
-| `00_schemas_auslesen.cmd` | Läuft auf Windows, holt die Schemaliste aus der Datenbank |
-| `00_dateien_uebertragen.cmd` | Läuft auf Windows, überträgt alles per scp und setzt Rechte |
+| `00_schemas_auslesen.cmd` | Läuft auf Windows, holt die Schemaliste aus der Datenbank. Variablen `USERSTORE_KEY`, `HANA_DB` |
+| `00_dateien_uebertragen.cmd` | Läuft auf Windows, überträgt alles und setzt Rechte, `--key` / `--scp` |
 | `export.conf` | Betriebswerte: Threads, Aufbewahrung, Mindestspeicher, Mail, StorageBox. Die Skripte lesen sie bei jedem Lauf |
 | `export_schemas.txt` | Die zu sichernden Schemas, eins pro Zeile. Die Skripte lesen sie bei jedem Lauf; eine Änderung braucht keinen neuen Satz Skripte |
 | `01_setup_userstore.sh` | Legt den hdbuserstore-Key an, Passwort wird interaktiv abgefragt |
 | `02_prepare_dirs.sh` | Export- und Logverzeichnisse samt Schreibtest |
 | `03_preflight.sh` | Prüft Client, Verbindung, Schemas, Werkzeuge, Platz – ändert nichts |
-| `04_test_export.sh` | Einmaliger Testexport inklusive tar-Lauf |
-| `schema_export.sh` | Das eigentliche Exportskript für Cron |
+| `04_test_export.sh` | Einmaliger Testexport inklusive tar-Lauf, `[SCHEMA]` / `--keep` |
+| `schema_export.sh` | Das eigentliche Exportskript für Cron, ohne Schalter |
 | `05_install_cron.sh` | Trägt den Cronjob idempotent ein, `--show` / `--remove` |
-| `06_offload_storagebox.sh` | Kopiert den Tagesordner auf eine Hetzner StorageBox (nur bei eingeschalteter Auslagerung) |
-| `90_restore_schema.sh` | Entpackt ein Archiv, `--import` spielt es zurück |
+| `06_offload_storagebox.sh` | Kopiert den Tagesordner auf eine Hetzner StorageBox (nur bei eingeschalteter Auslagerung), `JJJJ-MM-TT` / `--pending` / `--check` / `--setup` |
+| `90_restore_schema.sh` | Entpackt ein Archiv, `--list`, `--import` spielt es zurück |
+
+Die erzeugte Anleitung führt unter **Aufrufe und Schalter** alle Aufrufe mit
+ihrer Wirkung auf; dieselbe Übersicht steht in [ABLAUF.md](ABLAUF.md).
 
 ## Übertragung auf den Server
 
