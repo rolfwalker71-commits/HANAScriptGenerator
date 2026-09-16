@@ -21,6 +21,35 @@ export interface MailConfig {
 }
 
 /**
+ * Ueberwachung ueber einen Ping-Dienst im healthchecks.io-Stil.
+ *
+ * Gebaut fuer Systeme ohne eingerichteten Mailversand. Das Skript meldet
+ * sich zu Beginn und am Ende eines Laufs; der Dienst zeigt daraus ein
+ * Dashboard und schlaegt Alarm. Entscheidend ist, was ein Server ueber sich
+ * selbst nicht melden kann: bleibt ein Lauf ganz aus, faellt genau das dort
+ * auf, weil der erwartete Ping fehlt.
+ */
+export interface NotifyConfig {
+  enabled: boolean;
+  /**
+   * Ping-Adresse des Checks fuer den Export, z. B.
+   * `https://hc-ping.com/<uuid>`. Wer sie kennt, kann falsche
+   * Erfolgsmeldungen schicken – sie gehoert deshalb nicht ins Log.
+   */
+  url: string;
+  /**
+   * Eigene Ping-Adresse fuer die Auslagerung, leer = keine. Zwei Jobs duerfen
+   * nicht auf denselben Check zeigen: der eine setzte zurueck, was der andere
+   * gerade gemeldet hat.
+   */
+  offloadUrl: string;
+  /** Leer = direkt hinaus. Sonst `http://host:port`. */
+  proxy: string;
+  /** Wie viele Zeilen aus dem Log als Ping-Inhalt mitgehen. */
+  maxDetailLines: number;
+}
+
+/**
  * Auslagerung der Tagesarchive auf eine Hetzner StorageBox.
  *
  * Uebertragen wird per rsync ueber SSH. Ein Cronlauf kann kein Passwort
@@ -87,13 +116,14 @@ export interface ExportConfig {
   minFreeGb: number;
   schedule: ScheduleConfig;
   mail: MailConfig;
+  notify: NotifyConfig;
   offload: OffloadConfig;
 }
 
 export type IssueSeverity = 'error' | 'warning';
 
 export interface ValidationIssue {
-  field: keyof ExportConfig | 'schedule' | 'mail' | 'offload';
+  field: keyof ExportConfig | 'schedule' | 'mail' | 'notify' | 'offload';
   severity: IssueSeverity;
   message: string;
 }

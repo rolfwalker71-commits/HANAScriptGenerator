@@ -258,7 +258,8 @@
           <section class="step" data-title="Benachrichtigung">
             <h2>Soll der Lauf sich melden?</h2>
             <p class="step__lead">
-              Optional. Ohne Mail bleibt das Log im Exportverzeichnis die einzige Rückmeldung.
+              Optional, aber beides zusammen möglich. Ohne eine der beiden Meldungen bleibt das
+              Log im Exportverzeichnis die einzige Rückmeldung.
             </p>
 
             <div class="group">
@@ -282,6 +283,58 @@
                 <label class="field field--check">
                   <input type="checkbox" id="mailOnlyOnError" />
                   <span>Nur bei Fehlern</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="group">
+              <label class="field field--check field--wide">
+                <input type="checkbox" id="notifyEnabled" />
+                <span>Läufe von einem Ping-Dienst überwachen lassen</span>
+              </label>
+
+              <div id="notifyFields" class="subgroup">
+                <p class="field--wide">
+                  <small>
+                    Gedacht für <a href="https://healthchecks.io" target="_blank" rel="noopener">healthchecks.io</a>
+                    oder eine selbst betriebene Instanz davon. Das Skript meldet Beginn und Ende
+                    jedes Laufs; der Dienst zeigt ein Dashboard und schlägt Alarm. Er merkt als
+                    Einziger auch, wenn ein Lauf <strong>ganz ausbleibt</strong> – das kann eine
+                    Meldung, die der Server selbst verschickt, grundsätzlich nicht.
+                    Die Crontab bleibt unverändert.
+                  </small>
+                </p>
+
+                <label class="field field--wide">
+                  <span>Ping-Adresse für den Export</span>
+                  <input type="password" id="notifyUrl" autocomplete="off" spellcheck="false"
+                         placeholder="https://hc-ping.com/…" />
+                  <small>
+                    Im Dienst einen Check anlegen und dessen Ping-Adresse hier eintragen. Wer sie
+                    kennt, kann falsche Erfolgsmeldungen schicken: sie landet in
+                    <code>export.conf</code> (chmod 600) und nie im Log.
+                  </small>
+                </label>
+
+                <label class="field field--wide">
+                  <span>Ping-Adresse für die Auslagerung</span>
+                  <input type="password" id="notifyOffloadUrl" autocomplete="off" spellcheck="false"
+                         placeholder="https://hc-ping.com/… (eigener Check)" />
+                  <small>
+                    Ein <strong>zweiter</strong> Check. Auf derselben Adresse überschriebe der
+                    spätere Lauf die Meldung des früheren.
+                  </small>
+                </label>
+
+                <label class="field">
+                  <span>Logzeilen im Ping</span>
+                  <input type="number" id="notifyMaxLines" min="0" max="50" />
+                  <small>Fehler- und Hinweiszeilen, die zur Ansicht mitgeschickt werden.</small>
+                </label>
+
+                <label class="field">
+                  <span>Proxy (optional)</span>
+                  <input type="text" id="notifyProxy" placeholder="http://proxy:3128" />
                 </label>
               </div>
             </div>

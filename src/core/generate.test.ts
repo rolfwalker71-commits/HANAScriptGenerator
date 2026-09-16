@@ -61,6 +61,20 @@ function offloadConfig(): ExportConfig {
   };
 }
 
+/** Wie offloadConfig, aber zusätzlich mit eingeschalteter Überwachung. */
+function notifyConfig(): ExportConfig {
+  return {
+    ...offloadConfig(),
+    notify: {
+      enabled: true,
+      url: 'https://hc-ping.example/11111111-2222-3333-4444-555555555555',
+      offloadUrl: 'https://hc-ping.example/66666666-7777-8888-9999-000000000000',
+      proxy: '',
+      maxDetailLines: 12,
+    },
+  };
+}
+
 const workDir = mkdtempSync(join(tmpdir(), 'hana-script-generator-'));
 
 afterAll(() => {
@@ -120,6 +134,11 @@ describe('generateAll', () => {
     // Ohne diesen Fall bliebe das Auslagerungsskript ungeprüft: es entsteht
     // nur, wenn die Auslagerung eingeschaltet ist.
     checkBashSyntax(offloadConfig());
+  });
+
+  it('liefert syntaktisch gültiges Bash mit Überwachung', () => {
+    checkBashSyntax(notifyConfig());
+    checkBashSyntax({ ...notifyConfig(), notify: { ...notifyConfig().notify, proxy: 'http://p:3128' } });
   });
 
   it('exportiert und archiviert jedes Schema einzeln', () => {
@@ -430,10 +449,43 @@ describe('Einstellungen', () => {
     expect(Object.keys(confOf(exampleConfig())).some((key) => key.startsWith('BOX_'))).toBe(false);
   });
 
+  it('nennt die Ueberwachung nur, wenn sie eingeschaltet ist', () => {
+    // Sonst verlangte ein neu erzeugtes Skript einen Schluessel, den eine
+    // gepflegte export.conf auf dem Server nicht kennt – und der naechste
+    // Cronlauf bräche ab, weil read_export_conf mit 2 endet.
+    expect(Object.keys(confOf(offloadConfig())).some((key) => key.startsWith('NOTIFY_'))).toBe(
+      false,
+    );
+    expect(Object.keys(confOf(notifyConfig()))).toEqual(
+      expect.arrayContaining(['NOTIFY_ENABLED', 'NOTIFY_PING_URL', 'NOTIFY_PING_URL_OFFLOAD']),
+    );
+  });
+
+  it('verlangt die Ueberwachungs-Schluessel nur bei eingeschalteter Ueberwachung', () => {
+    const readCall = (config: ExportConfig, name: string): string => {
+      const file = generateAll(config).find((entry) => entry.name === name);
+      const line = file?.content.split('\n').find((entry) => entry.startsWith('read_export_conf '));
+      return line ?? '';
+    };
+
+    expect(readCall(offloadConfig(), 'schema_export.sh')).not.toContain('NOTIFY_');
+    expect(readCall(offloadConfig(), '06_offload_storagebox.sh')).not.toContain('NOTIFY_');
+    expect(readCall(notifyConfig(), 'schema_export.sh')).toContain('NOTIFY_PING_URL');
+    expect(readCall(notifyConfig(), '06_offload_storagebox.sh')).toContain('NOTIFY_PING_URL');
+  });
+
+  it('übernimmt die Ping-Adresse Zeichen für Zeichen', () => {
+    const config = notifyConfig();
+    expect(confOf(config)['NOTIFY_PING_URL']).toBe(config.notify.url);
+    expect(confOf(config)['NOTIFY_PING_URL_OFFLOAD']).toBe(config.notify.offloadUrl);
+  });
+
   it('trägt in keinem Skript Betriebswerte fest ein', () => {
     const assignment =
-      /^(THREADS|RETENTION_DAYS|MIN_FREE_GB|KEEP_RAW_EXPORT|MAIL_[A-Z_]+|BOX_[A-Z]+|REMOTE_RETENTION_DAYS)=/m;
-    for (const file of generateAll(offloadConfig())) {
+      /^(THREADS|RETENTION_DAYS|MIN_FREE_GB|KEEP_RAW_EXPORT|MAIL_[A-Z_]+|BOX_[A-Z]+|NOTIFY_[A-Z_]+|REMOTE_RETENTION_DAYS)=/m;
+    // Deshalb heissen die Laufzeitvariablen der Ueberwachung NTF_ und nicht
+    // NOTIFY_: sonst muesste diese Regel aufgeweicht werden.
+    for (const file of generateAll(notifyConfig())) {
       if (file.language !== 'bash') continue;
       expect(file.content, file.name).not.toMatch(assignment);
     }
@@ -696,6 +748,45 @@ describe('defaults', () => {
 describe('parseSchemaList', () => {
   it('trennt bei Zeilenumbruch, Komma und Leerzeichen und entfernt Duplikate', () => {
     expect(parseSchemaList('A, B\nC  D;A')).toEqual(['A', 'B', 'C', 'D']);
+  });
+});
+
+describe('validateConfig für die Überwachung', () => {
+  const withNotify = (patch: Partial<ExportConfig['notify']>): ExportConfig => ({
+    ...notifyConfig(),
+    notify: { ...notifyConfig().notify, ...patch },
+  });
+
+  const errorsOf = (config: ExportConfig): string[] =>
+    validateConfig(config)
+      .filter((issue) => issue.severity === 'error')
+      .map((issue) => issue.message);
+
+  it('nimmt eine vollständige Konfiguration ohne Fehler an', () => {
+    expect(errorsOf(notifyConfig())).toEqual([]);
+  });
+
+  it('verlangt eine Ping-Adresse, wenn die Überwachung eingeschaltet ist', () => {
+    expect(errorsOf(withNotify({ url: '' })).join(' ')).toContain('Ohne Ping-Adresse');
+  });
+
+  it('lehnt http ab, weil die Adresse sonst offen im Netz läge', () => {
+    expect(errorsOf(withNotify({ url: 'http://hc-ping.example/abc' })).join(' ')).toContain('https');
+  });
+
+  it('lehnt denselben Check für beide Läufe ab', () => {
+    const config = withNotify({ offloadUrl: notifyConfig().notify.url });
+    expect(errorsOf(config).join(' ')).toContain('je einen eigenen Check');
+  });
+
+  it('prüft nichts, solange die Überwachung aus ist', () => {
+    // Ein Rest aus einem früheren Versuch darf die Erzeugung nicht blockieren.
+    expect(errorsOf(withNotify({ enabled: false, url: 'unbrauchbar' }))).toEqual([]);
+  });
+
+  it('warnt, wenn die Auslagerung läuft, aber nicht überwacht wird', () => {
+    const issues = validateConfig(withNotify({ offloadUrl: '' }));
+    expect(issues.some((issue) => issue.message.includes('nicht überwacht'))).toBe(true);
   });
 });
 

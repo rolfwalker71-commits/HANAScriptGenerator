@@ -1,6 +1,7 @@
 import type { ExportConfig, GeneratedFile } from '../types.js';
 import { EXPORT_CONF_NAME, RULE, schemaFileReader, scriptHeader, userGuard } from './common.js';
 import { confKeys, confReader } from './exportConf.js';
+import { notifyPreflight } from './notify.js';
 
 /**
  * Prüft alles, was der spätere Cronlauf voraussetzt: Client, Verbindung,
@@ -139,7 +140,7 @@ if [ "\${CONF_OK}" = "yes" ] && [ "\${MAIL_ENABLED}" = "yes" ]; then
         fail "Mailprogramm '\${MAIL_COMMAND}' wurde nicht gefunden."
     fi
 fi
-${
+${config.notify.enabled ? notifyPreflight(config) : ''}${
   box.enabled
     ? `
 # Das Aufraeumen auf der Box loescht Tagesordner unter BOX_PATH.

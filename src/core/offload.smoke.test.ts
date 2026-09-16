@@ -78,10 +78,31 @@ done
 exit 0
 `;
 
+/** Schreibt die per --config gereichte Adresse und den Inhalt mit. */
+const fakeCurl = `#!/bin/bash
+CONFIG="$(cat)"
+BODY=""
+for ARG in "$@"; do case "\${ARG}" in @*) BODY="\${ARG#@}" ;; esac; done
+{
+    printf '%s\\n' "\${CONFIG}"
+    [ -n "\${BODY}" ] && [ -r "\${BODY}" ] && cat "\${BODY}"
+} >> "\${FAKE_CURL_OUT}"
+exit 0
+`;
+
+/** Die Ping-Adresse der Auslagerung im Test. */
+const OFFLOAD_PING = 'https://hc-ping.example/auslagerung-check';
+
 let root: string;
 let remote: string;
 let binDir: string;
+let pingLog: string;
 let config: ExportConfig;
+
+/** Was seit dem letzten Zurücksetzen an den Ping-Dienst ging. */
+function pings(): string {
+  return existsSync(pingLog) ? readFileSync(pingLog, 'utf8') : '';
+}
 
 /** Inhalt des zuletzt geschriebenen Auslagerungs-Logs, für Fehlermeldungen. */
 function latestLog(): string {
@@ -101,6 +122,7 @@ function run(args: string[]): { stdout: string; status: number } {
         ...process.env,
         PATH: `${binDir}:${process.env['PATH'] ?? ''}`,
         FAKE_REMOTE: remote,
+        FAKE_CURL_OUT: pingLog,
       },
     });
     return { stdout, status: 0 };
@@ -136,9 +158,12 @@ beforeAll(() => {
   mkdirSync(remote, { recursive: true });
   mkdirSync(binDir, { recursive: true });
 
+  pingLog = join(root, 'pings.txt');
+
   for (const [name, body] of [
     ['rsync', fakeRsync],
     ['sftp', fakeSftp],
+    ['curl', fakeCurl],
   ] as const) {
     const path = join(binDir, name);
     writeFileSync(path, body, 'utf8');
@@ -160,6 +185,13 @@ beforeAll(() => {
     exportBase: join(root, 'exports'),
     scriptPath: join(root, 'schema_export.sh'),
     schemas: ['ALPHA', 'BETA'],
+    notify: {
+      enabled: true,
+      url: 'https://hc-ping.example/export-check',
+      offloadUrl: OFFLOAD_PING,
+      proxy: '',
+      maxDetailLines: 12,
+    },
     offload: {
       ...base.offload,
       enabled: true,
@@ -308,5 +340,60 @@ describe('generiertes Auslagerungsskript', () => {
 
     expect(status).not.toBe(0);
     expect(stdout).toContain('BOX_PATH=/home ist zu allgemein');
+  });
+});
+
+describe('Meldung der Auslagerung an den Ping-Dienst', () => {
+  /**
+   * Die vorherigen Tests lassen Tagesordner liegen. Diese hier beschreiben
+   * das Melden und nicht das Uebertragen, deshalb starten sie leer.
+   */
+  function leererBestand(): void {
+    for (const entry of readdirSync(config.exportBase)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(entry)) {
+        rmSync(join(config.exportBase, entry), { recursive: true, force: true });
+      }
+    }
+    rmSync(pingLog, { force: true });
+  }
+
+  it('meldet auch dann Erfolg, wenn gar nichts offen ist', () => {
+    // Laeuft die Auslagerung schon nach dem Export, findet der taegliche
+    // --pending-Lauf fast immer nichts. Bliebe die Meldung dann aus, ginge
+    // der Check an fast jedem Tag auf Rot.
+    leererBestand();
+
+    const { status, stdout } = run(['--pending']);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain('Nichts offen');
+    expect(pings()).toContain(`url = "${OFFLOAD_PING}/start"`);
+    expect(pings()).toContain(`url = "${OFFLOAD_PING}/0"`);
+    expect(pings()).toContain('nichts offen, alle Tagesordner sind uebertragen');
+  });
+
+  it('meldet einen Lauf für einen bestimmten Tag mit Ziel und Ergebnis', () => {
+    leererBestand();
+    const day = dayBefore(1);
+    makeDay(day, ['ALPHA']);
+
+    const { status } = run([day]);
+
+    expect(status).toBe(0);
+    expect(pings()).toContain(`url = "${OFFLOAD_PING}/0"`);
+    expect(pings()).toContain('backup-kunde@box.example.invalid:/home/hana_exporte/kunde');
+    expect(pings()).toContain('Ergebnis  : erfolgreich');
+    expect(pings()).toContain(day);
+  });
+
+  it('meldet nichts bei --check, weil das ein Handlauf ist', () => {
+    // Ein Ping von hier stuende beim Dienst als echter Lauf in der Historie
+    // und liesse einen ausgefallenen Cronjob gesund aussehen.
+    leererBestand();
+
+    const { status } = run(['--check']);
+
+    expect(status).toBe(0);
+    expect(pings()).toBe('');
   });
 });

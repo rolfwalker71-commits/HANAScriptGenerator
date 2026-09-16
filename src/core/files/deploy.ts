@@ -38,7 +38,11 @@ export function generateDeployScript(
   const remoteSetup = [
     `sed -i 's/\\r$//' *.sh ${keptList}`,
     'chmod 750 *.sh',
-    `chmod 640 ${keptList}`,
+    // Die Einstellungen strenger als die Schemaliste: in ihnen kann eine
+    // Ping-Adresse stehen, und wer die liest, kann dem Ueberwachungsdienst
+    // falschen Erfolg melden. 640 hiesse: jedes Mitglied der Gruppe kann das.
+    `chmod 600 ${EXPORT_CONF_NAME}`,
+    `chmod 640 ${SCHEMA_FILE_NAME}`,
     `chgrp %TARGET_GROUP% *.sh ${keptList} 2>/dev/null`,
   ].join(' && ');
 

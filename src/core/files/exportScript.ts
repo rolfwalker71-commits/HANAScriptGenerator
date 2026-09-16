@@ -13,7 +13,8 @@ import {
   scriptHeader,
   userGuard,
 } from './common.js';
-import { EXPORT_SCRIPT_KEYS, confReader } from './exportConf.js';
+import { confReader, exportScriptKeys } from './exportConf.js';
+import { notifyBlock } from './notify.js';
 
 /**
  * Das Hauptskript: exportiert jedes Schema einzeln, archiviert jeden Export
@@ -119,6 +120,11 @@ OK_SCHEMAS=()
 FAILED_SCHEMAS=()
 SKIPPED_SCHEMAS=()
 
+# Fuer die Laufzeit in der Abschlussmeldung.
+NTF_START_EPOCH="$(date +%s)"
+# Wird von export_schema je Schema gesetzt.
+ARCHIVE_SIZE=""
+
 case "\${COMPRESSION}" in
     gz)
         TAR_CREATE=(-czf)
@@ -175,6 +181,8 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "\${LOG_FILE}"
 }
 
+${notifyBlock(config, 'export')}
+
 ${RULE}
 #  Vorabpruefungen
 ${RULE}
@@ -190,7 +198,7 @@ log "Einstellungen: \${EXPORT_CONF}"
 log "Schemaliste: \${SCHEMA_FILE}"
 log "${HEAVY_RULE.slice(2)}"
 
-read_export_conf ${EXPORT_SCRIPT_KEYS.join(' ')}
+read_export_conf ${exportScriptKeys(config).join(' ')}
 RC=$?
 
 if [ \${RC} -eq 1 ]; then
@@ -217,6 +225,8 @@ if [ "\${MAIL_ENABLED}" = "yes" ] && { [ -z "\${MAIL_RECIPIENT}" ] || [ -z "\${M
     CONF_ISSUES+=("Mail unvollstaendig")
     MAIL_ENABLED="no"
 fi
+
+notify_begin
 
 if ! read_schema_file; then
     log "FEHLER: Schemaliste fehlt oder ist nicht lesbar: \${SCHEMA_FILE}"
@@ -295,6 +305,10 @@ ${RULE}
 export_schema()
 {
     SCHEMA="$1"
+
+    # Zuruecksetzen, sonst traegt ein gescheitertes Schema die Groesse des
+    # vorherigen in die Uebersicht.
+    ARCHIVE_SIZE=""
     WORK_DIR="\${DAY_DIR}/\${SCHEMA}"
     ARCHIVE="\${DAY_DIR}/\${SCHEMA}_\${DATE}.\${ARCHIVE_EXT}"
 
@@ -377,14 +391,19 @@ do
     if [ \${RC} -eq 0 ] && [ "\${FOUND}" = "0" ]; then
         log "HINWEIS: Schema \${SCHEMA} steht in der Schemaliste, existiert in der Datenbank aber nicht. Uebersprungen."
         SKIPPED_SCHEMAS+=("\${SCHEMA}")
+        notify_row "\${SCHEMA}" "uebersprungen" "-" 0
         continue
     fi
 
+    SCHEMA_STARTED="$(date +%s)"
+
     if export_schema "\${SCHEMA}"; then
         OK_SCHEMAS+=("\${SCHEMA}")
+        notify_row "\${SCHEMA}" "ok" "\${ARCHIVE_SIZE:--}" $(($(date +%s) - SCHEMA_STARTED))
     else
         FAILED_SCHEMAS+=("\${SCHEMA}")
         EXITCODE=1
+        notify_row "\${SCHEMA}" "FEHLER" "-" $(($(date +%s) - SCHEMA_STARTED))
     fi
 done
 
@@ -508,6 +527,57 @@ if [ "\${MAIL_ENABLED}" = "yes" ]; then
         fi
         "\${MAIL_COMMAND}" -s "\${SUBJECT}" "\${MAIL_RECIPIENT}" < "\${LOG_FILE}"
     fi
+fi
+
+${RULE}
+#  Inhalt der Abschlussmeldung
+#
+#  Klartext und kein JSON: der Dienst zeigt den Inhalt so an, wie er
+#  ankommt, und man liest ihn morgens mit dem Auge und nicht mit einem
+#  Programm.
+${RULE}
+
+if [ \${EXITCODE} -ne 0 ]; then
+    NTF_VERDICT="Schema-Export mit Fehlern"
+elif [ \${HINTS} -gt 0 ]; then
+    NTF_VERDICT="Schema-Export erfolgreich, mit Hinweisen"
+else
+    NTF_VERDICT="Schema-Export erfolgreich"
+fi
+
+notify_add "Kunde      : ${config.customer || '-'}"
+notify_add "Tenant     : ${config.sid} (Instanz ${config.instance}) auf $(hostname)"
+notify_add "Ergebnis   : \${NTF_VERDICT}"
+notify_add "Dauer      : $(notify_duration $(($(date +%s) - NTF_START_EPOCH)))"
+notify_add "Schemas    : \${#OK_SCHEMAS[@]} ok, \${#FAILED_SCHEMAS[@]} Fehler, \${#SKIPPED_SCHEMAS[@]} uebersprungen"
+notify_add "Tagesordner: \${DAY_DIR} ($(du -sh "\${DAY_DIR}" 2>/dev/null | awk '{print $1}'))"
+notify_add "Log        : \${LOG_FILE}"
+
+if [ \${#NTF_ROWS[@]} -gt 0 ]; then
+    notify_add ""
+    notify_add "$(printf '%-22s %-14s %8s %9s' 'SCHEMA' 'ZUSTAND' 'GROESSE' 'DAUER')"
+
+    for ROW in \${NTF_ROWS[@]+"\${NTF_ROWS[@]}"}
+    do
+        notify_add "\${ROW}"
+    done
+fi
+
+# Der Auszug aus dem Log ist begrenzt, die Tabelle darueber nicht: welches
+# Schema klemmte, soll auch dann vollstaendig dastehen, wenn alle klemmten.
+#
+# grep -a, weil die Ausgabe von hdbsql das Log fuer grep binaer aussehen
+# lassen kann - dann kaeme statt der Zeilen nur "Binary file matches".
+if [ "\${NOTIFY_MAX_LINES:-0}" -gt 0 ]; then
+    NTF_FOUND=0
+
+    while IFS= read -r LINE
+    do
+        [ \${NTF_FOUND} -eq 0 ] && notify_add "" && notify_add "Aus dem Log:"
+        NTF_FOUND=1
+        notify_add "  \${LINE}"
+    done < <(grep -a -E '(FEHLER|WARNUNG|ABBRUCH|HINWEIS):' "\${LOG_FILE}" 2>/dev/null \
+             | tail -n "\${NOTIFY_MAX_LINES}")
 fi
 
 exit \${EXITCODE}

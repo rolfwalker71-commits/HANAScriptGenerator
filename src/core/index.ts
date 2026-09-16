@@ -4,6 +4,7 @@ export type {
   GeneratedFile,
   IssueSeverity,
   MailConfig,
+  NotifyConfig,
   OffloadConfig,
   ScheduleConfig,
   ValidationIssue,

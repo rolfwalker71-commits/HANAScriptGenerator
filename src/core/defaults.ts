@@ -99,6 +99,13 @@ export function defaultConfig(): ExportConfig {
     minFreeGb: 0,
     schedule: { hour: 2, minute: 0, dayOfWeek: '*' },
     mail: { enabled: false, recipient: '', onlyOnError: true, command: 'mailx' },
+    notify: {
+      enabled: false,
+      url: '',
+      offloadUrl: '',
+      proxy: '',
+      maxDetailLines: 12,
+    },
     offload: {
       enabled: false,
       host: '',
@@ -134,6 +141,12 @@ export function normalizeConfig(config: ExportConfig): ExportConfig {
     exportBase: normalizePath(config.exportBase),
     schemas: config.schemas.map((s) => s.trim()).filter((s) => s.length > 0),
     mail: { ...config.mail, recipient: config.mail.recipient.trim() },
+    notify: {
+      ...config.notify,
+      url: config.notify.url.trim(),
+      offloadUrl: config.notify.offloadUrl.trim(),
+      proxy: config.notify.proxy.trim(),
+    },
     schedule: { ...config.schedule },
     offload: {
       ...config.offload,

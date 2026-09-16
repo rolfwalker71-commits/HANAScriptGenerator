@@ -25,8 +25,8 @@ interface ConfSection {
   entries: ConfEntry[];
 }
 
-/** Die Schlüssel, die das Exportskript braucht. */
-export const EXPORT_SCRIPT_KEYS = [
+/** Die Schlüssel, die das Exportskript immer braucht. */
+const BASE_EXPORT_KEYS = [
   'THREADS',
   'RETENTION_DAYS',
   'MIN_FREE_GB',
@@ -37,14 +37,40 @@ export const EXPORT_SCRIPT_KEYS = [
   'MAIL_COMMAND',
 ] as const;
 
-/** Die Schlüssel, die das Auslagerungsskript braucht. */
-export const OFFLOAD_SCRIPT_KEYS = [
+/** Die Schlüssel, die das Auslagerungsskript immer braucht. */
+const BASE_OFFLOAD_KEYS = [
   'BOX_HOST',
   'BOX_USER',
   'BOX_PORT',
   'BOX_PATH',
   'REMOTE_RETENTION_DAYS',
 ] as const;
+
+/** Die Schlüssel der Überwachung, die beide Skripte brauchen. */
+const NOTIFY_KEYS = [
+  'NOTIFY_ENABLED',
+  'NOTIFY_PING_URL',
+  'NOTIFY_PING_URL_OFFLOAD',
+  'NOTIFY_MAX_LINES',
+  'NOTIFY_PROXY',
+] as const;
+
+/**
+ * Was ein Skript verlangt, hängt von der Konfiguration ab – und das ist keine
+ * Feinheit, sondern verhindert einen Ausfall: `read_export_conf` endet mit 2,
+ * sobald ein verlangter Schlüssel fehlt, und die Skripte brechen daraufhin ab.
+ * Eine vorhandene `export.conf` wird beim erneuten Übertragen aber bewusst
+ * nicht überschrieben (siehe `deploy.ts`). Würde ein neues Skript einen
+ * Schlüssel verlangen, den die Datei auf dem Server nicht kennt, stünde der
+ * nächste Cronlauf still und das Backup fiele aus.
+ */
+export function exportScriptKeys(config: ExportConfig): string[] {
+  return [...BASE_EXPORT_KEYS, ...(config.notify.enabled ? NOTIFY_KEYS : [])];
+}
+
+export function offloadScriptKeys(config: ExportConfig): string[] {
+  return [...BASE_OFFLOAD_KEYS, ...(config.notify.enabled ? NOTIFY_KEYS : [])];
+}
 
 const yesNo = (flag: boolean): string => (flag ? 'yes' : 'no');
 
@@ -119,6 +145,50 @@ export function confSections(config: ExportConfig): ConfSection[] {
       ],
     },
   ];
+
+  // Nur bei eingeschalteter Ueberwachung, wie bei der StorageBox: die
+  // Skripte verlangen dann auch nur dann diese Schluessel.
+  if (config.notify.enabled) {
+    const notify = config.notify;
+
+    sections.push({
+      title: 'Ueberwachung',
+      entries: [
+        {
+          key: 'NOTIFY_ENABLED',
+          kind: 'yesno',
+          value: yesNo(notify.enabled),
+          description: 'yes = Beginn und Ende jedes Laufs an den Ping-Dienst melden.',
+        },
+        {
+          // Wer die Adresse kennt, kann falsche Erfolgsmeldungen schicken.
+          // Deshalb gehoert diese Datei auf chmod 600.
+          key: 'NOTIFY_PING_URL',
+          kind: 'text',
+          value: notify.url,
+          description: 'Ping-Adresse des Checks fuer den Export, z. B. https://hc-ping.com/<uuid>.',
+        },
+        {
+          key: 'NOTIFY_PING_URL_OFFLOAD',
+          kind: 'text',
+          value: notify.offloadUrl,
+          description: 'Eigener Check fuer die Auslagerung, leer = keiner. Nie derselbe wie oben.',
+        },
+        {
+          key: 'NOTIFY_MAX_LINES',
+          kind: 'number',
+          value: String(notify.maxDetailLines),
+          description: 'Wie viele Zeilen aus dem Log mitgeschickt werden, 0 = nur die Kopfdaten.',
+        },
+        {
+          key: 'NOTIFY_PROXY',
+          kind: 'text',
+          value: notify.proxy,
+          description: 'Proxy als http://host:port, leer = direkt hinaus.',
+        },
+      ],
+    });
+  }
 
   if (box.enabled) {
     sections.push({
@@ -232,7 +302,7 @@ export function generateExportConf(config: ExportConfig): GeneratedFile {
     name: EXPORT_CONF_NAME,
     title: 'Einstellungen',
     purpose:
-      'Betriebswerte wie Aufbewahrung, Threads, Mail und StorageBox. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ändern.',
+      'Betriebswerte wie Aufbewahrung, Threads, Mail, Ueberwachung und StorageBox. Die Skripte lesen sie bei jedem Lauf – auf dem Server hier ändern.',
     language: 'text',
     executable: false,
     content,
@@ -258,7 +328,7 @@ export function confReader(config: ExportConfig): string {
   return `${RULE}
 #  Einstellungen
 #
-#  Betriebswerte wie Aufbewahrung, Threads, Mail und StorageBox stehen nicht
+#  Betriebswerte wie Aufbewahrung, Threads, Mail, Ueberwachung und StorageBox stehen nicht
 #  im Skript, sondern in ${EXPORT_CONF_NAME} im selben Verzeichnis. Die Datei
 #  wird zeilenweise gelesen und nicht mit "source" geladen.
 ${RULE}

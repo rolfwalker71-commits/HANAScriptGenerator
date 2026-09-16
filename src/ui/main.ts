@@ -59,6 +59,11 @@ const fields = {
   mailRecipient: el<HTMLInputElement>('mailRecipient'),
   mailCommand: el<HTMLInputElement>('mailCommand'),
   mailOnlyOnError: el<HTMLInputElement>('mailOnlyOnError'),
+  notifyEnabled: el<HTMLInputElement>('notifyEnabled'),
+  notifyUrl: el<HTMLInputElement>('notifyUrl'),
+  notifyOffloadUrl: el<HTMLInputElement>('notifyOffloadUrl'),
+  notifyMaxLines: el<HTMLInputElement>('notifyMaxLines'),
+  notifyProxy: el<HTMLInputElement>('notifyProxy'),
   offloadEnabled: el<HTMLInputElement>('offloadEnabled'),
   offloadHost: el<HTMLInputElement>('offloadHost'),
   offloadUser: el<HTMLInputElement>('offloadUser'),
@@ -91,6 +96,7 @@ const ui = {
   schemaPaste: el<HTMLTextAreaElement>('schemaPaste'),
   inputSchemaListing: el<HTMLInputElement>('inputSchemaListing'),
   mailFields: el<HTMLDivElement>('mailFields'),
+  notifyFields: el<HTMLDivElement>('notifyFields'),
   offloadFields: el<HTMLDivElement>('offloadFields'),
   offloadTimeHint: el<HTMLElement>('offloadTimeHint'),
   profileSelect: el<HTMLSelectElement>('profileSelect'),
@@ -116,7 +122,7 @@ const stepFields: ReadonlyArray<ReadonlyArray<ValidationIssue['field']>> = [
   ['schemas'],
   ['threads', 'compression', 'keepRawExport', 'minFreeGb'],
   ['retentionDays', 'schedule'],
-  ['mail'],
+  ['mail', 'notify'],
   ['offload'],
   [],
 ];
@@ -166,6 +172,13 @@ function readForm(): ExportConfig {
       recipient: fields.mailRecipient.value,
       command: fields.mailCommand.value,
       onlyOnError: fields.mailOnlyOnError.checked,
+    },
+    notify: {
+      enabled: fields.notifyEnabled.checked,
+      url: fields.notifyUrl.value,
+      offloadUrl: fields.notifyOffloadUrl.value,
+      proxy: fields.notifyProxy.value,
+      maxDetailLines: Number.parseInt(fields.notifyMaxLines.value, 10),
     },
     offload: {
       ...(() => {
@@ -220,6 +233,12 @@ function writeForm(config: ExportConfig): void {
   fields.mailCommand.value = config.mail.command;
   fields.mailOnlyOnError.checked = config.mail.onlyOnError;
 
+  fields.notifyEnabled.checked = config.notify.enabled;
+  fields.notifyUrl.value = config.notify.url;
+  fields.notifyOffloadUrl.value = config.notify.offloadUrl;
+  fields.notifyMaxLines.value = String(config.notify.maxDetailLines);
+  fields.notifyProxy.value = config.notify.proxy;
+
   fields.offloadEnabled.checked = config.offload.enabled;
   fields.offloadHost.value = config.offload.host;
   fields.offloadUser.value = config.offload.user;
@@ -252,6 +271,7 @@ function withDefaults(partial: Partial<ExportConfig>): ExportConfig {
     ...partial,
     schedule: { ...base.schedule, ...partial.schedule },
     mail: { ...base.mail, ...partial.mail },
+    notify: { ...base.notify, ...partial.notify },
     offload: { ...base.offload, ...partial.offload },
   };
 }
@@ -260,6 +280,7 @@ function withDefaults(partial: Partial<ExportConfig>): ExportConfig {
 function syncConditionalFields(): void {
   fields.scheduleDowCustom.hidden = fields.scheduleDow.value !== '__custom';
   ui.mailFields.hidden = !fields.mailEnabled.checked;
+  ui.notifyFields.hidden = !fields.notifyEnabled.checked;
   ui.offloadFields.hidden = !fields.offloadEnabled.checked;
 
   // Läuft die Auslagerung schon nach dem Export, holt der Termin nur nach.
@@ -467,6 +488,12 @@ function renderIssues(issues: ValidationIssue[]): void {
   );
 }
 
+/** Nur der Dienst einer Ping-Adresse – die Kennung dahinter ist ein Geheimnis. */
+function pingHost(url: string): string {
+  const match = /^https:\/\/([^/\s]+)/.exec(url);
+  return match?.[1] ?? 'nicht gesetzt';
+}
+
 function renderSummary(config: ExportConfig): void {
   const ext = archiveExtension(config.compression);
   const rows: Array<[string, string]> = [
@@ -491,6 +518,17 @@ function renderSummary(config: ExportConfig): void {
       'Mail',
       config.mail.enabled
         ? `${config.mail.recipient} (${config.mail.onlyOnError ? 'nur bei Fehlern' : 'nach jedem Lauf'})`
+        : 'keine',
+    ],
+    [
+      'Überwachung',
+      config.notify.enabled
+        ? // Nur der Dienst, nicht die Kennung des Checks: die Zusammenfassung
+          // ist das, was man abfotografiert oder in ein Ticket kopiert, und
+          // wer die Ping-Adresse hat, kann falschen Erfolg melden.
+          `${pingHost(config.notify.url)}, ${
+            config.notify.offloadUrl.length > 0 ? 'Export und Auslagerung' : 'nur der Export'
+          }`
         : 'keine',
     ],
   ];

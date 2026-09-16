@@ -77,6 +77,12 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
       ? `${config.mail.recipient} (${config.mail.onlyOnError ? 'nur bei Fehlern oder Hinweisen' : 'nach jedem Lauf'})`
       : 'nein'
   } |
+| Überwachung | ${
+    config.notify.enabled
+      ? `Ping-Dienst auf ${config.notify.url.replace(/^https:\/\//, '').split('/')[0] ?? '?'}` +
+        `${config.notify.offloadUrl.length > 0 ? ', Export und Auslagerung' : ', nur der Export'}`
+      : 'nein'
+  } |
 
 ## Dateien
 
@@ -84,7 +90,7 @@ pro Schema und Tag genau ein Archiv, nicht ein gemeinsames Archiv über alle Sch
 | --- | --- |
 | \`00_schemas_auslesen.cmd\` | Läuft auf **Windows**, nicht auf dem Server: holt die Schemaliste für den Generator. Für den Export nicht nötig. |
 | \`00_dateien_uebertragen.cmd\` | Läuft auf **Windows**: kopiert alles hierher per scp und setzt Rechte. |
-| \`${EXPORT_CONF_NAME}\` | Betriebswerte wie Aufbewahrung, Threads, Mail${config.offload.enabled ? ' und StorageBox' : ''}. Wird bei jedem Lauf gelesen. |
+| \`${EXPORT_CONF_NAME}\` | Betriebswerte wie Aufbewahrung, Threads, Mail${config.notify.enabled ? ', Überwachung' : ''}${config.offload.enabled ? ' und StorageBox' : ''}. Wird bei jedem Lauf gelesen.${config.notify.enabled ? ' **Enthält eine Ping-Adresse – `chmod 600`.**' : ''} |
 | \`${SCHEMA_FILE_NAME}\` | Die zu sichernden Schemas, eins pro Zeile. Wird bei jedem Lauf gelesen – Schemas hier ergänzen oder entfernen. |
 | \`01_setup_userstore.sh\` | Legt den hdbuserstore-Key \`${config.userstoreKey}\` an. |
 | \`02_prepare_dirs.sh\` | Erstellt Export- und Logverzeichnisse. |
@@ -524,7 +530,64 @@ fehlgeschlagen.
 \`00_dateien_uebertragen.cmd\` überschreibt eine vorhandene Liste nicht. Soll sie
 doch aus dem Generator übernommen werden, die Datei auf dem Server vorher löschen.
 
-## Wiederherstellung
+${
+  config.notify.enabled
+    ? `## Überwachung
+
+Die Skripte melden sich bei jedem Lauf an einen Ping-Dienst im Stil von
+[healthchecks.io](https://healthchecks.io): einmal zu Beginn an
+\`<Adresse>/start\`, einmal am Ende an \`<Adresse>/<Exitcode>\`. Der Dienst
+wertet 0 als Erfolg und jeden anderen Wert als Fehlschlag und zeigt daraus ein
+Dashboard im Browser.
+
+**Die Crontab wird dafür nicht angefasst.** Gemeldet wird aus dem Skript
+heraus, der Cronjob bleibt unverändert.
+
+Der Umweg über einen fremden Dienst hat einen Grund, der sich auf diesem
+Server nicht nachbauen lässt: Bleibt ein Lauf **ganz aus** – weil die Maschine
+steht, der Cron nicht lief oder das Skript fehlt –, kann dieser Server das
+nicht melden. Dort fällt genau das auf, weil der erwartete Ping fehlt.
+
+### Einrichtung im Dienst
+
+1. Je Lauf einen eigenen Check anlegen: einen für den Export${config.offload.enabled ? ' und einen für die Auslagerung' : ''}.
+   **Nie denselben Check für beide** – der spätere Lauf überschriebe die
+   Meldung des früheren, und ein Fehlschlag verschwände.
+2. Den Zeitplan des Checks auf den Cronjob abstimmen (\`${cronLine(config).split(' ').slice(0, 5).join(' ')}\`),
+   sonst schlägt er zur falschen Zeit Alarm.
+3. Die Ping-Adressen in \`${EXPORT_CONF_NAME}\` eintragen:
+   \`NOTIFY_PING_URL\`${config.offload.enabled ? ' und \`NOTIFY_PING_URL_OFFLOAD\`' : ''}.
+4. Prüfen mit \`./03_preflight.sh\`.
+
+### Was mitgeschickt wird
+
+An die Abschlussmeldung hängt das Skript eine Übersicht als Klartext: Kunde,
+Tenant, Dauer, eine Zeile je Schema mit Zustand, Größe und Laufzeit sowie die
+letzten \`NOTIFY_MAX_LINES\` Fehler- und Hinweiszeilen aus dem Log. Die Tabelle
+der Schemas wird **nicht** gekürzt – welches Schema klemmte, steht auch dann
+vollständig da, wenn alle klemmten.
+
+Damit verlassen Hostname, Schemanamen und Fehlertexte dieses System. Ist das
+nicht gewollt, lässt sich healthchecks als Docker-Container selbst betreiben;
+in \`${EXPORT_CONF_NAME}\` ändert sich dann nur die Adresse.
+
+### Die Ping-Adresse ist ein Geheimnis
+
+Wer sie kennt, kann dem Dienst **falschen Erfolg** melden und damit ein
+ausgefallenes Backup gesund aussehen lassen. Deshalb:
+
+- \`${EXPORT_CONF_NAME}\` gehört auf \`chmod 600\`; \`03_preflight.sh\` prüft das.
+- Die Skripte schreiben die Adresse nie ins Log und reichen sie curl über
+  dessen Konfiguration statt als Argument – als Argument stünde sie in der
+  Prozessliste.
+- Sie gehört nicht in Tickets oder Screenshots.
+
+Eine gescheiterte Meldung lässt den Lauf unberührt: sie steht als \`WARNUNG\`
+im Log, der Exitcode des Exports ändert sich dadurch nicht.
+
+`
+    : ''
+}## Wiederherstellung
 
 \`\`\`bash
 ./90_restore_schema.sh ${first} 2026-01-15
@@ -558,7 +621,16 @@ Bestätigung durch Eintippen des Schemanamens.
 | \`Einstellungen fehlen oder sind nicht lesbar\` | \`${EXPORT_CONF_NAME}\` liegt nicht neben dem Skript | Datei aus dem ZIP neben \`${script}\` legen |
 | \`${EXPORT_CONF_NAME}: ... fehlt\` | Neuerer Generator, ältere Datei auf dem Server | Zeile aus der neu erzeugten \`${EXPORT_CONF_NAME}\` übernehmen |
 | \`... ist ungueltig, erwartet wird ...\` | Tippfehler in \`${EXPORT_CONF_NAME}\` | Wert korrigieren, dann \`./03_preflight.sh\` |
-| Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |
+| Archiv fehlt, Rohexport liegt noch da | tar oder Prüflauf fehlgeschlagen | Log ansehen; der Rohexport bleibt in diesem Fall absichtlich erhalten |${
+    config.notify.enabled
+      ? `
+| \`Meldung ... fehlgeschlagen (curl 6)\` | Name nicht auflösbar | DNS prüfen, ggf. \`NOTIFY_PROXY\` setzen |
+| \`Meldung ... fehlgeschlagen (curl 7)\` oder \`28\` | Keine Verbindung oder Zeitüberschreitung | Firewall für ausgehendes HTTPS prüfen, ggf. \`NOTIFY_PROXY\` setzen |
+| \`curl fehlt\` | curl nicht installiert | \`zypper install curl\`; der Export läuft trotzdem weiter |
+| Dienst meldet „läuft zu lange“, obwohl alles gut ist | Zeitplan des Checks passt nicht zum Cronjob | Im Dienst Zeitplan und Toleranz an den Cronjob angleichen |
+| Dienst bleibt still, obwohl nichts lief | Beide Läufe zeigen auf denselben Check | Je Lauf einen eigenen Check; \`03_preflight.sh\` meldet das |`
+      : ''
+  }
 `;
 
   return {

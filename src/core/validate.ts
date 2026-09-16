@@ -119,6 +119,58 @@ export function validateConfig(config: ExportConfig): ValidationIssue[] {
     }
   }
 
+  if (config.notify.enabled) {
+    const notify = config.notify;
+
+    const checkPing = (value: string, what: string): void => {
+      if (/^http:\/\//i.test(value)) {
+        // Wer die Adresse mitliest, kann falsche Erfolgsmeldungen schicken
+        // und damit ein ausgefallenes Backup als gesund erscheinen lassen.
+        error('notify', `${what} muss https sein – über http läge sie offen im Netz.`);
+      } else if (!/^https:\/\/[^\s"'<>]+$/.test(value)) {
+        error('notify', `${what} muss mit https:// beginnen und darf keinen Leerraum enthalten.`);
+      }
+    };
+
+    if (notify.url.length === 0) {
+      error('notify', 'Ohne Ping-Adresse für den Export kann nichts überwacht werden.');
+    } else {
+      checkPing(notify.url, 'Die Ping-Adresse des Exports');
+    }
+
+    if (notify.offloadUrl.length > 0) {
+      checkPing(notify.offloadUrl, 'Die Ping-Adresse der Auslagerung');
+
+      if (notify.offloadUrl === notify.url) {
+        // Beide Jobs auf einem Check hiesse: der spaetere ueberschreibt die
+        // Meldung des frueheren, und ein Fehlschlag verschwindet.
+        error(
+          'notify',
+          'Export und Auslagerung brauchen je einen eigenen Check. Auf derselben Adresse ' +
+            'überschreibt der spätere Lauf die Meldung des früheren.',
+        );
+      }
+    } else if (config.offload.enabled) {
+      warn(
+        'notify',
+        'Die Auslagerung läuft, wird aber nicht überwacht. Ein fehlgeschlagener ' +
+          'Auslagerungslauf bliebe unbemerkt.',
+      );
+    }
+
+    if (notify.proxy.length > 0 && !/^https?:\/\/[^\s]+$/.test(notify.proxy)) {
+      error('notify', 'Der Proxy wird als http://host:port angegeben.');
+    }
+
+    if (
+      !Number.isInteger(notify.maxDetailLines) ||
+      notify.maxDetailLines < 0 ||
+      notify.maxDetailLines > 50
+    ) {
+      error('notify', 'Zwischen 0 und 50 Zeilen dürfen als Ping-Inhalt mitgehen.');
+    }
+  }
+
   if (config.offload.enabled) {
     const box = config.offload;
 

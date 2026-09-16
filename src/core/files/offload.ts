@@ -7,7 +7,8 @@ import {
   scriptHeader,
   userGuard,
 } from './common.js';
-import { OFFLOAD_SCRIPT_KEYS, confReader } from './exportConf.js';
+import { confReader, offloadScriptKeys } from './exportConf.js';
+import { notifyBlock } from './notify.js';
 
 /**
  * Kopiert die Tagesarchive per rsync über SSH auf eine Hetzner StorageBox.
@@ -156,6 +157,8 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "\${LOG_FILE}"
 }
 
+${notifyBlock(config, 'offload')}
+
 ${RULE}
 #  Vorabpruefungen
 ${RULE}
@@ -170,7 +173,7 @@ do
     fi
 done
 
-read_export_conf ${OFFLOAD_SCRIPT_KEYS.join(' ')}
+read_export_conf ${offloadScriptKeys(config).join(' ')}
 RC=$?
 
 if [ \${RC} -eq 1 ]; then
@@ -550,6 +553,11 @@ case "\${MODE}" in
         ;;
 
     --pending)
+        # Gemeldet wird erst ab hier: --setup und --check sind Handlaeufe mit
+        # einem Bildschirm davor und wuerden beim Dienst als echte Laeufe in
+        # der Historie stehen.
+        notify_begin
+
         DAYS="$(for ENTRY in "\${EXPORT_BASE}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
                 do
                     [ -d "\${ENTRY}" ] || continue
@@ -559,11 +567,18 @@ case "\${MODE}" in
 
         if [ -z "\${DAYS}" ]; then
             log "Nichts offen, alle Tagesordner sind uebertragen."
+
+            # Auch das ist ein erfolgreicher Lauf. Bliebe die Meldung aus,
+            # ginge der Check an jedem Tag auf Rot, an dem der Export schon
+            # alles ausgelagert hat - also an fast jedem.
+            notify_add "Ziel      : \${BOX_USER}@\${BOX_HOST}:\${BOX_PATH}"
+            notify_add "Ergebnis  : nichts offen, alle Tagesordner sind uebertragen"
             exit 0
         fi
         ;;
 
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+        notify_begin
         DAYS="\${MODE}"
         ;;
 
@@ -591,6 +606,23 @@ fi
 
 log "Logdatei: \${LOG_FILE}"
 log "${'='.repeat(60)}"
+
+notify_add "Ziel      : \${BOX_USER}@\${BOX_HOST}:\${BOX_PATH}"
+notify_add "Ergebnis  : $([ \${EXITCODE} -eq 0 ] && echo 'erfolgreich' || echo 'mit Fehlern')"
+notify_add "Tage      : $(echo \${DAYS} | tr '\\n' ' ')"
+notify_add "Log       : \${LOG_FILE}"
+
+if [ "\${NOTIFY_MAX_LINES:-0}" -gt 0 ]; then
+    NTF_FOUND=0
+
+    while IFS= read -r LINE
+    do
+        [ \${NTF_FOUND} -eq 0 ] && notify_add "" && notify_add "Aus dem Log:"
+        NTF_FOUND=1
+        notify_add "  \${LINE}"
+    done < <(grep -a -E '(FEHLER|WARNUNG|ABBRUCH|HINWEIS):' "\${LOG_FILE}" 2>/dev/null \
+             | tail -n "\${NOTIFY_MAX_LINES}")
+fi
 
 exit \${EXITCODE}
 `;
